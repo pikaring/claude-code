@@ -1,0 +1,11 @@
+{
+  "annual_workdays": 245,
+  "hourly_wage_yen": 3000,
+  "workday_hours": 7.75,
+  "typing_speed_cpm_scenario": 60,
+  "editing_speed_cpm_scenario": 20,
+  "context_questions_per_thread": 4.109,
+  "context_questions_per_thread_note": "会話スレッドIDが生ログに無いため自動再計算していません。実測し直す場合はこの値を編集してください。",
+  "reduction_time_input_min_per_char": 0.012,
+  "reduction_time_output_min_per_char": 0.002
+}
