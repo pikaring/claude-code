@@ -4,8 +4,8 @@
   "workday_hours": 7.75,
   "typing_speed_cpm_scenario": 60,
   "editing_speed_cpm_scenario": 20,
-  "context_questions_per_thread": 4.109,
-  "context_questions_per_thread_note": "会話スレッドIDが生ログに無いため自動再計算していません。実測し直す場合はこの値を編集してください。",
+  "session_gap_minutes": 60,
+  "session_gap_note": "6月分データの手動集計値(C≈4.55)に最も近い結果を返す閾値として60分を採用(2026-07-20 ユーザー提供の update_shukei.py 仕様に基づく)。",
   "reduction_time_input_min_per_char": 0.012,
   "reduction_time_output_min_per_char": 0.002
 }

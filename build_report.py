@@ -48,8 +48,8 @@ DEFAULT_SETTINGS = {
     "workday_hours": 7.75,
     "typing_speed_cpm_scenario": 60,
     "editing_speed_cpm_scenario": 20,
-    "context_questions_per_thread": 4.109,
-    "context_questions_per_thread_note": "会話スレッドIDが生ログに無いため自動再計算していません。実測し直す場合はこの値を編集してください。",
+    "session_gap_minutes": 60,
+    "session_gap_note": "6月分データの手動集計値(C≈4.55)に最も近い結果を返す閾値として60分を採用(2026-07-20 ユーザー提供の update_shukei.py 仕様に基づく)。",
     "reduction_time_input_min_per_char": 0.012,
     "reduction_time_output_min_per_char": 0.002,
 }
@@ -194,6 +194,23 @@ def bucket_len(n):
 
 BUCKET_ORDER = ['〜50字（短文・ひと言）', '51〜100字', '101〜200字', '201〜500字',
                 '501〜1000字', '1001〜2000字', '2001〜5000字', '5001字〜（大量）']
+
+
+def count_sessions(user_rows, gap_minutes=60):
+    """ユーザーごとに発言を時系列で並べ、直前発言との間隔が gap_minutes を
+    超えたら新セッションとみなしてカウントする(update_shukei.py と同仕様)。"""
+    by_user = collections.defaultdict(list)
+    for r in user_rows:
+        by_user[r['email']].append(r['dt'])
+    n_sessions = 0
+    for email, times in by_user.items():
+        times.sort()
+        prev = None
+        for t in times:
+            if prev is None or (t - prev).total_seconds() / 60 > gap_minutes:
+                n_sessions += 1
+            prev = t
+    return n_sessions
 
 
 def top_ngrams(texts, top_n=30, min_len=3, max_len=12):
@@ -437,6 +454,8 @@ def build(csv_path, out_path):
     total_in_chars = sum(r['chars'] for r in user_rows)
     total_out_chars = sum(r['chars'] for r in asst_rows)
     total_users = len(per_user)
+    n_sessions = count_sessions(user_rows, settings['session_gap_minutes'])
+    context_questions_per_thread = round(total_prompts / n_sessions, 3) if n_sessions > 0 else 1.0
 
     return {
         'period_start': period_start, 'period_end': period_end,
@@ -448,6 +467,7 @@ def build(csv_path, out_path):
         'total_prompts': total_prompts, 'total_responses': len(asst_rows),
         'total_in_chars': total_in_chars, 'total_out_chars': total_out_chars,
         'total_users': total_users, 'settings': settings,
+        'n_sessions': n_sessions, 'context_questions_per_thread': context_questions_per_thread,
     }, regs
 
 
@@ -669,12 +689,14 @@ def write_workbook(data, regs, out_path):
     ws['A26'] = f"{data['period_end'].month}月分データ"; ws['C26'] = '時間'
     ws['A27'] = '入力文字数'; ws['B27'] = data['total_in_chars']; ws['C27'] = '=ROUND(B27/B23/60,0)'; ws['D27'] = '入力時間（A）'
     ws['A28'] = '出力文字数'; ws['B28'] = data['total_out_chars']; ws['C28'] = '=ROUND(B28/B24/60,0)'; ws['D28'] = '出力時間（B）'
-    ws['A29'] = '１つの文脈での質問数（C）'; ws['B29'] = s['context_questions_per_thread']
+    ws['A29'] = '１つの文脈での質問数（C）'; ws['B29'] = data['context_questions_per_thread']
     ws['C29'] = '=ROUND(C28/B29,0)'; ws['D29'] = '回答を得るまでの実出力時間（D=B/C）'
     ws['A30'] = '利用者数'; ws['B30'] = data['total_users']; ws['C30'] = '=ROUND(C29-C27,0)'; ws['D30'] = '削減時間（D－A）'
     ws['A31'] = '一人当たり削減時間（月）'; ws['C31'] = '=ROUND(C30/B30,2)'; ws['D31'] = '時間／人'
     ws['A33'] = '【読み方】出力時間Bを質問数Cで割ることで「1回の問い合わせで得られた有効な回答」を生成するのに相当する時間を推計。入力時間Aを差し引いたものを純削減時間とする。'
-    ws['A34'] = ('【前提】入出力文字数はログ集計値（プレフィックス除く）。質問数Cは' + s['context_questions_per_thread_note'])
+    ws['A34'] = (f"【前提】入出力文字数はログ集計値（プレフィックス除く）。質問数C=総プロンプト数÷セッション数"
+                 f"(ユーザーごとに発言間隔が{s['session_gap_minutes']}分を超えたら新セッション、として自動算出。"
+                 f"今回のセッション数={data['n_sessions']})")
     autosize(ws, [30, 14, 30, 30, 12, 16])
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
