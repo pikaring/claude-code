@@ -121,6 +121,15 @@ try {
   console.log(`期間設定: ${start} 〜 ${end}`);
   await page.waitForTimeout(15000); // データ再読み込み待ち
 
+  // テーブルに実データ行が表示される(=エクスポート操作が可能になる)まで待つ。
+  // 「利用ログ」テーブル本体は座標が変わりやすいため、行データらしきテキスト
+  // (メールアドレス形式のセル)が現れるまでポーリングする。
+  const tableLoaded = page.locator('text=/@city\\.hakodate\\.hokkaido\\.jp/').first();
+  await tableLoaded.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {
+    console.error('WARN: テーブル行の読み込み確認がタイムアウトしました。そのまま続行します。');
+  });
+  await page.waitForTimeout(2000);
+
   // 5. 「利用ログ」テーブルにホバー → メニュー → Export to CSV
   const vis = page.locator('text=Table, 利用ログ').first();
   const box = await vis.boundingBox().catch(() => null);
@@ -128,11 +137,27 @@ try {
   await page.waitForTimeout(2000);
   const menuBtn = page.locator('[aria-label="Menu options, 利用ログ, Table"]');
   await menuBtn.waitFor({ state: 'visible', timeout: 20000 });
-  await menuBtn.click();
-  await page.waitForTimeout(1500);
-  const dl = page.waitForEvent('download', { timeout: 180000 });
-  await page.locator('[role="menuitem"]:has-text("Export to CSV")').first().click();
-  const download = await dl;
+
+  // メニュー項目が無効(データ未読み込み)な場合があるため、開き直しながら数回試す。
+  let download;
+  let lastErr;
+  for (let attempt = 1; attempt <= 3 && !download; attempt++) {
+    try {
+      await menuBtn.click();
+      await page.waitForTimeout(1500);
+      const exportItem = page.locator('[role="menuitem"]:has-text("Export to CSV")').first();
+      await exportItem.waitFor({ state: 'visible', timeout: 10000 });
+      const dl = page.waitForEvent('download', { timeout: 120000 }); // 件数が多いと生成に時間がかかる
+      await exportItem.click({ timeout: 10000 });
+      download = await dl;
+    } catch (e) {
+      lastErr = e;
+      console.error(`Export to CSV 試行${attempt}回目 失敗: ${e.message.split('\n')[0]}`);
+      await page.keyboard.press('Escape').catch(() => {});
+      await page.waitForTimeout(8000);
+    }
+  }
+  if (!download) throw lastErr || new Error('Export to CSV に繰り返し失敗しました');
   const outPath = path.join(downloadsDir, `qommons-log-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.csv`);
   await download.saveAs(outPath);
   console.log(`DOWNLOADED: ${outPath}`);
