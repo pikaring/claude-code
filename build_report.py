@@ -102,11 +102,14 @@ def load_registrants():
                 'department': dept,
                 'email': email,
                 'employee_no': employee_no,
+                'access_level': row.get('access_level') or '',
+                'status': row.get('status') or '',
             }
             dept_registrant_count[dept] += 1
     for email, (name, dept) in KNOWN_UNLISTED_DEPARTMENTS.items():
         if email not in regs:
-            regs[email] = {'name': name, 'kana': '', 'department': dept, 'email': email, 'employee_no': ''}
+            regs[email] = {'name': name, 'kana': '', 'department': dept, 'email': email, 'employee_no': '',
+                            'access_level': '', 'status': ''}
     return regs, dept_registrant_count
 
 
@@ -652,12 +655,13 @@ def write_workbook(data, regs, out_path):
     ws = wb.create_sheet('対応表（メール↔氏名部署）')
     ws['A1'] = 'メールアドレス ↔ 氏名・部署 対応表（登録者リスト）'; ws['A1'].font = title_font
     ws['A2'] = '出典: registrants.csv（このリポジトリで管理する登録者マスタ）'; ws['A2'].font = note_font
-    headers = ['No', 'メールアドレス', '職員番号', '氏名', '氏名（カナ）', '部署名']
+    headers = ['No', 'メールアドレス', '職員番号', '氏名', '氏名（カナ）', 'アクセスレベル', '部署名', 'ステータス']
     ws.append([]); ws.append(headers)
     style_header_row(ws, 4, len(headers))
     for i, r in enumerate(regs.values(), start=1):
-        ws.append([i, r.get('email'), r.get('employee_no'), r.get('name'), r.get('kana'), r.get('department')])
-    autosize(ws, [6, 32, 10, 16, 18, 26])
+        ws.append([i, r.get('email'), r.get('employee_no'), r.get('name'), r.get('kana'),
+                   r.get('access_level'), r.get('department'), r.get('status')])
+    autosize(ws, [6, 32, 10, 16, 18, 12, 26, 10])
 
     # ===== モデル・機能別集計 =====
     ws = wb.create_sheet('モデル・機能別集計')

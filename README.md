@@ -101,6 +101,15 @@ python3 build_report.py [CSVパス]   # 省略時は downloads/ の最新ファ�
 スキップするバグがあり、該当職員が軒並み「(未登録)」扱いになっていた。
 2026-07-22 に修正)。
 
+### 対応表の列(registrants.csv)
+
+`email, employee_no, name, name_kana, access_level, department, status` の
+7列。`access_level`(メンバー/管理者)と `status`(完了/未完了、Qommons側の
+アカウント設定状況とみられる)は 2026-07-22 に追加された列で、対応表シートに
+表示するのみで現時点では集計ロジック(部署別集計の登録者数・利用率など)には
+使っていない。`status` が「未完了」の登録者を登録者数から除外すべきか等は
+未確定のため、必要であれば集計方法を変更する。
+
 ### 頻出単語 Top30(入出力傾向分析シート)
 
 janome(辞書同梱の純Python形態素解析ライブラリ、`pip install janome`)で
