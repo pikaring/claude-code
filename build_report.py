@@ -84,9 +84,10 @@ def load_registrants():
     ログインID)をキーにした辞書。表示用の実メールアドレス/職員番号は
     各レコードの 'email' / 'employee_no' に別途保持する。"""
     regs = {}
-    dept_registrant_count = collections.Counter()
+    dept_registrant_count = collections.Counter()      # 全登録者(ステータス問わず)
+    dept_registrant_started = collections.Counter()    # うち「完了」(=利用開始済み)のみ
     if not os.path.exists(REGISTRANTS_PATH):
-        return regs, dept_registrant_count
+        return regs, dept_registrant_count, dept_registrant_started
     with open(REGISTRANTS_PATH, encoding='utf-8-sig') as f:
         r = csv.DictReader(f)
         for row in r:
@@ -96,6 +97,7 @@ def load_registrants():
                 continue
             login_id = email if email else f'{employee_no}{EMPLOYEE_NO_LOGIN_SUFFIX}'
             dept = row.get('department') or '(未登録)'
+            status = row.get('status') or ''
             regs[login_id] = {
                 'name': row.get('name') or login_id,
                 'kana': row.get('name_kana') or '',
@@ -103,14 +105,16 @@ def load_registrants():
                 'email': email,
                 'employee_no': employee_no,
                 'access_level': row.get('access_level') or '',
-                'status': row.get('status') or '',
+                'status': status,
             }
             dept_registrant_count[dept] += 1
+            if status == '完了':
+                dept_registrant_started[dept] += 1
     for email, (name, dept) in KNOWN_UNLISTED_DEPARTMENTS.items():
         if email not in regs:
             regs[email] = {'name': name, 'kana': '', 'department': dept, 'email': email, 'employee_no': '',
                             'access_level': '', 'status': ''}
-    return regs, dept_registrant_count
+    return regs, dept_registrant_count, dept_registrant_started
 
 
 def find_latest_csv():
@@ -339,7 +343,7 @@ def cluster_topics(texts, n_clusters=8, samples_per_cluster=6):
 
 def build(csv_path, out_path):
     settings = load_settings()
-    regs, dept_reg_count = load_registrants()
+    regs, dept_reg_count, dept_reg_started = load_registrants()
     rows = load_log(csv_path)
     if not rows:
         raise SystemExit('ERROR: ログが空です')
@@ -408,10 +412,14 @@ def build(csv_path, out_path):
     department = []
     for d, a in dept_agg.items():
         registrant_count = dept_reg_count.get(d, len(a['users']))
+        # 「未完了」(=まだ利用開始していない登録者)は利用機会が無いため、
+        # 利用率の分母は「完了」(利用開始済み)登録者数を使う。
+        registrant_started = dept_reg_started.get(d, registrant_count)
         user_count = len(a['users'])
         department.append({
-            'department': d, 'registrants': registrant_count, 'users': user_count,
-            'usage_rate': (user_count / registrant_count) if registrant_count else None,
+            'department': d, 'registrants': registrant_count, 'registrants_started': registrant_started,
+            'users': user_count,
+            'usage_rate': (user_count / registrant_started) if registrant_started else None,
             'prompts': a['prompts'], 'responses': a['responses'],
             'records': a['prompts'] + a['responses'], 'chars': a['chars'],
             'prompts_per_user': round(a['prompts'] / user_count) if user_count else 0,
@@ -599,16 +607,18 @@ def write_workbook(data, regs, out_path):
     # ===== 部署別集計 =====
     ws = wb.create_sheet('部署別集計')
     ws['A1'] = 'QommonsAI 利用集計（部署別）'; ws['A1'].font = title_font
-    ws['A2'] = f"{period_label}  ／ 利用回数=プロンプト(質問)数  ／ 使用文字数=入力+出力(プレフィックス除く)"; ws['A2'].font = note_font
-    headers = ['部署名', '登録者数', '利用者数', '利用率', 'プロンプト数', '応答数', '合計レコード', '使用文字数', '1人あたり\nプロンプト数(利用者)']
+    ws['A2'] = (f"{period_label}  ／ 利用回数=プロンプト(質問)数  ／ 使用文字数=入力+出力(プレフィックス除く)"
+                "  ／ 利用率=利用者数÷登録者数(利用開始済み)"); ws['A2'].font = note_font
+    headers = ['部署名', '登録者数\n(全体)', '登録者数\n(利用開始済み)', '利用者数', '利用率',
+               'プロンプト数', '応答数', '合計レコード', '使用文字数', '1人あたり\nプロンプト数(利用者)']
     ws.append([]); ws.append(headers)
     style_header_row(ws, 4, len(headers))
     for d in data['department']:
-        ws.append([d['department'], d['registrants'], d['users'], d['usage_rate'],
+        ws.append([d['department'], d['registrants'], d['registrants_started'], d['users'], d['usage_rate'],
                    d['prompts'], d['responses'], d['records'], d['chars'], d['prompts_per_user']])
     for r in range(5, ws.max_row + 1):
-        ws.cell(r, 4).number_format = '0%'
-    autosize(ws, [26, 10, 10, 9, 11, 9, 11, 12, 16])
+        ws.cell(r, 5).number_format = '0%'
+    autosize(ws, [26, 10, 12, 10, 9, 11, 9, 11, 12, 16])
 
     # ===== 個人別集計 =====
     ws = wb.create_sheet('個人別集計')
