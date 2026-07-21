@@ -1,4 +1,23 @@
 ﻿email,employee_no,name,name_kana,department
+tsuchida.kazuhiro@city.hakodate.hokkaido.jp,,土田　和宏,ツチダ　カズヒロ,総務部文書法制課
+takagi.m@city.hakodate.hokkaido.jp,,高木　幹彦,タカギ　ミキヒコ,保健福祉部介護保険課
+ueda.kento@city.hakodate.hokkaido.jp,,上田　絃人,ウエダ　ケント,生涯学習部管理課
+takahashi.keisuke@city.hakodate.hokkaido.jp,,高橋　佳奨,タカハシ　ケイスケ,生涯学習部管理課
+nakata.muneo@city.hakodate.hokkaido.jp,,中田　宗男,ナカタ　ムネオ,学校教育部教育政策課
+matsumiya.e@city.hakodate.hokkaido.jp,,松宮　恵美子,マツミヤ　エミコ,学校教育部教育政策課
+kuroda.h@city.hakodate.hokkaido.jp,,黒田　育生,クロダ　ハグミ,博物館
+tanaka.shuichi@city.hakodate.hokkaido.jp,,田中　修一,タナカ　シュウイチ,環境部
+kudo.makoto@city.hakodate.hokkaido.jp,,工藤　允,クドウ　マコト,財務部税務室
+nakagawa.tatsuki@city.hakodate.hokkaido.jp,,中川　樹,ナカガワ　タツキ,南茅部支所産業建設課
+kaga.akio@city.hakodate.hokkaido.jp,,加我　明夫,カガ　アキオ,南茅部支所産業建設課
+fujieda@city.hakodate.hokkaido.jp,,藤枝　千佳子,フジエダ　チカコ,市民部国保年金課
+murai.yuta@city.hakodate.hokkaido.jp,,村井　雄太,ムライ　ユウタ,企業局上下水道部管路整備室
+kimura.kazu@city.hakodate.hokkaido.jp,,木村　一成,キムラ　カズナリ,総務部災害対策課
+watanabe.h@city.hakodate.hokkaido.jp,,渡辺　裕紀,ワタナベ　ヒロキ,病院局管理部庶務課
+takahashi.k@city.hakodate.hokkaido.jp,,高橋　健介,タカハシ　ケンスケ,企業局管理部経理課
+keita.watanabe@city.hakodate.hokkaido.jp,,渡邉　啓太,ワタナベ　ケイタ,保健所生活衛生課
+kato.ayane@city.hakodate.hokkaido.jp,,加藤　彩音,カトウ　アヤネ,保健福祉部介護保険課
+iwaya@city.hakodate.hokkaido.jp,,岩谷　楓,イワヤ　カエデ,生涯学習部文化財課
 tatebe.taku@city.hakodate.hokkaido.jp,,建部　琢自,タテベ　タクジ,企業局管理部料金課
 nakashima.yuta@city.hakodate.hokkaido.jp,,中嶋　悠太,ナカジマ　ユウタ,土木部道路建設課
 nagano.s@city.hakodate.hokkaido.jp,,長野　秀一,ナガノ　シュウイチ,総務部災害対策課
@@ -8,7 +27,7 @@ debayashi@city.hakodate.hokkaido.jp,,出林　好成,デバヤシ　コウセイ
 tazawa.haruka@city.hakodate.hokkaido.jp,,田澤　遥,タザワ　ハルカ,土木部道路建設課
 takano.n@city.hakodate.hokkaido.jp,,高野　直也,タカノ　ナオヤ,土木部道路建設課
 takahashi.kotaro@city.hakodate.hokkaido.jp,,髙橋　浩太朗,タカハシ　コウタロウ,土木部道路建設課
-takabatake.k@city.hakodate.hokkaido.jp,,高畠　洸輝,タカバタケ　コウキ,土木部道路建設課
+takabatake.k@city.hakodate.hokkaido.jp,,髙畠　洸輝,タカバタケ　コウキ,土木部道路建設課
 sudo.takuya@city.hakodate.hokkaido.jp,,須藤　拓哉,スドウ　タクヤ,土木部道路建設課
 kuroda.sora@city.hakodate.hokkaido.jp,,黒田　そら,クロダ　ソラ,土木部道路建設課
 iriba.j@city.hakodate.hokkaido.jp,,入場　準,イリバ　ジュン,土木部道路建設課
@@ -17,11 +36,11 @@ yasuda.h@city.hakodate.hokkaido.jp,,安田　礼史,ヤスダ　ヒロフミ,生
 yamanaka.teruhiko@city.hakodate.hokkaido.jp,,山中　輝彦,ヤマナカ　テルヒコ,生涯学習部南茅部教育事務所
 yamamoto.k@city.hakodate.hokkaido.jp,,山本　圭,ヤマモト　ケイ,土木部管理課
 yadomura.hiroshi@city.hakodate.hokkaido.jp,,宿村　裕史,ヤドムラ　ヒロシ,戸井支所
-wakasaki.n@city.hakodate.hokkaido.jp,,若崎　典子,ワカサキ　ノリコ,保健福祉部介護保険課
+wakasaki.n@city.hakodate.hokkaido.jp,,若﨑　典子,ワカサキ　ノリコ,保健福祉部介護保険課
 tanaka.mitsuya@city.hakodate.hokkaido.jp,,田中　光也,タナカ　ミツヤ,学校教育部教職員課
 takizawa.ka@city.hakodate.hokkaido.jp,,滝沢　華麗,タキザワ　カレン,生涯学習部管理課
 taki@city.hakodate.hokkaido.jp,,瀧　真美,タキ　マミ,子ども未来部子どもサービス課
-takasugi@city.hakodate.hokkaido.jp,,高杉　雄亮,タカスギ　ユウスケ,総務部人事課
+takasugi@city.hakodate.hokkaido.jp,,髙杉　雄亮,タカスギ　ユウスケ,総務部人事課
 takahashi.miyu@city.hakodate.hokkaido.jp,,高橋　未悠,タカハシ　ミユウ,福祉事務所障がい保健福祉課
 suzuki.takayoshi@city.hakodate.hokkaido.jp,,鈴木　孝嘉,スズキ　タカヨシ,生涯学習部管理課
 sunouchi.h@city.hakodate.hokkaido.jp,,簾内　光,スノウチ　ヒカル,子ども未来部子ども見守り・相談課
@@ -83,7 +102,7 @@ ueda.syota@city.hakodate.hokkaido.jp,,上田　翔太,ウエダ　ショウタ,�
 tanaka.ryuji@city.hakodate.hokkaido.com,,田中　竜次,タナカ　リュウジ,生涯学習部管理課
 takeuchi.yu@city.hakodate.hokkaido.jp,,竹内　裕,タケウチ　ユタカ,環境部環境推進課
 takahashi.mitsuhiro@city.hakodate.hokkaido.jp,,高橋　光博,タカハシ　ミツヒロ,椴法華支所
-takagi.y@city.hakodate.hokkaido.jp,,高木　雄登,タカギ　ユウト,経済部経済企画課
+takagi.y@city.hakodate.hokkaido.jp,,髙木　雄登,タカギ　ユウト,経済部経済企画課
 suzuki.s@city.hakodate.hokkaido.jp,,鈴木　慎一,スズキ　シンイチ,市民部戸籍住民課
 sugawara.yoshino@city.hakodate.hokkaido.jp,,菅原　佳乃,スガワラ　ヨシノ,生涯学習部管理課
 shikauchi.a@city.hakodate.hokkaido.jp,,鹿内　陽,シカウチ　アキラ,都市建設部
@@ -581,7 +600,7 @@ tateyama.k@city.hakodate.hokkaido.jp,,館山　一也,タテヤマ　カズヤ,�
 tanezaki.s@city.hakodate.hokkaido.jp,,種崎　俊,タネザキ　シュン,都市建設部まちづくり景観課
 tanaka.i@city.hakodate.hokkaido.jp,,田中　いずみ,タナカ　イズミ,都市建設部まちづくり景観課
 takikawa.manami@city.hakodate.hokkaido.jp,,滝川　愛実,タキカワ　マナミ,市民部戸籍住民課
-takabayashi.m@city.hakodate.hokkaido.jp,,高林　美玖,タカバヤシ　ミク,市民部国保年金課
+takabayashi.m@city.hakodate.hokkaido.jp,,髙林　美玖,タカバヤシ　ミク,市民部国保年金課
 tagawa@city.hakodate.hokkaido.jp,,田川　裕治,タガワ　ユウジ,土木部用地管理課
 syuto.s@city.hakodate.hokkaido.jp,,佐々木　柊人,ササキ　シュウト,衛生試験所
 shimomoto.naoki@city.hakodate.hokkaido.jp,,下元　直樹,シモモト　ナオキ,土木部管理課
@@ -664,7 +683,7 @@ sasaki.kaito@city.hakodate.hokkaido.jp,,佐々木　海斗,ササキ　カイト
 sakai.nagara@city.hakodate.hokkaido.jp,,酒井　永楽,サカイ　ナガラ,財務部税務室
 saito.an@city.hakodate.hokkaido.jp,,齊藤　安夏,サイトウ　アンナ,財務部管理課
 sagawa.atsushi@city.hakodate.hokkaido.jp,,佐川　篤,サガワ　アツシ,財務部財政課
-ozaki.i@city.hakodate.hokkaido.jp,,小崎　一歩,オザキ　イッポ,観光部観光推進課
+ozaki.i@city.hakodate.hokkaido.jp,,小﨑　一歩,オザキ　イッポ,観光部観光推進課
 omori.taka@city.hakodate.hokkaido.jp,,大森　崇史,オオモリ　タカヒト,観光部観光総務課
 oikawa.naoko@city.hakodate.hokkaido.jp,,及川　奈緒子,オイカワ　ナオコ,財務部税務室
 ohzuchi@city.hakodate.hokkaido.jp,,大槌　康彦,オオヅチ　ヤスヒコ,観光部観光総務課
@@ -729,7 +748,7 @@ takase.r@city.hakodate.hokkaido.jp,,高瀬　ルミ,タカセ　ルミ,農林水
 takase.nanako@city.hakodate.hokkaido.jp,,高瀬　菜々子,タカセ　ナナコ,市民部国保年金課
 taguchi.hideo@city.hakodate.hokkaido.jp,,田口　英生,タグチ　ヒデオ,港湾空港部港湾空港振興課
 tabata.hiro@city.hakodate.hokkaido.jp,,田畑　浩文,タバタ　ヒロフミ,総務部秘書課
-sotozaki@city.hakodate.hokkaido.jp,,外崎　洋亮,ソトザキ　ヨウスケ,市民部交通安全課
+sotozaki@city.hakodate.hokkaido.jp,,外﨑　洋亮,ソトザキ　ヨウスケ,市民部交通安全課
 shimizu.yuya@city.hakodate.hokkaido.jp,,清水　佑哉,シミズ　ユウヤ,港湾空港部管理課
 shimizu.takahito@city.hakodate.hokkaido.jp,,清水　崇仁,シミズ　タカヒト,総務部災害対策課
 shimizu.koya@city.hakodate.hokkaido.jp,,清水　恒矢,シミズ　コウヤ,市民部国保年金課
@@ -816,7 +835,7 @@ ikeda.aya@city.hakodate.hokkaido.jp,,池田　文,イケダ　アヤ,市民部�
 hirata.k@city.hakodate.hokkaido.jp,,平田　薫,ヒラタ　カオル,市民部くらし安心課
 yasuda.y@city.hakodate.hokkaido.jp,,安田　好宏,ヤスダ　ヨシヒロ,市民部市民・男女共同参画課
 tonosaki.m@city.hakodate.hokkaido.jp,,外崎　未矩,トノサキ　ミク,市民部市民・男女共同参画課
-takahashi.kentaro@city.hakodate.hokkaido.jp,,高橋　健太郎,タカハシ　ケンタロウ,総務部総務課
+takahashi.kentaro@city.hakodate.hokkaido.jp,,髙橋　健太郎,タカハシ　ケンタロウ,総務部総務課
 seki@city.hakodate.hokkaido.jp,,關　優樹,セキ　マサキ,市民部市民・男女共同参画課
 sawadaishi.s@city.hakodate.hokkaido.jp,,沢田石　寿美,サワダイシ　スミ,市民部市民・男女共同参画課
 sasaki.rina@city.hakodate.hokkaido.jp,,佐々木　梨那,ササキ　リナ,市民部市民・男女共同参画課
@@ -848,7 +867,7 @@ toyama.haruki@city.hakodate.hokkaido.jp,,外山　開,トヤマ　ハルキ,総�
 terasaki@city.hakodate.hokkaido.jp,,寺崎　皇紀,テラサキ　コウキ,総務部文書法制課
 tanaka.megu@city.hakodate.hokkaido.jp,,田中　恵,タナカ　メグミ,総務部職員厚生課
 takano.harunobu@city.hakodate.hokkaido.jp,,高野　陽之,タカノ　ハルノブ,総務部
-takagi.norifumi@city.hakodate.hokkaido.jp,,高木　則文,タカギ　ノリフミ,総務部災害対策課
+takagi.norifumi@city.hakodate.hokkaido.jp,,髙木　則文,タカギ　ノリフミ,総務部災害対策課
 sugimoto.y@city.hakodate.hokkaido.jp,,杉本　悠,スギモト　ユウ,監査事務局監査課
 sugawa.d@city.hakodate.hokkaido.jp,,須川　大地,スガワ　ダイチ,監査事務局監査課
 suda.narumi@city.hakodate.hokkaido.jp,,須田　成美,スダ　ナルミ,総務部文書法制課
