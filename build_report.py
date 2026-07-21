@@ -257,6 +257,83 @@ def top_words(texts, top_n=30):
     return counter.most_common(top_n)
 
 
+# クラスタリング用の追加ストップワード。頻出単語Top30(top_words)とは別に、
+# トピック分類では庁内文書に一律に現れる汎用語(お願い・確認・作成 等)を
+# 除外しないと、内容の異なる文書同士が表面的な語彙一致でひとつの
+# 巨大クラスタにまとまってしまう(2026-07-22 実データ検証で確認)。
+_CLUSTER_STOPWORDS = _NOUN_STOPWORDS | {
+    'お願い', '必要', '方法', '確認', '対象', '可能', 'データ', 'ファイル', '情報',
+    '修正', '文章', '自治体', '状況', '対応', '作成', '説明', '質問', '回答', '函館',
+}
+
+
+def _tokenize_for_clustering(tokenizer, text):
+    words = []
+    for tok in tokenizer.tokenize(text):
+        pos = tok.part_of_speech.split(',')
+        if pos[0] != '名詞' or pos[1] in ('数', '非自立', '代名詞', '接尾', '接続詞的'):
+            continue
+        base = tok.base_form if tok.base_form != '*' else tok.surface
+        if len(base) < 2 or base in _CLUSTER_STOPWORDS or base.isdigit():
+            continue
+        words.append(base)
+    return ' '.join(words)
+
+
+def cluster_topics(texts, n_clusters=8, samples_per_cluster=6):
+    """プロンプト本文を名詞ベースのTF-IDF→SVD→KMeansで分野分けする。
+    戻り値の各クラスタには自動集計(件数・割合・キーワード)に加えて、
+    'sample_texts'(代表的な生の質問文、最大 samples_per_cluster 件)を含む。
+    sample_texts はワークブックには書き込まず、実行者が話題名・概要を
+    執筆するための参考情報としてのみ使う(生データを永続化しない)。"""
+    global _word_tokenizer
+    if _word_tokenizer is None:
+        from janome.tokenizer import Tokenizer
+        _word_tokenizer = Tokenizer()
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.decomposition import TruncatedSVD
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import normalize
+    import numpy as np
+
+    filtered_texts = [t for t in texts if t and len(t) >= 8]
+    docs = [_tokenize_for_clustering(_word_tokenizer, t) for t in filtered_texts]
+    pairs = [(d, t) for d, t in zip(docs, filtered_texts) if len(d.split()) >= 2]
+    if len(pairs) < n_clusters * 20:
+        return []  # データが少なすぎてクラスタリングが不安定になる場合はスキップ
+    docs = [p[0] for p in pairs]
+    sample_source_texts = [p[1] for p in pairs]
+
+    vec = TfidfVectorizer(max_features=4000, min_df=3, max_df=0.3, sublinear_tf=True)
+    X = vec.fit_transform(docs)
+    svd = TruncatedSVD(n_components=min(80, X.shape[1] - 1), random_state=42)
+    Xr = normalize(svd.fit_transform(X))
+
+    km = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    labels = km.fit_predict(Xr)
+    terms = np.array(vec.get_feature_names_out())
+
+    total = len(labels)
+    topics = []
+    for k in range(n_clusters):
+        idx = np.where(labels == k)[0]
+        if len(idx) == 0:
+            continue
+        mean_tfidf = np.asarray(X[idx].mean(axis=0)).ravel()
+        top_idx = np.argsort(mean_tfidf)[::-1][:15]
+        keywords = [terms[i] for i in top_idx]
+        center = Xr[idx].mean(axis=0)
+        sims = Xr[idx].dot(center)
+        order = np.argsort(sims)[::-1][:samples_per_cluster]
+        samples = [sample_source_texts[idx[o]][:200] for o in order]
+        topics.append({
+            'size': int(len(idx)), 'share': len(idx) / total,
+            'keywords': keywords, 'sample_texts': samples,
+        })
+    topics.sort(key=lambda t: -t['size'])
+    return topics
+
+
 def build(csv_path, out_path):
     settings = load_settings()
     regs, dept_reg_count = load_registrants()
@@ -466,6 +543,7 @@ def build(csv_path, out_path):
     ai_char_stats.sort(key=lambda x: -x['mean'])
 
     words = top_words([r['text'] for r in user_rows if r['text']])
+    topics = cluster_topics([r['text'] for r in user_rows if r['text']], n_clusters=8)
 
     # ---------- 業務削減効果_試算 ----------
     total_in_chars = sum(r['chars'] for r in user_rows)
@@ -480,7 +558,7 @@ def build(csv_path, out_path):
         'model_stats': model_stats, 'ai_stats': ai_stats,
         'hourly': hourly, 'weekday_stats': weekday_stats, 'daily': daily, 'trend': trend,
         'length_dist': length_dist, 'attachment': attachment, 'ai_char_stats': ai_char_stats,
-        'words': words,
+        'words': words, 'topics': topics,
         'total_prompts': total_prompts, 'total_responses': len(asst_rows),
         'total_in_chars': total_in_chars, 'total_out_chars': total_out_chars,
         'total_users': total_users, 'settings': settings,
@@ -666,6 +744,24 @@ def write_workbook(data, regs, out_path):
             c.number_format = '0.0%'
     autosize(ws, [30, 16, 10])
 
+    # ===== 主な話題・テーマ =====
+    ws = wb.create_sheet('主な話題・テーマ')
+    ws['A1'] = 'QommonsAI 主な話題・テーマ（プロンプト内容の分野分け）'; ws['A1'].font = title_font
+    ws['A2'] = f"{period_label}  ／ 統計的クラスタリング(TF-IDF+SVD+KMeans)による自動分野分け。「話題名」「概要」は日次実行時にログ内容を確認して記入。"; ws['A2'].font = note_font
+    headers = ['No', '話題名', '件数', '割合', 'キーワード（上位15）', '概要']
+    ws.append([]); ws.append(headers)
+    style_header_row(ws, 4, len(headers))
+    for i, tp in enumerate(data['topics'], start=1):
+        ws.append([i, tp.get('name', '(要記入)'), tp['size'], tp['share'],
+                   '、'.join(tp['keywords']), tp.get('description', '(要記入)')])
+    for r in range(5, ws.max_row + 1):
+        ws.cell(r, 4).number_format = '0.0%'
+        ws.cell(r, 6).alignment = Alignment(wrap_text=True, vertical='top')
+        ws.cell(r, 5).alignment = Alignment(wrap_text=True, vertical='top')
+    autosize(ws, [5, 26, 8, 8, 50, 55])
+    if not data['topics']:
+        ws['A6'] = '(このシートは実行時のプロンプト件数が少ない場合、意味のある分野分けができないためスキップされることがあります)'
+
     # ===== 利用者推移 =====
     ws = wb.create_sheet('利用者推移')
     ws['A1'] = 'QommonsAI 利用者推移（日別）'; ws['A1'].font = title_font
@@ -731,6 +827,22 @@ def main():
     import shutil
     latest_path = os.path.join(HERE, 'QommonsAI利用集計.xlsx')
     shutil.copyfile(out_path, latest_path)
+
+    # 「主な話題・テーマ」の話題名・概要を執筆するための参考資料(生の質問文を含む)。
+    # debug/ はコミット対象外なので、ここに生データを残しても外部には出ない。
+    if data['topics']:
+        os.makedirs(os.path.join(HERE, 'debug'), exist_ok=True)
+        labeling_path = os.path.join(HERE, 'debug', 'topics_for_labeling.json')
+        with open(labeling_path, 'w', encoding='utf-8') as f:
+            json.dump([
+                {'index': i, 'size': t['size'], 'share': round(t['share'], 4),
+                 'keywords': t['keywords'], 'sample_texts': t['sample_texts']}
+                for i, t in enumerate(data['topics'])
+            ], f, ensure_ascii=False, indent=2)
+        print(f"TOPICS_FOR_LABELING: {labeling_path}")
+        print("次のステップ: 上記ファイルのキーワード・サンプル文を読み、"
+              "label_topics.py で「話題名」「概要」を書き込んでください。")
+
     print(f"総プロンプト数: {data['total_prompts']}")
     print(f"総利用者数: {data['total_users']}")
     print(f"OUTPUT: {out_path}")
