@@ -19,8 +19,8 @@ Qommons AI 利用ログ CSV → 「QommonsAI利用集計.xlsx」形式の集計�
   業務削減効果_試算の「１つの文脈での質問数(C)」は生ログに会話スレッドIDが
   無く再現不能なため、report_settings.json の値をそのまま引き継ぐ
   (自動再計算はしない。手元で見直したい場合はその値を編集する)。
-  頻出フレーズ Top30 は簡易な N-gram 頻度集計による参考値(前回とアルゴリズムが
-  異なる可能性があるため目安として扱うこと)。
+  頻出単語 Top30 は janome による形態素解析ベースの名詞頻度集計(語尾・助詞・
+  代名詞・数値等は除外)。
 """
 import csv
 import json
@@ -74,8 +74,15 @@ KNOWN_UNLISTED_DEPARTMENTS = {
     'system@city.hakodate.hokkaido.jp': ('(システムアカウント)', '総務部情報システム課'),
 }
 
+# メールアドレスを持たない職員は、生ログの ユーザー名 列に
+# "<6桁の職員番号>@北海道_函館市" という形式でアカウントIDが記録される。
+EMPLOYEE_NO_LOGIN_SUFFIX = '@北海道_函館市'
+
 
 def load_registrants():
+    """regs は生ログの ユーザー名 列の値(メールアドレス、または職員番号ベースの
+    ログインID)をキーにした辞書。表示用の実メールアドレス/職員番号は
+    各レコードの 'email' / 'employee_no' に別途保持する。"""
     regs = {}
     dept_registrant_count = collections.Counter()
     if not os.path.exists(REGISTRANTS_PATH):
@@ -83,17 +90,23 @@ def load_registrants():
     with open(REGISTRANTS_PATH, encoding='utf-8-sig') as f:
         r = csv.DictReader(f)
         for row in r:
-            email = row['email']
-            regs[email] = {
-                'name': row.get('name') or email,
+            email = (row.get('email') or '').strip()
+            employee_no = (row.get('employee_no') or '').strip()
+            if not email and not employee_no:
+                continue
+            login_id = email if email else f'{employee_no}{EMPLOYEE_NO_LOGIN_SUFFIX}'
+            dept = row.get('department') or '(未登録)'
+            regs[login_id] = {
+                'name': row.get('name') or login_id,
                 'kana': row.get('name_kana') or '',
-                'department': row.get('department') or '(未登録)',
-                'employee_no': row.get('employee_no') or '',
+                'department': dept,
+                'email': email,
+                'employee_no': employee_no,
             }
-            dept_registrant_count[row.get('department') or '(未登録)'] += 1
+            dept_registrant_count[dept] += 1
     for email, (name, dept) in KNOWN_UNLISTED_DEPARTMENTS.items():
         if email not in regs:
-            regs[email] = {'name': name, 'kana': '', 'department': dept, 'employee_no': ''}
+            regs[email] = {'name': name, 'kana': '', 'department': dept, 'email': email, 'employee_no': ''}
     return regs, dept_registrant_count
 
 
@@ -213,31 +226,35 @@ def count_sessions(user_rows, gap_minutes=60):
     return n_sessions
 
 
-def top_ngrams(texts, top_n=30, min_len=3, max_len=12):
-    # 簡易な部分文字列(n-gram)頻度集計。テンプレ文言・システムプロンプトも含む粗い参考値。
+# 形態素解析による単語単位の頻出語集計(janome、辞書同梱の純Python実装)。
+# 名詞のみを対象とし、語尾・助詞・代名詞・数値など意味の薄い語は除外する。
+_word_tokenizer = None
+
+_NOUN_STOPWORDS = {
+    'こと', 'もの', 'ため', 'よう', 'これ', 'それ', 'あれ', 'ここ', 'そこ', 'あそこ',
+    'どこ', '何', 'とき', '時', '場合', '等', 'など', 'ところ', 'うえ', '上', '中', '下',
+    '前', '後', '際', '方', '内容', 'それぞれ', 'ここまで', 'もん',
+}
+
+
+def top_words(texts, top_n=30):
+    global _word_tokenizer
+    if _word_tokenizer is None:
+        from janome.tokenizer import Tokenizer
+        _word_tokenizer = Tokenizer()
     counter = collections.Counter()
     for t in texts:
-        t = t.strip()
-        L = len(t)
-        if L < min_len:
+        if not t:
             continue
-        step = max(1, L // 400)  # 長文はサンプリングして計算量を抑える
-        for length in range(min_len, min(max_len, L) + 1):
-            for i in range(0, L - length + 1, step):
-                frag = t[i:i + length]
-                if frag.strip() and '\n' not in frag:
-                    counter[frag] += 1
-    # 短いフレーズが長いフレーズの部分文字列として重複カウントされやすいので、
-    # 出現数が同程度の下位互換(部分文字列)を間引く簡易フィルタ
-    items = counter.most_common(top_n * 4)
-    picked = []
-    for frag, cnt in items:
-        if any(frag in p[0] and cnt <= p[1] * 1.05 for p in picked):
-            continue
-        picked.append((frag, cnt))
-        if len(picked) >= top_n:
-            break
-    return picked
+        for tok in _word_tokenizer.tokenize(t):
+            pos = tok.part_of_speech.split(',')
+            if pos[0] != '名詞' or pos[1] in ('数', '非自立', '代名詞', '接尾', '接続詞的'):
+                continue
+            surface = tok.surface
+            if len(surface) < 2 or surface in _NOUN_STOPWORDS or surface.isdigit():
+                continue
+            counter[surface] += 1
+    return counter.most_common(top_n)
 
 
 def build(csv_path, out_path):
@@ -448,7 +465,7 @@ def build(csv_path, out_path):
         })
     ai_char_stats.sort(key=lambda x: -x['mean'])
 
-    phrases = top_ngrams([r['text'] for r in user_rows if r['text']])
+    words = top_words([r['text'] for r in user_rows if r['text']])
 
     # ---------- 業務削減効果_試算 ----------
     total_in_chars = sum(r['chars'] for r in user_rows)
@@ -463,7 +480,7 @@ def build(csv_path, out_path):
         'model_stats': model_stats, 'ai_stats': ai_stats,
         'hourly': hourly, 'weekday_stats': weekday_stats, 'daily': daily, 'trend': trend,
         'length_dist': length_dist, 'attachment': attachment, 'ai_char_stats': ai_char_stats,
-        'phrases': phrases,
+        'words': words,
         'total_prompts': total_prompts, 'total_responses': len(asst_rows),
         'total_in_chars': total_in_chars, 'total_out_chars': total_out_chars,
         'total_users': total_users, 'settings': settings,
@@ -560,8 +577,8 @@ def write_workbook(data, regs, out_path):
     headers = ['No', 'メールアドレス', '職員番号', '氏名', '氏名（カナ）', '部署名']
     ws.append([]); ws.append(headers)
     style_header_row(ws, 4, len(headers))
-    for i, (email, r) in enumerate(regs.items(), start=1):
-        ws.append([i, email, r.get('employee_no'), r.get('name'), r.get('kana'), r.get('department')])
+    for i, r in enumerate(regs.values(), start=1):
+        ws.append([i, r.get('email'), r.get('employee_no'), r.get('name'), r.get('kana'), r.get('department')])
     autosize(ws, [6, 32, 10, 16, 18, 26])
 
     # ===== モデル・機能別集計 =====
@@ -638,11 +655,11 @@ def write_workbook(data, regs, out_path):
     for a in data['ai_char_stats']:
         ws.append([a['ai_name'], a['mean'], a['median']])
     c_start = ws.max_row + 2
-    ws.cell(c_start, 1).value = '▼ 入力テキスト 頻出フレーズ Top30（簡易N-gram、参考値）'; ws.cell(c_start, 1).font = header_font
-    ws.append(['フレーズ（3文字以上）', '出現回数'])
+    ws.cell(c_start, 1).value = '▼ 入力テキスト 頻出単語 Top30（名詞、形態素解析）'; ws.cell(c_start, 1).font = header_font
+    ws.append(['単語', '出現回数'])
     style_header_row(ws, c_start + 1, 2)
-    for frag, cnt in data['phrases']:
-        ws.append([frag, cnt])
+    for word, cnt in data['words']:
+        ws.append([word, cnt])
     for r in range(6, ws.max_row + 1):
         c = ws.cell(r, 3)
         if isinstance(c.value, float):
