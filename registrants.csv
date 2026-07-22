@@ -1,9 +1,11 @@
 ﻿email,employee_no,name,name_kana,access_level,department,status
+yamazaki.y@city.hakodate.hokkaido.jp,,山崎　雄平,ヤマザキ　ユウヘイ,メンバー,福祉事務所高齢福祉課,未完了
+endo.k@city.hakodate.hokkaido.jp,,遠藤　和希,エンドウ　カズキ,メンバー,福祉事務所高齢福祉課,未完了
 tatebe@city.hakodate.hokkaido.jp,,建部　勝自,タテベ　カツジ,メンバー,保健福祉部地域包括ケア推進課,未完了
 tanimoto.kazuki@city.hakodate.hokkaido.jp,,溪本　和貴,タニモト　カズキ,メンバー,都市建設部都市整備課,未完了
-shiokoshi@city.hakodate.hokkaido.jp,,塩越　大地,シオコシ　ダイチ,メンバー,福祉事務所高齢福祉課,未完了
+shiokoshi@city.hakodate.hokkaido.jp,,塩越　大地,シオコシ　ダイチ,メンバー,福祉事務所高齢福祉課,完了
 masuko.y@city.hakodate.hokkaido.jp,,益子　由慎,マスコ　ユシン,メンバー,保健福祉部地域包括ケア推進課,未完了
-ikari@city.hakodate.hokkaido.jp,,猪狩　憲司,イカリ　ケンジ,メンバー,福祉事務所高齢福祉課,未完了
+ikari@city.hakodate.hokkaido.jp,,猪狩　憲司,イカリ　ケンジ,メンバー,福祉事務所高齢福祉課,完了
 tsuchida.kazuhiro@city.hakodate.hokkaido.jp,,土田　和宏,ツチダ　カズヒロ,メンバー,総務部文書法制課,完了
 takagi.m@city.hakodate.hokkaido.jp,,高木　幹彦,タカギ　ミキヒコ,メンバー,保健福祉部介護保険課,完了
 ueda.kento@city.hakodate.hokkaido.jp,,上田　絃人,ウエダ　ケント,メンバー,生涯学習部管理課,完了
@@ -17,7 +19,7 @@ nakagawa.tatsuki@city.hakodate.hokkaido.jp,,中川　樹,ナカガワ　タツ�
 kaga.akio@city.hakodate.hokkaido.jp,,加我　明夫,カガ　アキオ,管理者,南茅部支所産業建設課,完了
 fujieda@city.hakodate.hokkaido.jp,,藤枝　千佳子,フジエダ　チカコ,メンバー,市民部国保年金課,未完了
 murai.yuta@city.hakodate.hokkaido.jp,,村井　雄太,ムライ　ユウタ,メンバー,企業局上下水道部管路整備室,未完了
-kimura.kazu@city.hakodate.hokkaido.jp,,木村　一成,キムラ　カズナリ,メンバー,総務部災害対策課,未完了
+kimura.kazu@city.hakodate.hokkaido.jp,,木村　一成,キムラ　カズナリ,メンバー,総務部災害対策課,完了
 watanabe.h@city.hakodate.hokkaido.jp,,渡辺　裕紀,ワタナベ　ヒロキ,メンバー,病院局管理部庶務課,完了
 takahashi.k@city.hakodate.hokkaido.jp,,高橋　健介,タカハシ　ケンスケ,メンバー,企業局管理部経理課,完了
 keita.watanabe@city.hakodate.hokkaido.jp,,渡邉　啓太,ワタナベ　ケイタ,管理者,保健所生活衛生課,完了
@@ -188,7 +190,7 @@ tonooka@city.hakodate.hokkaido.jp,,外岡　佳代子,トノオカ　カヨコ,�
 tomita.yoshimi@city.hakodate.hokkaido.jp,,冨田　好美,トミタ　ヨシミ,管理者,学校教育部学校教育課,完了
 tomine@city.hakodate.hokkaido.jp,,遠峯　良太,トオミネ　リョウタ,メンバー,生涯学習部スポーツ振興課,未完了
 teshiromori@city.hakodate.hokkaido.jp,,手代森　佳幸,テシロモリ　ヨシユキ,管理者,生涯学習部管理課,完了
-terashima.k@city.hakodate.hokkaido.jp,,寺嶋　一也,テラシマ　カズヤ,メンバー,企業局管理部経営企画課,未完了
+terashima.k@city.hakodate.hokkaido.jp,,寺嶋　一也,テラシマ　カズヤ,メンバー,企業局管理部経営企画課,完了
 teramura@city.hakodate.hokkaido.jp,,寺村　日出人,テラムラ　ヒデト,メンバー,子ども未来部子ども健やか育成課,未完了
 teramoto@city.hakodate.hokkaido.jp,,寺本　歩,テラモト　アユム,メンバー,福祉事務所湯川福祉課,未完了
 tenma@city.hakodate.hokkaido.jp,,天満　真吾,テンマ　シンゴ,メンバー,福祉事務所生活支援総務課,完了
@@ -345,7 +347,7 @@ nakahama.t@city.hakodate.hokkaido.jp,,中浜　武敏,ナカハマ　タケト�
 nakagawa.yun@city.hakodate.hokkaido.jp,,阿部　優南,アベ　ユウナ,メンバー,経済部企業立地推進課,未完了
 nakagawa.t@city.hakodate.hokkaido.jp,,中川　知子,ナカガワ　トモコ,メンバー,子ども未来部子どもサービス課,未完了
 nakagawa.k@city.hakodate.hokkaido.jp,,中川　慧,ナカガワ　ケイ,メンバー,消防本部東消防署的場支署,未完了
-nakagai@city.hakodate.hokkaido.jp,,中貝　聡介,ナカガイ　ソウスケ,メンバー,企業局管理部料金課,未完了
+nakagai@city.hakodate.hokkaido.jp,,中貝　聡介,ナカガイ　ソウスケ,メンバー,企業局管理部料金課,完了
 nakagai.madoka@city.hakodate.hokkaido.jp,,中貝　円香,ナカガイ　マドカ,メンバー,生涯学習部管理課,完了
 naito.yumena@city.hakodate.hokkaido.jp,,内藤　夢奈,ナイトウ　ユメナ,メンバー,子ども未来部母子保健課,完了
 naito.y@city.hakodate.hokkaido.jp,,内藤　雄太,ナイトウ　ユウタ,メンバー,子ども未来部子ども健やか育成課,未完了
@@ -627,7 +629,7 @@ ozaki.takanori@city.hakodate.hokkaido.jp,,雄崎　貴則,オザキ　タカノ�
 okada.emi@city.hakodate.hokkaido.jp,,岡田　絵美,オカダ　エミ,メンバー,選挙管理委員会事務局選挙課,完了
 ohsumi.hiroyuki@city.hakodate.hokkaido.jp,,大住　洋之,オオスミ　ヒロユキ,管理者,南茅部支所地域振興課,完了
 mineyama@city.hakodate.hokkaido.jp,,峯山　英幸,ミネヤマ　ヒデユキ,管理者,生涯学習部恵山教育事務所,完了
-matsuura.shun@city.hakodate.hokkaido.jp,,松浦　舜,マツウラ　シュン,管理者,南茅部支所地域振興課,未完了
+matsuura.shun@city.hakodate.hokkaido.jp,,松浦　舜,マツウラ　シュン,管理者,南茅部支所地域振興課,完了
 m.taniguchi@city.hakodate.hokkaido.jp,,谷口　雅之,タニグチ　マサユキ,メンバー,恵山支所市民福祉課,未完了
 kudo.yusuke@city.hakodate.hokkaido.jp,,工藤　優祐,クドウ　ユウスケ,メンバー,選挙管理委員会事務局選挙課,完了
 kiyosawa.akihiro@city.hakodate.hokkaido.jp,,清澤　明広,キヨサワ　アキヒロ,メンバー,恵山支所地域振興課,完了
@@ -912,7 +914,7 @@ saito.yuki@city.hakodate.hokkaido.jp,,齋藤　由紀,サイトウ　ユキ,メ�
 ono@city.hakodate.hokkaido.jp,,小野　浩,オノ　ヒロシ,メンバー,監査事務局監査課,完了
 narita.t@city.hakodate.hokkaido.jp,,成田　達哉,ナリタ　タツヤ,メンバー,総務部災害対策課,完了
 mitsui.h@city.hakodate.hokkaido.jp,,三ッ井　悠花,ミツイ　ハルカ,メンバー,総務部人事課,未完了
-kawaguchi.hiroshi@city.hakodate.hokkaido.jp,,川口　洋,カワグチ　ヒロシ,メンバー,総務部災害対策課,未完了
+kawaguchi.hiroshi@city.hakodate.hokkaido.jp,,川口　洋,カワグチ　ヒロシ,メンバー,総務部災害対策課,完了
 hayase.hiroshi@city.hakodate.hokkaido.jp,,早瀬　洋,ハヤセ　ヒロシ,管理者,総務部文書法制課,完了
 hikichi.k@city.hakodate.hokkaido.jp,,引地　小夏,ヒキチ　コナツ,メンバー,監査事務局監査課,完了
 yonekura.kohei@city.hakodate.hokkaido.jp,,米倉　航平,ヨネクラ　コウヘイ,メンバー,総務部総務課,完了
