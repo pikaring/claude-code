@@ -142,16 +142,22 @@ try {
   let download;
   let lastErr;
   for (let attempt = 1; attempt <= 3 && !download; attempt++) {
+    // 前の試行で使った waitForEvent の Promise が残っていると、この試行が
+    // 終わった後にバックグラウンドでタイムアウト→未処理rejectionでプロセスが
+    // クラッシュすることがあった(2026-07-23 の本番実行で発生)。必ず
+    // .catch() を付けて破棄し、次の試行に進む。
+    let dl;
     try {
       await menuBtn.click();
       await page.waitForTimeout(1500);
       const exportItem = page.locator('[role="menuitem"]:has-text("Export to CSV")').first();
       await exportItem.waitFor({ state: 'visible', timeout: 10000 });
-      const dl = page.waitForEvent('download', { timeout: 120000 }); // 件数が多いと生成に時間がかかる
+      dl = page.waitForEvent('download', { timeout: 120000 }); // 件数が多いと生成に時間がかかる
       await exportItem.click({ timeout: 10000 });
       download = await dl;
     } catch (e) {
       lastErr = e;
+      if (dl) dl.catch(() => {}); // 未処理rejection化を防ぐ
       console.error(`Export to CSV 試行${attempt}回目 失敗: ${e.message.split('\n')[0]}`);
       await page.keyboard.press('Escape').catch(() => {});
       await page.waitForTimeout(8000);
