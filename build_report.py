@@ -412,14 +412,12 @@ def build(csv_path, out_path):
     department = []
     for d, a in dept_agg.items():
         registrant_count = dept_reg_count.get(d, len(a['users']))
-        # 「未完了」(=まだ利用開始していない登録者)は利用機会が無いため、
-        # 利用率の分母は「完了」(利用開始済み)登録者数を使う。
         registrant_started = dept_reg_started.get(d, registrant_count)
         user_count = len(a['users'])
         department.append({
             'department': d, 'registrants': registrant_count, 'registrants_started': registrant_started,
             'users': user_count,
-            'usage_rate': (user_count / registrant_started) if registrant_started else None,
+            'usage_rate': (user_count / registrant_count) if registrant_count else None,
             'prompts': a['prompts'], 'responses': a['responses'],
             'records': a['prompts'] + a['responses'], 'chars': a['chars'],
             'prompts_per_user': round(a['prompts'] / user_count) if user_count else 0,
@@ -608,7 +606,7 @@ def write_workbook(data, regs, out_path):
     ws = wb.create_sheet('部署別集計')
     ws['A1'] = 'QommonsAI 利用集計（部署別）'; ws['A1'].font = title_font
     ws['A2'] = (f"{period_label}  ／ 利用回数=プロンプト(質問)数  ／ 使用文字数=入力+出力(プレフィックス除く)"
-                "  ／ 利用率=利用者数÷登録者数(利用開始済み)"); ws['A2'].font = note_font
+                "  ／ 利用率=利用者数÷登録者数(全体)"); ws['A2'].font = note_font
     headers = ['部署名', '登録者数\n(全体)', '登録者数\n(利用開始済み)', '利用者数', '利用率',
                'プロンプト数', '応答数', '合計レコード', '使用文字数', '1人あたり\nプロンプト数(利用者)']
     ws.append([]); ws.append(headers)
