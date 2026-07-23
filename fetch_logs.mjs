@@ -132,10 +132,19 @@ try {
 
   // 5. 「利用ログ」テーブルにホバー → メニュー → Export to CSV
   const vis = page.locator('text=Table, 利用ログ').first();
-  const box = await vis.boundingBox().catch(() => null);
-  if (box) await page.mouse.move(box.x + box.width / 2, box.y + 40);
-  await page.waitForTimeout(2000);
   const menuBtn = page.locator('[aria-label="Menu options, 利用ログ, Table"]');
+
+  // QuickSightのツールバー(3点リーダー)はマウスホバー中しか表示されない。
+  // ループの外で1回だけホバーすると、前の試行のEscapeキーやクリックで
+  // マウスが離れた際にツールバーが消え、次の試行でメニューボタンの
+  // クリックがタイムアウトすることがあった(2026-07-24 の本番実行で発生)。
+  // 各試行の冒頭で毎回ホバーし直す。
+  async function hoverVisual() {
+    const box = await vis.boundingBox().catch(() => null);
+    if (box) await page.mouse.move(box.x + box.width / 2, box.y + 40);
+    await page.waitForTimeout(1500);
+  }
+  await hoverVisual();
   await menuBtn.waitFor({ state: 'visible', timeout: 20000 });
 
   // メニュー項目が無効(データ未読み込み)な場合があるため、開き直しながら数回試す。
@@ -148,6 +157,7 @@ try {
     // .catch() を付けて破棄し、次の試行に進む。
     let dl;
     try {
+      if (attempt > 1) await hoverVisual();
       await menuBtn.click();
       await page.waitForTimeout(1500);
       const exportItem = page.locator('[role="menuitem"]:has-text("Export to CSV")').first();
