@@ -103,31 +103,55 @@ try {
   await page.unroute('**quicksight.aws.amazon.com/embed/**');
 
   // 3. QuickSight をトップレベルで開く
-  await page.goto(embedUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await page.waitForTimeout(15000);
-
-  // 4. Controls を展開して日付を当月1日〜当日(JST)に設定
-  await page.locator('[aria-label="Controls"]').click().catch(() => {});
-  await page.waitForTimeout(2000);
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
   const pad = n => String(n).padStart(2, '0');
   const start = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/01 00:00:00`;
   const end = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} 23:59:59`;
-  const dates = page.locator('input[aria-label="Enter a date"]');
-  await dates.nth(0).waitFor({ state: 'visible', timeout: 15000 });
-  await dates.nth(0).fill(start); await dates.nth(0).press('Enter');
-  await page.waitForTimeout(2000);
-  await dates.nth(1).fill(end); await dates.nth(1).press('Enter');
-  console.log(`期間設定: ${start} 〜 ${end}`);
-  await page.waitForTimeout(15000); // データ再読み込み待ち
 
-  // テーブルに実データ行が表示される(=エクスポート操作が可能になる)まで待つ。
-  // 「利用ログ」テーブル本体は座標が変わりやすいため、行データらしきテキスト
-  // (メールアドレス形式のセル)が現れるまでポーリングする。
-  const tableLoaded = page.locator('text=/@city\\.hakodate\\.hokkaido\\.jp/').first();
-  await tableLoaded.waitFor({ state: 'visible', timeout: 60000 }).catch(() => {
-    console.error('WARN: テーブル行の読み込み確認がタイムアウトしました。そのまま続行します。');
-  });
+  // 月末に近づき対象件数が増えると、QuickSight側のクエリが
+  // "Getting data for this visualization took too long" で失敗し、
+  // Export to CSV が disabled のまま(=何度リトライしても無駄)になることがある
+  // (2026-07-27 の本番実行で発生)。この場合はページを再読み込みして
+  // 日付設定からやり直す。
+  const tooLongError = page.getByText('Getting data for this visualization took too long');
+  let tableReady = false;
+  for (let loadAttempt = 1; loadAttempt <= 3 && !tableReady; loadAttempt++) {
+    if (loadAttempt === 1) {
+      await page.goto(embedUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    } else {
+      console.error(`テーブルのクエリタイムアウトを検知。ページを再読み込みして再試行します(${loadAttempt}回目)。`);
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+    }
+    await page.waitForTimeout(15000);
+
+    // Controls を展開して日付を当月1日〜当日(JST)に設定
+    await page.locator('[aria-label="Controls"]').click().catch(() => {});
+    await page.waitForTimeout(2000);
+    const dates = page.locator('input[aria-label="Enter a date"]');
+    await dates.nth(0).waitFor({ state: 'visible', timeout: 15000 });
+    await dates.nth(0).fill(start); await dates.nth(0).press('Enter');
+    await page.waitForTimeout(2000);
+    await dates.nth(1).fill(end); await dates.nth(1).press('Enter');
+    console.log(`期間設定: ${start} 〜 ${end}`);
+    await page.waitForTimeout(20000); // データ再読み込み待ち(月末は通常より長めに待つ)
+
+    // テーブルに実データ行が表示される(=エクスポート操作が可能になる)まで待つ。
+    // 「利用ログ」テーブル本体は座標が変わりやすいため、行データらしきテキスト
+    // (メールアドレス形式のセル)が現れるまでポーリングする。
+    const tableLoaded = page.locator('text=/@city\\.hakodate\\.hokkaido\\.jp/').first();
+    const raceResult = await Promise.race([
+      tableLoaded.waitFor({ state: 'visible', timeout: 90000 }).then(() => 'loaded').catch(() => 'timeout'),
+      tooLongError.waitFor({ state: 'visible', timeout: 90000 }).then(() => 'query_timeout').catch(() => 'timeout'),
+    ]);
+    if (raceResult === 'loaded') {
+      tableReady = true;
+    } else if (raceResult === 'query_timeout') {
+      continue; // ページ再読み込みして再試行
+    } else {
+      console.error('WARN: テーブル行の読み込み確認がタイムアウトしました。そのまま続行します。');
+      tableReady = true; // 判定不能。従来通りとりあえず先に進む
+    }
+  }
   await page.waitForTimeout(2000);
 
   // 5. 「利用ログ」テーブルにホバー → メニュー → Export to CSV
