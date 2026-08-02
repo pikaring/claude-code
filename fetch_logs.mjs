@@ -105,8 +105,12 @@ try {
   // 3. QuickSight をトップレベルで開く
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
   const pad = n => String(n).padStart(2, '0');
-  const start = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/01 00:00:00`;
-  const end = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} 23:59:59`;
+  // QOMMONS_START_DATE / QOMMONS_END_DATE / QOMMONS_FILE_DATE を設定すると、
+  // 当月以外の期間(例: 過去月の再取得)を明示指定できる。未設定時は従来通り
+  // 当月1日〜当日(JST)。
+  const start = process.env.QOMMONS_START_DATE || `${now.getFullYear()}/${pad(now.getMonth() + 1)}/01 00:00:00`;
+  const end = process.env.QOMMONS_END_DATE || `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} 23:59:59`;
+  const fileDate = process.env.QOMMONS_FILE_DATE || `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   // 月末に近づき対象件数が増えると、QuickSight側のクエリが
   // "Getting data for this visualization took too long" で失敗し、
@@ -198,7 +202,7 @@ try {
     }
   }
   if (!download) throw lastErr || new Error('Export to CSV に繰り返し失敗しました');
-  const outPath = path.join(downloadsDir, `qommons-log-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.csv`);
+  const outPath = path.join(downloadsDir, `qommons-log-${fileDate}.csv`);
   await download.saveAs(outPath);
   console.log(`DOWNLOADED: ${outPath}`);
 } catch (err) {

@@ -57,11 +57,15 @@ def main():
     with open(sys.argv[1], encoding='utf-8') as f:
         labels = json.load(f)
 
-    month_files = sorted(glob.glob(os.path.join(HERE, 'reports', 'QommonsAI利用集計_*.xlsx')))
+    # ファイル名(月)の並び順ではなく更新日時で選ぶ。過去月を後から再実行した
+    # 場合(例: 8月分作成後に7月分を再取得)でも、直前に build_report.py が
+    # 書き出した(=最新更新の)ファイルを正しく対象にするため。
+    month_files = glob.glob(os.path.join(HERE, 'reports', 'QommonsAI利用集計_*.xlsx'))
     if not month_files:
         print("ERROR: reports/QommonsAI利用集計_*.xlsx が見つかりません。先に build_report.py を実行してください。")
         sys.exit(1)
-    label_workbook(month_files[-1], labels)
+    latest_month_file = max(month_files, key=os.path.getmtime)
+    label_workbook(latest_month_file, labels)
     latest = os.path.join(HERE, 'QommonsAI利用集計.xlsx')
     if os.path.exists(latest):
         label_workbook(latest, labels)
