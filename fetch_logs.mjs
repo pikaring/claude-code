@@ -76,11 +76,29 @@ const page = await context.newPage();
 
 try {
   // 1. ログイン
+  // .fill() だとReact側のonChangeが検知せず「ログイン」ボタンがdisabledの
+  // ままになることがあった(2026-08-07の本番実行で発生)。1文字ずつ入力する
+  // pressSequentially に切り替え、ボタンが有効化されるまで待ってからクリックする。
   await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(2000);
-  await page.locator('input[name="username"], input[type="email"], input[placeholder*="メール"]').first().fill(EMAIL, { timeout: 15000 });
-  await page.locator('input[name="password"], input[type="password"]').first().fill(PASSWORD);
-  await page.getByRole('button', { name: /ログイン|log ?in/i }).first().click();
+  const emailInput = page.locator('input[name="username"], input[type="email"], input[placeholder*="メール"]').first();
+  const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
+  await emailInput.click({ timeout: 15000 });
+  await emailInput.pressSequentially(EMAIL, { delay: 30 });
+  await passwordInput.click();
+  await passwordInput.pressSequentially(PASSWORD, { delay: 30 });
+  const loginButton = page.getByRole('button', { name: /ログイン|log ?in/i }).first();
+  await loginButton.evaluate(el => !el.disabled, { timeout: 15000 }).catch(() => {});
+  const enabled = await loginButton.isEnabled().catch(() => false);
+  if (!enabled) {
+    // 念のためもう一度、値をクリアしてから入力し直す
+    await emailInput.fill('');
+    await emailInput.pressSequentially(EMAIL, { delay: 50 });
+    await passwordInput.fill('');
+    await passwordInput.pressSequentially(PASSWORD, { delay: 50 });
+    await page.waitForTimeout(1000);
+  }
+  await loginButton.click({ timeout: 15000 });
   await page.waitForTimeout(5000);
 
   if (page.url().includes('/login')) {
