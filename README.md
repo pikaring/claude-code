@@ -28,11 +28,38 @@ Claude Code on the web の環境(Environment)設定:
 
 ```sh
 npm init -y && npm i playwright   # 初回のみ(ブラウザ本体はプリインストール済み)
+node fetch_registrants.mjs        # 登録者マスタの更新(集計前に必ず実行)
+python3 update_registrants.py     # → registrants.csv を再生成
 node fetch_logs.mjs
 ```
 
 成功すると `downloads/qommons-log-YYYY-MM-DD.csv` が保存されます。
 失敗時は `debug/` にスクリーンショットとページ HTML が残ります。
+
+## 登録者マスタの更新(集計作業の前に必ず実行する)
+
+**2026-08-07 ユーザー指示**: 定期作業(集計)の前に、必ず登録ユーザーを最新化すること。
+アカウント整理(削除・追加・異動)が随時行われるため、古いマスタのままだと
+部署別集計の登録者数・利用率がずれ、所属不明の利用者が「(未登録)」に
+集計されてしまう。
+
+```sh
+node fetch_registrants.mjs      # 組織管理のメンバー一覧を Excel でダウンロード
+python3 update_registrants.py   # registrants.csv を再生成(差分を標準出力に表示)
+```
+
+`fetch_registrants.mjs` の実機確認済みフロー(2026-08-07):
+
+1. `/login` でログイン(入力欄は `pressSequentially` で1文字ずつ入力する。
+   `.fill()` だと React 側の onChange が発火せず、ログインボタンが disabled のままになる)
+2. 画面左下のアカウントメニュー(部署名表示)をクリック → 「組織管理」→ `/management`
+3. 右上「管理」ボタン → 「メンバー登録」→ モーダル内の
+   「ダウンロード：20,000件テンプレート」リンク
+
+ダウンロードされる Excel は名前こそ「テンプレート」だが、**現在の登録メンバー全員が
+事前入力された状態**で入っており、`registrants.csv` と同じ項目(ログインID・氏名・
+カナ・アクセスレベル・部署名・本パスワード設定状況)がそのまま取得できる。
+この Excel は氏名を含むためコミットしない(`.gitignore` 済み)。
 
 ## 実機確認済みのフロー(2026-07-20)
 
