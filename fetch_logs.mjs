@@ -135,7 +135,9 @@ try {
   // Export to CSV が disabled のまま(=何度リトライしても無駄)になることがある
   // (2026-07-27 の本番実行で発生)。この場合はページを再読み込みして
   // 日付設定からやり直す。
-  const tooLongError = page.getByText('Getting data for this visualization took too long');
+  // 同じ文言が複数要素にマッチすると strict mode 違反で waitFor が例外になり、
+  // クエリタイムアウトを検知できなくなるため .first() を付ける。
+  const tooLongError = page.getByText('Getting data for this visualization took too long').first();
   let tableReady = false;
   for (let loadAttempt = 1; loadAttempt <= 3 && !tableReady; loadAttempt++) {
     if (loadAttempt === 1) {
@@ -160,18 +162,26 @@ try {
     // テーブルに実データ行が表示される(=エクスポート操作が可能になる)まで待つ。
     // 「利用ログ」テーブル本体は座標が変わりやすいため、行データらしきテキスト
     // (メールアドレス形式のセル)が現れるまでポーリングする。
+    // 対象件数が増えるほどクエリ完了(またはタイムアウト表示)までの時間が延びる。
+    // 90秒では月半ば以降にエラー表示が出る前に検知を打ち切ってしまい、
+    // Export が disabled のまま先に進んで失敗していた(2026-08-16 の本番実行で発生)。
     const tableLoaded = page.locator('text=/@city\\.hakodate\\.hokkaido\\.jp/').first();
     const raceResult = await Promise.race([
-      tableLoaded.waitFor({ state: 'visible', timeout: 90000 }).then(() => 'loaded').catch(() => 'timeout'),
-      tooLongError.waitFor({ state: 'visible', timeout: 90000 }).then(() => 'query_timeout').catch(() => 'timeout'),
+      tableLoaded.waitFor({ state: 'visible', timeout: 180000 }).then(() => 'loaded').catch(() => 'timeout'),
+      tooLongError.waitFor({ state: 'visible', timeout: 180000 }).then(() => 'query_timeout').catch(() => 'timeout'),
     ]);
     if (raceResult === 'loaded') {
       tableReady = true;
     } else if (raceResult === 'query_timeout') {
       continue; // ページ再読み込みして再試行
+    } else if (loadAttempt < 3) {
+      // 判定不能。テーブルが読めていない可能性が高いので、先に進まず再読み込みする
+      // (先に進むと Export to CSV が disabled のまま3回空振りして失敗するだけ)。
+      console.error('WARN: テーブル行の読み込みもエラー表示も確認できませんでした。再読み込みします。');
+      continue;
     } else {
       console.error('WARN: テーブル行の読み込み確認がタイムアウトしました。そのまま続行します。');
-      tableReady = true; // 判定不能。従来通りとりあえず先に進む
+      tableReady = true; // 最終試行。判定不能だが従来通りとりあえず先に進む
     }
   }
   await page.waitForTimeout(2000);
