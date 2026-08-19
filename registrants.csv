@@ -1,6 +1,10 @@
 ﻿email,employee_no,name,name_kana,access_level,department,status
 ,074665,笹森　正一,ササモリ　マサカズ,メンバー,消防本部北消防署亀田本町支署,未完了
+,116939,山田　直樹,ヤマダ　ナオキ,メンバー,消防本部消防本部救急課,未完了
+,136727,佐藤　彰,サトウ　アキラ,メンバー,消防本部北消防署,未完了
+,139165,飯田 修平,イイダ　シュウヘイ,メンバー,消防本部北消防署,未完了
 ,148351,猖々谷　幸輝,ショウジョウヤ　コウキ,メンバー,消防本部消防本部警防課,完了
+,151629,西村　絢人,ニシムラ　アヤト,メンバー,消防本部北消防署,未完了
 ,162451,山口　将平,ヤマグチ　ショウヘイ,メンバー,病院局管理部庶務課,完了
 ,510254,増山　洋子,マスヤマ　ヨウコ,メンバー,市民部交通安全課,完了
 ,512621,板垣　圭子,イタガキ　ケイコ,メンバー,学校教育部保健給食課,完了
@@ -19,6 +23,7 @@ abe.yoshie@city.hakodate.hokkaido.jp,,阿部　良枝,アベ　ヨシエ,メン�
 agatsuma@city.hakodate.hokkaido.jp,,我妻　宏,アガツマ　ヒロシ,メンバー,港湾空港部港湾空港振興課,未完了
 aikawa@city.hakodate.hokkaido.jp,,相川　将太,アイカワ　ショウタ,メンバー,保健福祉部健康増進課,未完了
 aiuchi@city.hakodate.hokkaido.jp,,相内　優作,アイウチ　ユウサク,メンバー,学校教育部学校教育課,完了
+aketa.s@city.hakodate.hokkaido.jp,,緋田　祥子,アケタ　ショウコ,メンバー,子ども未来部子ども見守り・相談課,未完了
 akimoto.y@city.hakodate.hokkaido.jp,,秋元　悠希,アキモト　ユウキ,メンバー,子ども未来部子どもサービス課,完了
 akita.y@city.hakodate.hokkaido.jp,,秋田　優一,アキタ　ユウイチ,メンバー,保健福祉部地域福祉課,完了
 amano.take@city.hakodate.hokkaido.jp,,天野　武春,アマノ　タケハル,メンバー,銭亀沢支所,未完了
@@ -36,11 +41,12 @@ ariga.tomoka@city.hakodate.hokkaido.jp,,有賀　友香,アリガ　トモカ,�
 asai@city.hakodate.hokkaido.jp,,浅井　恭子,アサイ　キョウコ,メンバー,はこだて療育・自立支援センター,完了
 asakura@city.hakodate.hokkaido.jp,,朝倉　美紀,アサクラ　ミキ,メンバー,総務部職員厚生課,完了
 aso@city.hakodate.hokkaido.jp,,麻生　礼子,アソウ　レイコ,メンバー,はこだて療育・自立支援センター,完了
-azuma.h@city.hakodate.hokkaido.jp,,東　裕人,アズマ　ヒロト,メンバー,土木部道路建設課,完了
+azuma.h@city.hakodate.hokkaido.jp,,東　裕人,アズマ　ヒロト,管理者,土木部道路建設課,完了
+azumaya@city.hakodate.hokkaido.jp,,稲船　雛弥,イナフネ　ヒナヨ,メンバー,経済部商業振興課,完了
 chano@city.hakodate.hokkaido.jp,,茶野　一,チャノ　ハジメ,メンバー,都市建設部都市計画課,完了
 chiba.e@city.hakodate.hokkaido.jp,,千葉　英里奈,チバ　エリナ,メンバー,経済部食産業振興課,完了
 chiba.shuhei@city.hakodate.hokkaido.jp,,千葉　周平,チバ　シュウヘイ,メンバー,財務部税務室,完了
-debayashi@city.hakodate.hokkaido.jp,,出林　好成,デバヤシ　コウセイ,管理者,企画部企画管理課,未完了
+debayashi@city.hakodate.hokkaido.jp,,出林　好成,デバヤシ　コウセイ,管理者,企画部企画管理課,完了
 deguchi.k@city.hakodate.hokkaido.jp,,出口　和伸,デグチ　カズノブ,メンバー,財務部税務室,完了
 durafourd@city.hakodate.hokkaido.jp,,ドゥラフォード　青佳,ドゥラフォード　ハルカ,メンバー,保健所保健予防課,完了
 ebiko@city.hakodate.hokkaido.jp,,蛯子　準,エビコ　ジュン,メンバー,福祉事務所湯川福祉課,完了
@@ -68,7 +74,7 @@ fukushi.towa@city.hakodate.hokkaido.jp,,福士　翔和,フクシ　トワ,メ�
 fukushi.yuya@city.hakodate.hokkaido.jp,,福士　裕也,フクシ　ユウヤ,管理者,会計部会計課,完了
 fukushima.a@city.hakodate.hokkaido.jp,,福島　章智,フクシマ　アキトモ,メンバー,消防本部北消防署,完了
 fukushima.keigo@city.hakodate.hokkaido.jp,,福島　慧悟,フクシマ　ケイゴ,メンバー,港湾空港部管理課,完了
-fukushima.y@city.hakodate.hokkaido.jp,,福嶋　優里子,フクシマ　ユリコ,メンバー,土木部管理課,完了
+fukushima.y@city.hakodate.hokkaido.jp,,福嶋　優里子,フクシマ　ユリコ,管理者,土木部管理課,完了
 funayama@city.hakodate.hokkaido.jp,,舩山　晴菜,フナヤマ　ハルナ,メンバー,財務部税務室,完了
 furube.wataru@city.hakodate.hokkaido.jp,,古部　渉,フルベ　ワタル,メンバー,恵山支所産業建設課,未完了
 furukawa.r@city.hakodate.hokkaido.jp,,古川　璃奈,フルカワ　リナ,メンバー,保健福祉部高齢福祉課,完了
@@ -132,6 +138,7 @@ igarashi.e@city.hakodate.hokkaido.jp,,五十嵐　瑛瑠,イガラシ　エル,�
 igarashi.hiromi@city.hakodate.hokkaido.jp,,五十嵐　広美,イガラシ　ヒロミ,メンバー,市民部国保年金課,未完了
 igarashi.ka@city.hakodate.hokkaido.jp,,五十嵐　かなめ,イガラシ　カナメ,メンバー,経済部食産業振興課,未完了
 iida.toshitsugi@city.hakodate.hokkaido.jp,,飯田　敏次,イイダ　トシツギ,管理者,選挙管理委員会事務局選挙課,完了
+iida@city.hakodate.hokkaido.jp,,飯田　美希子,イイダ　ミキコ,メンバー,市民部国保年金課,完了
 ikari@city.hakodate.hokkaido.jp,,猪狩　憲司,イカリ　ケンジ,メンバー,福祉事務所高齢福祉課,完了
 ikeda.aya@city.hakodate.hokkaido.jp,,池田　文,イケダ　アヤ,メンバー,市民部くらし安心課,完了
 ikeda.h@city.hakodate.hokkaido.jp,,池田　隼人,イケダ　ハヤト,メンバー,港湾空港部港湾空港振興課,完了
@@ -215,7 +222,7 @@ kanazawa.aym@city.hakodate.hokkaido.jp,,金澤　亜由美,カナザワ　アユ
 kanbara@city.hakodate.hokkaido.jp,,神原　嵩,カンバラ　タカシ,メンバー,経済部経済企画課,未完了
 kanbayashi.yu@city.hakodate.hokkaido.jp,,神林　侑平,カンバヤシ　ユウヘイ,メンバー,消防本部消防本部警防課,完了
 kanda.yuka@city.hakodate.hokkaido.jp,,勘田　祐花,カンダ　ユウカ,メンバー,保健福祉部指導監査課,完了
-kaneko.t@city.hakodate.hokkaido.jp,,金子　知代,カネコ　トモヨ,メンバー,子ども未来部子どもサービス課,未完了
+kaneko.t@city.hakodate.hokkaido.jp,,金子　知代,カネコ　トモヨ,メンバー,子ども未来部子どもサービス課,完了
 kaneko@city.hakodate.hokkaido.jp,,金子　良介,カネコ　リョウスケ,メンバー,市民部市民・男女共同参画課,完了
 kaneniwa@city.hakodate.hokkaido.jp,,金庭　宏明,カネニワ　ヒロアキ,メンバー,福祉事務所亀田福祉課,完了
 kaneno.yukiko@city.hakodate.hokkaido.jp,,金野　維子,カネノ　ユキコ,メンバー,選挙管理委員会事務局,完了
@@ -248,7 +255,7 @@ kawakami.h@city.hakodate.hokkaido.jp,,川上　日香里,カワカミ　ヒカ�
 kawakami.r@city.hakodate.hokkaido.jp,,川上　亮太,カワカミ　リョウタ,メンバー,観光部観光総務課,完了
 kawamura.c@city.hakodate.hokkaido.jp,,川村　智恵子,カワムラ　チエコ,メンバー,企業局管理部料金課,完了
 kawamura.k@city.hakodate.hokkaido.jp,,川村　浩二,カワムラ　コウジ,メンバー,農林水産部農林整備課,未完了
-kawamura.kota@city.hakodate.hokkaido.jp,,川村　洸太,カワムラ　コウタ,メンバー,土木部管理課,完了
+kawamura.kota@city.hakodate.hokkaido.jp,,川村　洸太,カワムラ　コウタ,管理者,土木部管理課,完了
 kawamura.ma@city.hakodate.hokkaido.jp,,河村　雅恵,カワムラ　マサエ,メンバー,子ども未来部子どもサービス課,完了
 kawamura.miho@city.hakodate.hokkaido.jp,,川村　美穂,カワムラ　ミホ,管理者,保健福祉部地域包括ケア推進課,完了
 kawasaki.naoko@city.hakodate.hokkaido.jp,,川崎　尚子,カワサキ　ナオコ,メンバー,港湾空港部管理課,完了
@@ -262,7 +269,7 @@ keita.watanabe@city.hakodate.hokkaido.jp,,渡邉　啓太,ワタナベ　ケイ�
 keta@city.hakodate.hokkaido.jp,,氣田　聖大,ケタ　マサキ,メンバー,保健福祉部,完了
 kigawa@city.hakodate.hokkaido.jp,,木川　浩文,キガワ　ヒロフミ,メンバー,市民部くらし安心課,完了
 kikuchi.k@city.hakodate.hokkaido.jp,,菊地　建一,キクチ　ケンイチ,メンバー,南茅部支所,完了
-kikuchi.mai@city.hakodate.hokkaido.jp,,菊池　真衣,キクチ　マイ,メンバー,土木部管理課,完了
+kikuchi.mai@city.hakodate.hokkaido.jp,,菊池　真衣,キクチ　マイ,管理者,土木部管理課,完了
 kikuchi.masa@city.hakodate.hokkaido.jp,,菊地　正明,キクチ　マサアキ,メンバー,湯川支所,完了
 kikuchi.yukiko@city.hakodate.hokkaido.jp,,菊地　由季子,キクチ　ユキコ,メンバー,総務部人事課,完了
 kimoto.a@city.hakodate.hokkaido.jp,,木元　歩惟,キモト　アユム,メンバー,保健福祉部健康増進課,完了
@@ -300,7 +307,7 @@ kobayashi.ryota@city.hakodate.hokkaido.jp,,小林　亮太,コバヤシ　リョ
 kobayashi.sho@city.hakodate.hokkaido.jp,,小林　翔太,コバヤシ　ショウタ,管理者,総務部秘書課,完了
 kobayashi.ta@city.hakodate.hokkaido.jp,,小林　威仁,コバヤシ　タカト,メンバー,椴法華支所産業建設課,完了
 kogasiwa@city.hakodate.hokkaido.jp,,小柏　めぐみ,コガシワ　メグミ,メンバー,環境部環境推進課,完了
-koguchi@city.hakodate.hokkaido.jp,,古口　奈津子,コグチ　ナツコ,メンバー,子ども未来部子ども見守り・相談課,未完了
+koguchi@city.hakodate.hokkaido.jp,,古口　奈津子,コグチ　ナツコ,メンバー,子ども未来部子ども見守り・相談課,完了
 kojima.emi@city.hakodate.hokkaido.jp,,小島　絵美,コジマ　エミ,メンバー,企画部計画推進室新幹線・地域交通政策課,未完了
 kokabu.hiro@city.hakodate.hokkaido.jp,,小甲　宏一,コカブ　ヒロカズ,メンバー,農林水産部農林整備課,完了
 kokubun.y@city.hakodate.hokkaido.jp,,國分　友香里,コクブン　ユカリ,メンバー,港湾空港部港湾空港振興課,完了
@@ -315,6 +322,7 @@ konno.s@city.hakodate.hokkaido.jp,,今野　邑子,コンノ　サトコ,メン�
 konno.shin@city.hakodate.hokkaido.jp,,今野　慎太郎,コンノ　シンタロウ,メンバー,企業局管理部経理課,完了
 konno.takahito@city.hakodate.hokkaido.jp,,今野　貴仁,コンノ　タカヒト,管理者,財務部管理課,完了
 konoma@city.hakodate.hokkaido.jp,,木間　大河,コノマ　タイガ,管理者,椴法華支所産業建設課,完了
+kori@city.hakodate.hokkaido.jp,,郡　和博,コオリ　カズヒロ,メンバー,保健所食肉検査所,完了
 kosaka.m@city.hakodate.hokkaido.jp,,小坂　未希子,コサカ　ミキコ,メンバー,都市建設部まちづくり景観課,完了
 koshita.s@city.hakodate.hokkaido.jp,,越田　周平,コシタ　シュウヘイ,メンバー,企画部計画推進室計画調整課,完了
 koshiyama@city.hakodate.hokkaido.jp,,腰山　恭平,コシヤマ　キョウヘイ,メンバー,市民部国保年金課,完了
@@ -323,6 +331,7 @@ kosono.t@city.hakodate.hokkaido.jp,,小園　敏弘,コソノ　トシヒロ,メ
 kotanagi.d@city.hakodate.hokkaido.jp,,小棚木　大輔,コタナギ　ダイスケ,メンバー,福祉事務所,未完了
 koyama.nori@city.hakodate.hokkaido.jp,,小山　生樹,コヤマ　ノリキ,メンバー,福祉事務所生活支援課,完了
 kozuka.yosuke@city.hakodate.hokkaido.jp,,小塚　陽介,コヅカ　ヨウスケ,メンバー,市民部国保年金課,完了
+kubota.s@city.hakodate.hokkaido.jp,,久保田　聡嗣,クボタ　サトシ,メンバー,都市建設部都市整備課,未完了
 kuchikawa.yuka@city.hakodate.hokkaido.jp,,口川　ゆかり,クチカワ　ユカリ,メンバー,湯川支所,完了
 kudo.a@city.hakodate.hokkaido.jp,,工藤　篤,クドウ　アツシ,メンバー,環境部日乃出クリーンセンター,完了
 kudo.atsuko@city.hakodate.hokkaido.jp,,工藤　敦子,クドウ　アツコ,管理者,保健福祉部地域福祉課,完了
@@ -402,6 +411,7 @@ monoe.m@city.hakodate.hokkaido.jp,,物江　真依,モノエ　マイ,管理者,
 mori.kanta@city.hakodate.hokkaido.jp,,森　貫太,モリ　カンタ,メンバー,生涯学習部管理課,完了
 mori.mizuho@city.hakodate.hokkaido.jp,,森　瑞穂,モリ　ミズホ,管理者,総務部職員厚生課,完了
 mori.narumi@city.hakodate.hokkaido.jp,,森　なるみ,モリ　ナルミ,メンバー,総務部人事課,完了
+morinaga.tomoko@city.hakodate.hokkaido.jp,,盛永　朋子,モリナガ　トモコ,メンバー,総務部職員厚生課,未完了
 morino.k@city.hakodate.hokkaido.jp,,盛野　圭吾,モリノ　ケイゴ,メンバー,保健福祉部高齢福祉課,完了
 morozumi@city.hakodate.hokkaido.jp,,両角　忠之,モロズミ　タダユキ,メンバー,企業局上下水道部管路整備室,完了
 motozumi.sawai@city.hakodate.hokkaido.jp,,澤井　宗純,サワイ　モトズミ,メンバー,港湾空港部管理課,未完了
@@ -413,7 +423,7 @@ murakoshi.akane@city.hakodate.hokkaido.jp,,村越　あかね,ムラコシ　ア
 murakoshi.kazuki@city.hakodate.hokkaido.jp,,村越　一輝,ムラコシ　カズキ,管理者,総務部行政改革課,完了
 murase@city.hakodate.hokkaido.jp,,村瀬　美奈子,ムラセ　ミナコ,メンバー,子ども未来部子ども見守り・相談課,完了
 murata.hiroki@city.hakodate.hokkaido.jp,,村田　大樹,ムラタ　ヒロキ,メンバー,環境部環境対策課,完了
-murata.s@city.hakodate.hokkaido.jp,,村田　伸二,ムラタ　シンジ,メンバー,企業局上下水道部管路整備室,未完了
+murata.s@city.hakodate.hokkaido.jp,,村田　伸二,ムラタ　シンジ,メンバー,企業局上下水道部管路整備室,完了
 murayama.e@city.hakodate.hokkaido.jp,,村山　絵美,ムラヤマ　エミ,メンバー,市民部戸籍住民課,完了
 murayama.takuya@city.hakodate.hokkaido.jp,,村山　卓也,ムラヤマ　タクヤ,メンバー,経済部雇用労政課,完了
 murayama.tatsuya@city.hakodate.hokkaido.jp,,村山　達也,ムラヤマ　タツヤ,管理者,農林水産部企画調整課,完了
@@ -441,7 +451,7 @@ nakamura.hayato@city.hakodate.hokkaido.jp,,中村　勇人,ナカムラ　ハヤ
 nakamura.j@city.hakodate.hokkaido.jp,,中村　淳,ナカムラ　ジュン,メンバー,土木部用地管理課,未完了
 nakamura.kaai@city.hakodate.hokkaido.jp,,中村　果愛,ナカムラ　カアイ,メンバー,企業局上下水道部浄水課,完了
 nakamura.madoka@city.hakodate.hokkaido.jp,,中村　まどか,ナカムラ　マドカ,管理者,市民部戸籍住民課,完了
-nakamura.sena@city.hakodate.hokkaido.jp,,中村　瀬奈,ナカムラ　セナ,メンバー,土木部管理課,完了
+nakamura.sena@city.hakodate.hokkaido.jp,,中村　瀬奈,ナカムラ　セナ,管理者,土木部管理課,完了
 nakamura.y@city.hakodate.hokkaido.jp,,中村　幸信,ナカムラ　ユキノブ,メンバー,議会事務局,完了
 nakamura.yo@city.hakodate.hokkaido.jp,,中村　頼和,ナカムラ　ヨリカズ,メンバー,市民部交通安全課,完了
 nakamura.yuri@city.hakodate.hokkaido.jp,,中村　優里,ナカムラ　ユリ,メンバー,子ども未来部子育て支援課,完了
@@ -465,15 +475,17 @@ niki.naomi@city.hakodate.hokkaido.jp,,二木　直美,ニキ　ナオミ,メン�
 niki.noriyuki@city.hakodate.hokkaido.jp,,二木　教之,ニキ　ノリユキ,メンバー,観光部観光総務課,完了
 nishida.h@city.hakodate.hokkaido.jp,,西田　英明,ニシダ　ヒデアキ,メンバー,財務部調度課,完了
 nishikawa.hi@city.hakodate.hokkaido.jp,,西川　裕志,ニシカワ　ヒロシ,メンバー,経済部商業振興課,完了
+nishikawa.j@city.hakodate.hokkaido.jp,,西川　純平,ニシカワ　ジュンペイ,メンバー,消防本部消防本部指導課,未完了
 nishikawa.taichi@city.hakodate.hokkaido.jp,,西川　太一,ニシカワ　タイチ,管理者,企画部地域デジタル課,完了
 nishikawara@city.hakodate.hokkaido.jp,,西川原　啓太,ニシカワラ　ケイタ,メンバー,市民部市民・男女共同参画課,完了
 nishimura.marie@city.hakodate.hokkaido.jp,,西村　茉莉絵,ニシムラ　マリエ,メンバー,会計部会計課,完了
 nishimura.masahito@city.hakodate.hokkaido.jp,,西村　雅人,ニシムラ　マサヒト,メンバー,環境部埋立処分場,未完了
 nishimura.yuki@city.hakodate.hokkaido.jp,,西村　有紀,ニシムラ　ユキ,メンバー,子ども未来部子どもサービス課,完了
-nishimura@city.hakodate.hokkaido.jp,,西村　仁志,ニシムラ　ヒトシ,メンバー,企業局交通部電車乗務員養成所,未完了
+nishimura@city.hakodate.hokkaido.jp,,西村　仁志,ニシムラ　ヒトシ,メンバー,企業局交通部電車乗務員養成所,完了
 nishiya.masami@city.hakodate.hokkaido.jp,,西谷　真実,ニシヤ　マサミ,メンバー,環境部清掃事業課,完了
 nishiyama.keita@city.hakodate.hokkaido.jp,,西山　敬太,ニシヤマ　ケイタ,メンバー,企画部計画推進室計画調整課,未完了
 niwata@city.hakodate.hokkaido.jp,,庭田　真由,ニワタ　マユ,管理者,生涯学習部管理課,完了
+noda.a@city.hakodate.hokkaido.jp,,野田　篤史,ノダ　アツシ,メンバー,消防本部消防本部消防指令センター指令１課,未完了
 noda.r@city.hakodate.hokkaido.jp,,野田　梨々花,ノダ　リリカ,メンバー,議会事務局議事調査課,完了
 noguchi@city.hakodate.hokkaido.jp,,野口　智子,ノグチ　サトコ,メンバー,環境部環境推進課,完了
 nohmi.daisuke@city.hakodate.hokkaido.jp,,能美　大輔,ノウミ　ダイスケ,メンバー,財務部税務室,完了
@@ -503,7 +515,7 @@ oizumi.j@city.hakodate.hokkaido.jp,,大泉　潤,オオイズミ　ジュン,メ
 okada.emi@city.hakodate.hokkaido.jp,,岡田　絵美,オカダ　エミ,メンバー,選挙管理委員会事務局選挙課,完了
 okagawa@city.hakodate.hokkaido.jp,,岡河　敏夫,オカガワ　トシオ,メンバー,市民部国保年金課,完了
 okizaki@city.hakodate.hokkaido.jp,,沖崎　雅樹,オキザキ　マサキ,管理者,企画部企画管理課,完了
-okubo.ichi@city.hakodate.hokkaido.jp,,大久保　市郎,オオクボ　イチロウ,メンバー,土木部道路建設課,完了
+okubo.ichi@city.hakodate.hokkaido.jp,,大久保　市郎,オオクボ　イチロウ,管理者,土木部道路建設課,完了
 okubo.yuko@city.hakodate.hokkaido.jp,,大久保　優子,オオクボ　ユウコ,メンバー,保健所地域保健課,完了
 okugaya@city.hakodate.hokkaido.jp,,奥ヶ谷　貴史,オクガヤ　タカシ,管理者,企画部企画管理課,完了
 okuno.h@city.hakodate.hokkaido.jp,,奥野　秀光,オクノ　ヒデミツ,メンバー,農林水産部農務課,完了
@@ -518,7 +530,8 @@ osaka.shuji@city.hakodate.hokkaido.jp,,大坂　秀次,オオサカ　シュウ�
 osaki.yumi@city.hakodate.hokkaido.jp,,大崎　祐実,オオサキ　ユミ,メンバー,子ども未来部母子保健課,完了
 osanai.y@city.hakodate.hokkaido.jp,,小山内　裕美子,オサナイ　ユミコ,メンバー,学校教育部保健給食課,完了
 ota.naoyuki@city.hakodate.hokkaido.jp,,太田　尚之,オオタ　ナオユキ,メンバー,生涯学習部文化財課,完了
-oya@city.hakodate.hokkaido.jp,,大矢　京右,オオヤ　キョウスケ,メンバー,博物館,未完了
+ouchi.n@city.hakodate.hokkaido.jp,,大内　尚哉,オオウチ　ナオヤ,メンバー,土木部公園河川管理課,未完了
+oya@city.hakodate.hokkaido.jp,,大矢　京右,オオヤ　キョウスケ,メンバー,博物館,完了
 oyanagi.a@city.hakodate.hokkaido.jp,,大柳　有紗,オオヤナギ　アリサ,メンバー,環境部環境推進課,完了
 ozaki.i@city.hakodate.hokkaido.jp,,小﨑　一歩,オザキ　イッポ,メンバー,観光部観光推進課,完了
 ozaki.m@city.hakodate.hokkaido.jp,,尾崎　瑞枝,オザキ　ミズエ,メンバー,経済部商業振興課,完了
@@ -545,7 +558,8 @@ sakamoto.tomoya@city.hakodate.hokkaido.jp,,坂本　朋也,サカモト　トモ
 sakashita@city.hakodate.hokkaido.jp,,坂下　浩,サカシタ　ヒロシ,管理者,子ども未来部子ども見守り・相談課,完了
 sakota.hidaka@city.hakodate.hokkaido.jp,,迫田　日高,サコタ　ヒダカ,メンバー,財務部税務室,完了
 sakurai@city.hakodate.hokkaido.jp,,櫻井　利匡,サクライ　トシマサ,メンバー,企業局上下水道部管路整備室,完了
-sakuraya@city.hakodate.hokkaido.jp,,櫻谷　政和,サクラヤ　マサカズ,メンバー,土木部道路建設課,完了
+sakuraya@city.hakodate.hokkaido.jp,,櫻谷　政和,サクラヤ　マサカズ,管理者,土木部道路建設課,完了
+sannohe@city.hakodate.hokkaido.jp,,三戸　賢広,サンノヘ　ヨシヒロ,メンバー,戸井支所地域振興課,完了
 sano.nobu@city.hakodate.hokkaido.jp,,佐野　暢彦,サノ　ノブヒコ,メンバー,恵山支所地域振興課,完了
 sasagawa@city.hakodate.hokkaido.jp,,笹川　英里,ササガワ　エリ,メンバー,経済部経済企画課,完了
 sasaki.ai@city.hakodate.hokkaido.jp,,佐々木　愛,ササキ　アイ,メンバー,市民部国保年金課,完了
@@ -564,6 +578,7 @@ sasaki.toru@city.hakodate.hokkaido.jp,,佐々木　透,ササキ　トオル,メ
 sasaki.yu@city.hakodate.hokkaido.jp,,佐々木　優,ササキ　ユウ,メンバー,総務部人事課,完了
 sasaki.yuta@city.hakodate.hokkaido.jp,,佐々木　悠太,ササキ　ユウタ,メンバー,保健所地域保健課,完了
 sasaki@city.hakodate.hokkaido.jp,,佐々木　陽一,ササキ　ヨウイチ,メンバー,企業局管理部総務課,未完了
+sato.a@city.hakodate.hokkaido.jp,,佐藤　亮,サトウ　アキラ,管理者,土木部道路建設課,完了
 sato.hidenori@city.hakodate.hokkaido.jp,,佐藤　英憲,サトウ　ヒデノリ,メンバー,監査事務局監査課,完了
 sato.hina@city.hakodate.hokkaido.jp,,佐藤　陽奈,サトウ　ヒナ,管理者,子ども未来部子ども企画課,完了
 sato.hiroyasu@city.hakodate.hokkaido.jp,,佐藤　弘康,サトウ　ヒロヤス,メンバー,都市建設部住宅課,未完了
@@ -572,7 +587,7 @@ sato.kazumi@city.hakodate.hokkaido.jp,,佐藤　一美,サトウ　カズミ,メ
 sato.koji@city.hakodate.hokkaido.jp,,佐藤　浩司,サトウ　コウジ,メンバー,企業局上下水道部業務課,未完了
 sato.michi@city.hakodate.hokkaido.jp,,佐藤　聖智子,サトウ　ミチコ,メンバー,総務部秘書課,未完了
 sato.minoru@city.hakodate.hokkaido.jp,,佐藤　実,サトウ　ミノル,メンバー,企業局管理部料金課,完了
-sato.nozomi@city.hakodate.hokkaido.jp,,佐藤　希望,サトウ　ノゾミ,メンバー,子ども未来部子ども見守り・相談課,未完了
+sato.nozomi@city.hakodate.hokkaido.jp,,佐藤　希望,サトウ　ノゾミ,メンバー,子ども未来部子ども見守り・相談課,完了
 sato.risa@city.hakodate.hokkaido.jp,,佐藤　里紗,サトウ　リサ,メンバー,環境部環境総務課,完了
 sato.s@city.hakodate.hokkaido.jp,,佐藤　照太,サトウ　ショウタ,メンバー,亀田支所,完了
 sato.satomi@city.hakodate.hokkaido.jp,,佐藤　里美,サトウ　サトミ,メンバー,保健所地域保健課,完了
@@ -627,7 +642,7 @@ shimizu.mi@city.hakodate.hokkaido.jp,,清水　みなみ,シミズ　ミナミ,�
 shimizu.takahito@city.hakodate.hokkaido.jp,,清水　崇仁,シミズ　タカヒト,メンバー,総務部災害対策課,完了
 shimizu.yuya@city.hakodate.hokkaido.jp,,清水　佑哉,シミズ　ユウヤ,メンバー,港湾空港部管理課,完了
 shimokawa@city.hakodate.hokkaido.jp,,下川　菜緒,シモカワ　ナオ,管理者,総務部秘書課,完了
-shimomoto.naoki@city.hakodate.hokkaido.jp,,下元　直樹,シモモト　ナオキ,メンバー,土木部管理課,完了
+shimomoto.naoki@city.hakodate.hokkaido.jp,,下元　直樹,シモモト　ナオキ,管理者,土木部管理課,完了
 shimomoto.yuki@city.hakodate.hokkaido.jp,,下元　佑希,シモモト　ユキ,メンバー,生涯学習部文化財課,完了
 shimosawa@city.hakodate.hokkaido.jp,,下澤　孝弘,シモサワ　タカヒロ,メンバー,財務部税務室,完了
 shinada.t@city.hakodate.hokkaido.jp,,品田　朋廣,シナダ　トモヒロ,メンバー,子ども未来部子ども健やか育成課,完了
@@ -646,6 +661,8 @@ sugawa.d@city.hakodate.hokkaido.jp,,須川　大地,スガワ　ダイチ,メン
 sugawara.yoshino@city.hakodate.hokkaido.jp,,菅原　佳乃,スガワラ　ヨシノ,メンバー,生涯学習部管理課,完了
 sugimoto.hisao@city.hakodate.hokkaido.jp,,杉本　久雄,スギモト　ヒサオ,メンバー,企業局上下水道部浄水課,未完了
 sugimoto.y@city.hakodate.hokkaido.jp,,杉本　悠,スギモト　ユウ,管理者,監査事務局監査課,完了
+suginohara@city.hakodate.hokkaido.jp,,杉之原　萌衣,スギノハラ　モエ,メンバー,会計部会計課,未完了
+sugisawa.masaaki@city.hakodate.hokkaido.jp,,杉澤　雅昭,スギサワ　マサアキ,メンバー,企業局管理部料金課,未完了
 sugisawa.yusuke@city.hakodate.hokkaido.jp,,杉澤　雄介,スギサワ　ユウスケ,メンバー,子ども未来部子ども企画課,完了
 suzuki.mari@city.hakodate.hokkaido.jp,,鈴木　真梨,スズキ　マリ,メンバー,企業局上下水道部浄水課,完了
 suzuki.masa@city.hakodate.hokkaido.jp,,鈴木　将宏,スズキ　マサヒロ,メンバー,企業局管理部総務課,未完了
@@ -663,7 +680,7 @@ taguchi.hideo@city.hakodate.hokkaido.jp,,田口　英生,タグチ　ヒデオ,�
 taguchi.takako@city.hakodate.hokkaido.jp,,田口　孝子,タグチ　タカコ,メンバー,学校教育部教育政策課,完了
 tahara.tomohide@city.hakodate.hokkaido.jp,,田原　朋英,タハラ　トモヒデ,メンバー,企業局上下水道部,完了
 taira@city.hakodate.hokkaido.jp,,平　浩之,タイラ　ヒロユキ,メンバー,福祉事務所亀田福祉課,未完了
-takabatake.k@city.hakodate.hokkaido.jp,,髙畠　洸輝,タカバタケ　コウキ,メンバー,土木部道路建設課,未完了
+takabatake.k@city.hakodate.hokkaido.jp,,髙畠　洸輝,タカバタケ　コウキ,管理者,土木部道路建設課,完了
 takabayashi.m@city.hakodate.hokkaido.jp,,髙林　美玖,タカバヤシ　ミク,メンバー,市民部国保年金課,完了
 takada.t@city.hakodate.hokkaido.jp,,高田　忠男,タカダ　タダオ,メンバー,企業局上下水道部管路整備室,完了
 takagi.m@city.hakodate.hokkaido.jp,,高木　幹彦,タカギ　ミキヒコ,メンバー,保健福祉部介護保険課,完了
@@ -676,8 +693,10 @@ takahashi.kazuya@city.hakodate.hokkaido.jp,,高橋　一也,タカハシ　カ�
 takahashi.keisuke@city.hakodate.hokkaido.jp,,高橋　佳奨,タカハシ　ケイスケ,メンバー,生涯学習部管理課,完了
 takahashi.kentaro@city.hakodate.hokkaido.jp,,髙橋　健太郎,タカハシ　ケンタロウ,管理者,総務部総務課,完了
 takahashi.kotaro@city.hakodate.hokkaido.jp,,髙橋　浩太朗,タカハシ　コウタロウ,メンバー,土木部道路建設課,完了
+takahashi.m@city.hakodate.hokkaido.jp,,高橋　真弓,タカハシ　マユミ,メンバー,経済部経済企画課,完了
 takahashi.mitsuhiro@city.hakodate.hokkaido.jp,,高橋　光博,タカハシ　ミツヒロ,メンバー,椴法華支所,完了
 takahashi.na@city.hakodate.hokkaido.jp,,高橋　也恵,タカハシ　ナリエ,メンバー,保健所保健予防課,完了
+takahashi.yuka@city.hakodate.hokkaido.jp,,高橋　結花,タカハシ　ユカ,メンバー,企画部企画管理課,未完了
 takahashi.yuko@city.hakodate.hokkaido.jp,,高橋　裕子,タカハシ　ユウコ,メンバー,市民部戸籍住民課,完了
 takai@city.hakodate.hokkaido.jp,,高井　暁,タカイ　サトル,メンバー,経済部,未完了
 takano.harunobu@city.hakodate.hokkaido.jp,,高野　陽之,タカノ　ハルノブ,メンバー,総務部,完了
@@ -769,6 +788,7 @@ ueda.kento@city.hakodate.hokkaido.jp,,上田　絃人,ウエダ　ケント,メ�
 ueda.syota@city.hakodate.hokkaido.jp,,上田　翔太,ウエダ　ショウタ,メンバー,経済部食産業振興課,完了
 ueda.taku@city.hakodate.hokkaido.jp,,上田　拓,ウエダ　タク,メンバー,議会事務局議事調査課,完了
 ueda.tomoko@city.hakodate.hokkaido.jp,,上田　智子,ウエダ　トモコ,管理者,総務部行政改革課,完了
+uemura.tomoya@city.hakodate.hokkaido.jp,,植村　友哉,ウエムラ　トモヤ,メンバー,南茅部支所市民福祉課,未完了
 ueno.saya@city.hakodate.hokkaido.jp,,上野　沙耶,ウエノ　サヤ,メンバー,総務部職員厚生課,完了
 ueno@city.hakodate.hokkaido.jp,,植野　見悟,ウエノ　ケンゴ,管理者,湯川支所,完了
 ueto.yasuhiro@city.hakodate.hokkaido.jp,,上戸　泰裕,ウエト　ヤスヒロ,メンバー,経済部商業振興課,完了
@@ -807,7 +827,7 @@ yamaguchi.suzuho@city.hakodate.hokkaido.jp,,山口　紗歩,ヤマグチ　ス�
 yamaguchi.yosuke@city.hakodate.hokkaido.jp,,山口　陽輔,ヤマグチ　ヨウスケ,メンバー,土木部道路管理課,未完了
 yamakami.y@city.hakodate.hokkaido.jp,,山上　優樹,ヤマカミ　ユウキ,管理者,企画部計画推進室計画調整課,完了
 yamakoshi@city.hakodate.hokkaido.jp,,山越　友絵,ヤマコシ　トモエ,管理者,農林水産部農務課,完了
-yamamoto.k@city.hakodate.hokkaido.jp,,山本　圭,ヤマモト　ケイ,メンバー,土木部管理課,完了
+yamamoto.k@city.hakodate.hokkaido.jp,,山本　圭,ヤマモト　ケイ,管理者,土木部管理課,完了
 yamamoto.kensuke@city.hakodate.hokkaido.jp,,山本　憲亮,ヤマモト　ケンスケ,メンバー,保健所生活衛生課,未完了
 yamamoto.kimiko@city.hakodate.hokkaido.jp,,山本　公子,ヤマモト　キミコ,メンバー,市民部市民・男女共同参画課,完了
 yamamoto.mitsushi@city.hakodate.hokkaido.jp,,山本　瑞,ヤマモト　ミツシ,メンバー,消防本部消防本部指導課,完了
@@ -833,6 +853,7 @@ yanahara.k@city.hakodate.hokkaido.jp,,柳原　克己,ヤナハラ　カツミ,�
 yasuda.h@city.hakodate.hokkaido.jp,,安田　礼史,ヤスダ　ヒロフミ,メンバー,生涯学習部南茅部教育事務所,未完了
 yasuda.m@city.hakodate.hokkaido.jp,,安田　愛梨,ヤスダ　マナ,メンバー,学校教育部教職員課,完了
 yasuda.y@city.hakodate.hokkaido.jp,,安田　好宏,ヤスダ　ヨシヒロ,メンバー,市民部市民・男女共同参画課,完了
+yasuzawa.tomoya@city.hakodate.hokkaido.jp,,安澤　朋也,ヤスザワ　トモヤ,メンバー,港湾空港部港湾課,未完了
 yoda.takayuki@city.hakodate.hokkaido.jp,,依田　貴之,ヨダ　タカユキ,メンバー,企業局上下水道部管路整備室,完了
 yokogawa@city.hakodate.hokkaido.jp,,横川　真奈美,ヨコガワ　マナミ,メンバー,子ども未来部,完了
 yokota.k@city.hakodate.hokkaido.jp,,横田　啓一,ヨコタ　ケイイチ,メンバー,保健所食肉検査所,完了

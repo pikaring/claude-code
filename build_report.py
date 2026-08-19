@@ -31,6 +31,7 @@ import statistics
 import datetime
 import glob
 import os
+import zipfile
 
 FILE_UPLOAD_RE = re.compile(r'^user_file_upload#(\{)')
 
@@ -115,6 +116,49 @@ def load_registrants():
             regs[email] = {'name': name, 'kana': '', 'department': dept, 'email': email, 'employee_no': '',
                             'access_level': '', 'status': ''}
     return regs, dept_registrant_count, dept_registrant_started
+
+
+def load_prior_month_users(month_str):
+    """month_str(YYYY-MM)より前の月の集計ブックから、既に利用したことのある
+    ログインIDの集合を返す。
+
+    build_report.py は当月分のCSVしか読まないため、これがないと月初の利用者が
+    全員「新規」に分類されてしまう(2026-08-16 ユーザー指摘)。過去月の
+    reports/QommonsAI利用集計_YYYY-MM.xlsx の「個人別集計」シートを参照して、
+    前月までに利用実績のある人を「リピーター」として扱えるようにする。
+
+    過去月のブックが存在しない期間については判定できないため、その分は
+    従来どおり「新規」に計上される(初回運用月は全員新規で正しい)。
+    """
+    from openpyxl import load_workbook
+    prior = set()
+    for path in sorted(glob.glob(os.path.join(REPORTS, 'QommonsAI利用集計_*.xlsx'))):
+        m = re.search(r'_(\d{4}-\d{2})\.xlsx$', os.path.basename(path))
+        if not m or m.group(1) >= month_str:
+            continue
+        try:
+            ws = load_workbook(path, read_only=True)['個人別集計']
+        except (KeyError, OSError, zipfile.BadZipFile):
+            print(f'WARN: {os.path.basename(path)} の個人別集計シートを読めませんでした。スキップします。')
+            continue
+        header_row = None
+        for row in ws.iter_rows(min_row=1, max_row=12, values_only=True):
+            header_row = row
+            if row and row[0] == '氏名':
+                break
+            header_row = None
+        if header_row is None:
+            continue
+        col = header_row.index('メールアドレス')
+        started = False
+        for row in ws.iter_rows(values_only=True):
+            if not started:
+                started = row and row[0] == '氏名'
+                continue
+            if not row or len(row) <= col or not row[col]:
+                continue
+            prior.add(str(row[col]).strip())
+    return prior
 
 
 def find_latest_csv():
@@ -513,12 +557,17 @@ def build(csv_path, out_path):
         daily.append({'date': d, 'prompts': c, 'users': users, 'note': note})
 
     # ---------- 利用者推移(日別) ----------
+    # 「新規」は当月内で初めて見たかどうかではなく、前月までの利用実績も含めて
+    # 初めてかどうかで判定する(前月までに使っていた人は月初からリピーター)。
+    # 累計ユニークは当月内の数字なので prior_users は含めない。
+    prior_users = load_prior_month_users(f'{dates[-1].year:04d}-{dates[-1].month:02d}')
     seen = set()
     trend = []
     for d in dates:
         day_users = set(r['email'] for r in user_rows if r['dt'].date() == d)
-        new_users = day_users - seen
-        repeaters = day_users & seen
+        known = seen | prior_users
+        new_users = day_users - known
+        repeaters = day_users & known
         seen |= day_users
         wd = d.weekday()
         trend.append({
