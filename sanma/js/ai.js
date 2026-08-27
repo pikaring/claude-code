@@ -5,11 +5,34 @@
  *   打牌   ... シャンテン数 -> 受け入れ枚数 -> 手役/ドラ価値 -> 危険度 の順で評価
  *   鳴き   ... シャンテンが進み、かつ役の見込みがある場合のみ
  *   リーチ ... 門前テンパイなら基本的に宣言（終盤の愚形は見送り）
+ *
+ * 難易度は game.difficulty（0=やさしい / 1=ふつう / 2=つよい）で切り替える。
+ * 弱くするときも「和了を見逃す」ような不自然な弱さにはせず、
+ * 読みの精度・降りの徹底・リーチ判断といった打ち手の腕にあたる部分を落とす。
  */
 (function (global) {
   'use strict';
 
   var MJ = global.MJ;
+
+  var LEVELS = [
+    // useUnseen  : 受け入れを残り枚数で数えるか（false なら種類数だけ＝場を読まない）
+    // doraWeight : ドラ・赤をどれだけ重く見るか
+    // defendFrom : 他家リーチ時に何シャンテンからベタ降りするか
+    // riichiMin  : 待ちが何枚以上ならリーチするか
+    // slip/slipTop: この確率で最善手ではなく 2〜slipTop 番手の打牌を選ぶ
+    // ponSkip    : 鳴ける場面を見送る確率
+    { name: 'やさしい', useUnseen: false, doraWeight: 0, defendFrom: 99, riichiMin: 3, slip: 0.45, slipTop: 3, ponSkip: 0.35 },
+    { name: 'ふつう', useUnseen: true, doraWeight: 6, defendFrom: 3, riichiMin: 2, slip: 0.20, slipTop: 2, ponSkip: 0.15 },
+    { name: 'つよい', useUnseen: true, doraWeight: 12, defendFrom: 2, riichiMin: 1, slip: 0, slipTop: 1, ponSkip: 0 }
+  ];
+
+  function levelOf(game, me) {
+    var d = me && me.difficulty != null ? me.difficulty : game.difficulty;
+    return LEVELS[d == null ? 1 : Math.max(0, Math.min(2, d))];
+  }
+
+  function rand(game) { return (game.rng || Math.random)(); }
 
   /** 場に見えている牌から残り枚数を数える */
   function unseenCounts(game, me) {
@@ -85,13 +108,13 @@
 
   /** 打牌選択: 手牌配列のインデックスを返す */
   function chooseDiscard(game, me) {
+    var lv = levelOf(game, me);
     var meldCount = me.melds.length;
     var unseen = unseenCounts(game, me);
     var counts = MJ.toCounts(me.hand);
     var baseShanten = MJ.shanten(counts, meldCount);
-    var riichiExists = game.players.some(function (p) { return p !== me && p.riichi; });
-    // ベタ降り判定: 他家リーチかつ自分が 2 シャンテン以上
-    var defensive = riichiExists && baseShanten >= 2;
+    var riichiExists = game.players.some(function (p) { return p.seat !== me.seat && p.riichi; });
+    var defensive = riichiExists && baseShanten >= lv.defendFrom;
 
     // 打牌候補ごとのシャンテン数を先に求め、最小の候補だけ受け入れを厳密に数える
     // （受け入れ計算はコストが高いため）
@@ -107,7 +130,7 @@
       if (sh0 < minShanten) minShanten = sh0;
     }
 
-    var best = null;
+    var scored = [];
     for (var ci = 0; ci < cand.length; ci++) {
       var i = cand[ci].index;
       var tile = me.hand[i];
@@ -116,10 +139,13 @@
       counts[tile.t]--;
       var accept = 0;
       if (sh === minShanten || defensive) {
-        MJ.ukeire(counts, meldCount).forEach(function (t) { accept += unseen[t]; });
+        MJ.ukeire(counts, meldCount).forEach(function (t) {
+          accept += lv.useUnseen ? unseen[t] : 1;
+        });
+        if (!lv.useUnseen) accept *= 4; // 種類数しか見ないぶんの目安
       }
       var rest = me.hand.filter(function (_, k) { return k !== i; });
-      var value = doraValue(game, rest) * 12 + shapeBonus(counts, me.seatWind, game.roundWind);
+      var value = doraValue(game, rest) * lv.doraWeight + shapeBonus(counts, me.seatWind, game.roundWind);
       counts[tile.t]++;
 
       var score;
@@ -129,13 +155,23 @@
         score = -sh * 1000 + accept * 8 + value - danger(game, me, tile) * 2;
         if (tile.red) score -= 40; // 赤は極力抱える
       }
-      if (!best || score > best.score) best = { index: i, score: score };
+      scored.push({ index: i, score: score });
     }
-    return best ? best.index : me.hand.length - 1;
+
+    if (!scored.length) return me.hand.length - 1;
+    scored.sort(function (a, b) { return b.score - a.score; });
+    // 難易度が低いほど、ときどき最善手ではなく次善手を選ぶ
+    var pick = 0;
+    if (lv.slip > 0 && scored.length > 1 && rand(game) < lv.slip) {
+      var span = Math.min(lv.slipTop, scored.length) - 1;
+      pick = 1 + Math.floor(rand(game) * span);
+    }
+    return scored[pick].index;
   }
 
   /** リーチ宣言するか */
   function shouldRiichi(game, me, discardIndex) {
+    var lv = levelOf(game, me);
     if (game.wall.length < 4) return false;
     if (me.points < 1000) return false;
     var counts = MJ.toCounts(me.hand);
@@ -144,7 +180,7 @@
     if (w.length === 0) return false;
     var unseen = unseenCounts(game, me);
     var live = w.reduce(function (a, t) { return a + unseen[t]; }, 0);
-    if (live === 0) return false;
+    if (live < lv.riichiMin) return false;
     // 終盤の愚形かつ打点が無いときは見送る
     if (game.wall.length < 8 && live <= 2) return false;
     return true;
@@ -161,6 +197,7 @@
     if (after === before && after > 0) return false;
 
     // 役の見込み
+    if (rand(game) < levelOf(game, me).ponSkip) return false;
     var isYakuhai = MJ.isDragon(tile.t) || tile.t === me.seatWind || tile.t === game.roundWind;
     if (isYakuhai) return true;
     if (me.riichi) return false;
@@ -227,6 +264,8 @@
     shouldMinkan: shouldMinkan,
     shouldKanSelf: shouldKanSelf,
     shouldKita: shouldKita,
-    unseenCounts: unseenCounts
+    unseenCounts: unseenCounts,
+    LEVELS: LEVELS,
+    levelOf: levelOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);

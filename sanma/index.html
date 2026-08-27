@@ -14,6 +14,7 @@
     <span class="title">三人麻雀</span>
     <span id="topinfo" style="display:flex;gap:6px;flex-wrap:wrap"></span>
     <span class="spacer"></span>
+    <button class="btn" data-act="difficulty">敵: ふつう</button>
     <button class="btn" data-act="hint">ヒント: OFF</button>
     <button class="btn" data-act="speed">速度: ふつう</button>
     <button class="btn" data-act="new-game">新規対局</button>
@@ -57,7 +58,10 @@
       ・自分の番は手牌をクリックして打牌します。<br>
       ・リーチ後は自動でツモ切りします。ツモ和了・暗カン・北抜きができるときだけ手が止まります。<br>
       ・リーチはボタンを押してから、捨てる牌を選びます。<br>
-      ・「ヒント」を ON にするとシャンテン数と待ちを表示します。
+      ・「ヒント」を ON にするとシャンテン数と、待ちの残り枚数を表示します。<br>
+      ・「敵」で CPU の強さを やさしい／ふつう／つよい から選べます。<br>
+      　CPU は自分の手牌と、河・副露・ドラ表示牌しか見ていません（他家の手牌や山は見ません）。<br>
+      　難易度で変わるのは、場の残り枚数を読むか・リーチに降りるか・打牌の精度といった打ち手の腕の部分です。
     </div>
     <div style="margin-top:12px;text-align:right">
       <button class="btn primary" data-act="close-rules">閉じる</button>

@@ -335,6 +335,7 @@ html, body {
     <span class="title">三人麻雀</span>
     <span id="topinfo" style="display:flex;gap:6px;flex-wrap:wrap"></span>
     <span class="spacer"></span>
+    <button class="btn" data-act="difficulty">敵: ふつう</button>
     <button class="btn" data-act="hint">ヒント: OFF</button>
     <button class="btn" data-act="speed">速度: ふつう</button>
     <button class="btn" data-act="new-game">新規対局</button>
@@ -378,7 +379,10 @@ html, body {
       ・自分の番は手牌をクリックして打牌します。<br>
       ・リーチ後は自動でツモ切りします。ツモ和了・暗カン・北抜きができるときだけ手が止まります。<br>
       ・リーチはボタンを押してから、捨てる牌を選びます。<br>
-      ・「ヒント」を ON にするとシャンテン数と待ちを表示します。
+      ・「ヒント」を ON にするとシャンテン数と、待ちの残り枚数を表示します。<br>
+      ・「敵」で CPU の強さを やさしい／ふつう／つよい から選べます。<br>
+      　CPU は自分の手牌と、河・副露・ドラ表示牌しか見ていません（他家の手牌や山は見ません）。<br>
+      　難易度で変わるのは、場の残り枚数を読むか・リーチに降りるか・打牌の精度といった打ち手の腕の部分です。
     </div>
     <div style="margin-top:12px;text-align:right">
       <button class="btn primary" data-act="close-rules">閉じる</button>
@@ -1305,11 +1309,34 @@ html, body {
  *   打牌   ... シャンテン数 -> 受け入れ枚数 -> 手役/ドラ価値 -> 危険度 の順で評価
  *   鳴き   ... シャンテンが進み、かつ役の見込みがある場合のみ
  *   リーチ ... 門前テンパイなら基本的に宣言（終盤の愚形は見送り）
+ *
+ * 難易度は game.difficulty（0=やさしい / 1=ふつう / 2=つよい）で切り替える。
+ * 弱くするときも「和了を見逃す」ような不自然な弱さにはせず、
+ * 読みの精度・降りの徹底・リーチ判断といった打ち手の腕にあたる部分を落とす。
  */
 (function (global) {
   'use strict';
 
   var MJ = global.MJ;
+
+  var LEVELS = [
+    // useUnseen  : 受け入れを残り枚数で数えるか（false なら種類数だけ＝場を読まない）
+    // doraWeight : ドラ・赤をどれだけ重く見るか
+    // defendFrom : 他家リーチ時に何シャンテンからベタ降りするか
+    // riichiMin  : 待ちが何枚以上ならリーチするか
+    // slip/slipTop: この確率で最善手ではなく 2〜slipTop 番手の打牌を選ぶ
+    // ponSkip    : 鳴ける場面を見送る確率
+    { name: 'やさしい', useUnseen: false, doraWeight: 0, defendFrom: 99, riichiMin: 3, slip: 0.45, slipTop: 3, ponSkip: 0.35 },
+    { name: 'ふつう', useUnseen: true, doraWeight: 6, defendFrom: 3, riichiMin: 2, slip: 0.20, slipTop: 2, ponSkip: 0.15 },
+    { name: 'つよい', useUnseen: true, doraWeight: 12, defendFrom: 2, riichiMin: 1, slip: 0, slipTop: 1, ponSkip: 0 }
+  ];
+
+  function levelOf(game, me) {
+    var d = me && me.difficulty != null ? me.difficulty : game.difficulty;
+    return LEVELS[d == null ? 1 : Math.max(0, Math.min(2, d))];
+  }
+
+  function rand(game) { return (game.rng || Math.random)(); }
 
   /** 場に見えている牌から残り枚数を数える */
   function unseenCounts(game, me) {
@@ -1385,13 +1412,13 @@ html, body {
 
   /** 打牌選択: 手牌配列のインデックスを返す */
   function chooseDiscard(game, me) {
+    var lv = levelOf(game, me);
     var meldCount = me.melds.length;
     var unseen = unseenCounts(game, me);
     var counts = MJ.toCounts(me.hand);
     var baseShanten = MJ.shanten(counts, meldCount);
-    var riichiExists = game.players.some(function (p) { return p !== me && p.riichi; });
-    // ベタ降り判定: 他家リーチかつ自分が 2 シャンテン以上
-    var defensive = riichiExists && baseShanten >= 2;
+    var riichiExists = game.players.some(function (p) { return p.seat !== me.seat && p.riichi; });
+    var defensive = riichiExists && baseShanten >= lv.defendFrom;
 
     // 打牌候補ごとのシャンテン数を先に求め、最小の候補だけ受け入れを厳密に数える
     // （受け入れ計算はコストが高いため）
@@ -1407,7 +1434,7 @@ html, body {
       if (sh0 < minShanten) minShanten = sh0;
     }
 
-    var best = null;
+    var scored = [];
     for (var ci = 0; ci < cand.length; ci++) {
       var i = cand[ci].index;
       var tile = me.hand[i];
@@ -1416,10 +1443,13 @@ html, body {
       counts[tile.t]--;
       var accept = 0;
       if (sh === minShanten || defensive) {
-        MJ.ukeire(counts, meldCount).forEach(function (t) { accept += unseen[t]; });
+        MJ.ukeire(counts, meldCount).forEach(function (t) {
+          accept += lv.useUnseen ? unseen[t] : 1;
+        });
+        if (!lv.useUnseen) accept *= 4; // 種類数しか見ないぶんの目安
       }
       var rest = me.hand.filter(function (_, k) { return k !== i; });
-      var value = doraValue(game, rest) * 12 + shapeBonus(counts, me.seatWind, game.roundWind);
+      var value = doraValue(game, rest) * lv.doraWeight + shapeBonus(counts, me.seatWind, game.roundWind);
       counts[tile.t]++;
 
       var score;
@@ -1429,13 +1459,23 @@ html, body {
         score = -sh * 1000 + accept * 8 + value - danger(game, me, tile) * 2;
         if (tile.red) score -= 40; // 赤は極力抱える
       }
-      if (!best || score > best.score) best = { index: i, score: score };
+      scored.push({ index: i, score: score });
     }
-    return best ? best.index : me.hand.length - 1;
+
+    if (!scored.length) return me.hand.length - 1;
+    scored.sort(function (a, b) { return b.score - a.score; });
+    // 難易度が低いほど、ときどき最善手ではなく次善手を選ぶ
+    var pick = 0;
+    if (lv.slip > 0 && scored.length > 1 && rand(game) < lv.slip) {
+      var span = Math.min(lv.slipTop, scored.length) - 1;
+      pick = 1 + Math.floor(rand(game) * span);
+    }
+    return scored[pick].index;
   }
 
   /** リーチ宣言するか */
   function shouldRiichi(game, me, discardIndex) {
+    var lv = levelOf(game, me);
     if (game.wall.length < 4) return false;
     if (me.points < 1000) return false;
     var counts = MJ.toCounts(me.hand);
@@ -1444,7 +1484,7 @@ html, body {
     if (w.length === 0) return false;
     var unseen = unseenCounts(game, me);
     var live = w.reduce(function (a, t) { return a + unseen[t]; }, 0);
-    if (live === 0) return false;
+    if (live < lv.riichiMin) return false;
     // 終盤の愚形かつ打点が無いときは見送る
     if (game.wall.length < 8 && live <= 2) return false;
     return true;
@@ -1461,6 +1501,7 @@ html, body {
     if (after === before && after > 0) return false;
 
     // 役の見込み
+    if (rand(game) < levelOf(game, me).ponSkip) return false;
     var isYakuhai = MJ.isDragon(tile.t) || tile.t === me.seatWind || tile.t === game.roundWind;
     if (isYakuhai) return true;
     if (me.riichi) return false;
@@ -1527,7 +1568,9 @@ html, body {
     shouldMinkan: shouldMinkan,
     shouldKanSelf: shouldKanSelf,
     shouldKita: shouldKita,
-    unseenCounts: unseenCounts
+    unseenCounts: unseenCounts,
+    LEVELS: LEVELS,
+    levelOf: levelOf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -1558,6 +1601,8 @@ html, body {
     this.seed = opts.seed;
     this.maxKyoku = opts.maxKyoku || 3;
     this.startPoints = opts.startPoints || 35000;
+    // CPU の強さ 0=やさしい / 1=ふつう / 2=つよい
+    this.difficulty = opts.difficulty == null ? 1 : opts.difficulty;
     this.roundWind = 27; // 東場のみ
     this.players = [0, 1, 2].map(function (i) {
       return {
@@ -1567,7 +1612,8 @@ html, body {
         points: 0,
         hand: [], drawn: null, melds: [], discards: [], kita: [],
         riichi: false, doubleRiichi: false, ippatsu: false, riichiTurn: -1,
-        tempFuriten: false, seatWind: 27, menzen: true, drawnFromDeadWall: false
+        tempFuriten: false, seatWind: 27, menzen: true, drawnFromDeadWall: false,
+        difficulty: null
       };
     });
     this.timer = null;
@@ -1776,7 +1822,7 @@ html, body {
       if (options.tsumo) { self.declareTsumo(p); return; }
 
       var full = { seat: p.seat, hand: p.hand.concat(p.drawn ? [p.drawn] : []),
-        melds: p.melds, seatWind: p.seatWind, riichi: p.riichi, discards: p.discards };
+        melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, riichi: p.riichi, discards: p.discards };
 
       // 北抜き
       if (options.kita && MJ.ai.shouldKita(self, full)) { self.doKita(p); return; }
@@ -1794,7 +1840,7 @@ html, body {
       if (p.riichi) { self.discard(p, -1, false); return; }
 
       var tiles = p.hand.concat([p.drawn]);
-      var tmp = { seat: p.seat, hand: tiles, melds: p.melds, seatWind: p.seatWind, discards: p.discards, riichi: p.riichi };
+      var tmp = { seat: p.seat, hand: tiles, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, discards: p.discards, riichi: p.riichi };
       var idx = MJ.ai.chooseDiscard(self, tmp);
       var declare = false;
       if (options.riichi) {
@@ -1876,7 +1922,7 @@ html, body {
       if (q.isAI) {
         if (opts.ron) aiClaims.push({ seat: seat, type: 'ron', offset: off, result: opts.ron });
         else {
-          var tmp = { seat: q.seat, hand: q.hand, melds: q.melds, seatWind: q.seatWind, riichi: q.riichi, discards: q.discards };
+          var tmp = { seat: q.seat, hand: q.hand, melds: q.melds, seatWind: q.seatWind, difficulty: q.difficulty, riichi: q.riichi, discards: q.discards };
           if (opts.kan && MJ.ai.shouldMinkan(this, tmp, tile)) {
             aiClaims.push({ seat: seat, type: 'kan', offset: off });
           } else if (opts.pon && MJ.ai.shouldPon(this, tmp, tile)) {
@@ -1976,7 +2022,7 @@ html, body {
     this.current = p.seat;
     if (p.isAI) {
       this.schedule(function () {
-        var tmp = { seat: p.seat, hand: p.hand, melds: p.melds, seatWind: p.seatWind, riichi: p.riichi, discards: p.discards };
+        var tmp = { seat: p.seat, hand: p.hand, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, riichi: p.riichi, discards: p.discards };
         var idx = MJ.ai.chooseDiscard(self, tmp);
         self.discard(p, idx, false);
       });
@@ -2133,7 +2179,7 @@ html, body {
       isHoutei: !!(!isTsumo && extra.isHoutei),
       isTenhou: !!(isTsumo && isFirst && p.seat === this.dealer && p.discards.length === 0),
       isChiihou: !!(isTsumo && isFirst && p.seat !== this.dealer && p.discards.length === 0),
-      seatWind: p.seatWind,
+      seatWind: p.seatWind, difficulty: p.difficulty,
       roundWind: this.roundWind,
       doraIndicators: this.doraIndicators,
       uraIndicators: p.riichi ? this.uraIndicatorsFor() : [],
@@ -2487,13 +2533,22 @@ html, body {
   }
 
   function hintText(p) {
-    var counts = MJ.toCounts(p.hand.concat(p.drawn ? [p.drawn] : []));
     var melds = p.melds.length;
-    var sh = MJ.shanten(counts, melds);
+    var sh = MJ.shanten(MJ.toCounts(p.hand.concat(p.drawn ? [p.drawn] : [])), melds);
     if (sh === -1) return '和了形';
-    if (p.hand.length + melds * 3 === 13 && !p.drawn) {
-      var w = MJ.waits(counts, melds);
-      if (w.length) return '待ち: ' + w.map(MJ.tileName).join('・');
+
+    // 打牌前（13枚形）の待ちが分かるなら、残り枚数付きで見せる
+    if (p.hand.length + melds * 3 === 13) {
+      var base = MJ.toCounts(p.hand);
+      if (MJ.shanten(base, melds) === 0) {
+        var w = MJ.waits(base, melds);
+        if (w.length) {
+          var unseen = MJ.ai.unseenCounts(game, { seat: 0, hand: p.hand, melds: p.melds });
+          return '待ち: ' + w.map(function (t) {
+            return MJ.tileName(t) + ' ' + unseen[t] + '枚';
+          }).join('・');
+        }
+      }
     }
     if (sh === 0) return 'テンパイ';
     return sh + 'シャンテン';
@@ -2696,6 +2751,11 @@ html, body {
         break;
       case 'new-game': startGame(); break;
       case 'hint': showHint = !showHint; btn.textContent = showHint ? 'ヒント: ON' : 'ヒント: OFF'; render(); break;
+      case 'difficulty':
+        var levels = MJ.ai.LEVELS;
+        game.difficulty = ((game.difficulty == null ? 1 : game.difficulty) + 1) % levels.length;
+        btn.textContent = '敵: ' + levels[game.difficulty].name;
+        break;
       case 'speed':
         var speeds = [1100, 650, 300, 60];
         var labels = ['ゆっくり', 'ふつう', 'はやい', '最速'];
@@ -2711,7 +2771,8 @@ html, body {
     logLines = [];
     riichiMode = false;
     var speed = game ? game.speed : 650;
-    game = new MJ.Game({ speed: speed, onEvent: onEvent });
+    var difficulty = game ? game.difficulty : 1;
+    game = new MJ.Game({ speed: speed, difficulty: difficulty, onEvent: onEvent });
     global.mjGame = game;
     renderLog();
     game.startGame();

@@ -150,13 +150,22 @@
   }
 
   function hintText(p) {
-    var counts = MJ.toCounts(p.hand.concat(p.drawn ? [p.drawn] : []));
     var melds = p.melds.length;
-    var sh = MJ.shanten(counts, melds);
+    var sh = MJ.shanten(MJ.toCounts(p.hand.concat(p.drawn ? [p.drawn] : [])), melds);
     if (sh === -1) return '和了形';
-    if (p.hand.length + melds * 3 === 13 && !p.drawn) {
-      var w = MJ.waits(counts, melds);
-      if (w.length) return '待ち: ' + w.map(MJ.tileName).join('・');
+
+    // 打牌前（13枚形）の待ちが分かるなら、残り枚数付きで見せる
+    if (p.hand.length + melds * 3 === 13) {
+      var base = MJ.toCounts(p.hand);
+      if (MJ.shanten(base, melds) === 0) {
+        var w = MJ.waits(base, melds);
+        if (w.length) {
+          var unseen = MJ.ai.unseenCounts(game, { seat: 0, hand: p.hand, melds: p.melds });
+          return '待ち: ' + w.map(function (t) {
+            return MJ.tileName(t) + ' ' + unseen[t] + '枚';
+          }).join('・');
+        }
+      }
     }
     if (sh === 0) return 'テンパイ';
     return sh + 'シャンテン';
@@ -359,6 +368,11 @@
         break;
       case 'new-game': startGame(); break;
       case 'hint': showHint = !showHint; btn.textContent = showHint ? 'ヒント: ON' : 'ヒント: OFF'; render(); break;
+      case 'difficulty':
+        var levels = MJ.ai.LEVELS;
+        game.difficulty = ((game.difficulty == null ? 1 : game.difficulty) + 1) % levels.length;
+        btn.textContent = '敵: ' + levels[game.difficulty].name;
+        break;
       case 'speed':
         var speeds = [1100, 650, 300, 60];
         var labels = ['ゆっくり', 'ふつう', 'はやい', '最速'];
@@ -374,7 +388,8 @@
     logLines = [];
     riichiMode = false;
     var speed = game ? game.speed : 650;
-    game = new MJ.Game({ speed: speed, onEvent: onEvent });
+    var difficulty = game ? game.difficulty : 1;
+    game = new MJ.Game({ speed: speed, difficulty: difficulty, onEvent: onEvent });
     global.mjGame = game;
     renderLog();
     game.startGame();

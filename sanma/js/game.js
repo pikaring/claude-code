@@ -24,6 +24,8 @@
     this.seed = opts.seed;
     this.maxKyoku = opts.maxKyoku || 3;
     this.startPoints = opts.startPoints || 35000;
+    // CPU の強さ 0=やさしい / 1=ふつう / 2=つよい
+    this.difficulty = opts.difficulty == null ? 1 : opts.difficulty;
     this.roundWind = 27; // 東場のみ
     this.players = [0, 1, 2].map(function (i) {
       return {
@@ -33,7 +35,8 @@
         points: 0,
         hand: [], drawn: null, melds: [], discards: [], kita: [],
         riichi: false, doubleRiichi: false, ippatsu: false, riichiTurn: -1,
-        tempFuriten: false, seatWind: 27, menzen: true, drawnFromDeadWall: false
+        tempFuriten: false, seatWind: 27, menzen: true, drawnFromDeadWall: false,
+        difficulty: null
       };
     });
     this.timer = null;
@@ -242,7 +245,7 @@
       if (options.tsumo) { self.declareTsumo(p); return; }
 
       var full = { seat: p.seat, hand: p.hand.concat(p.drawn ? [p.drawn] : []),
-        melds: p.melds, seatWind: p.seatWind, riichi: p.riichi, discards: p.discards };
+        melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, riichi: p.riichi, discards: p.discards };
 
       // 北抜き
       if (options.kita && MJ.ai.shouldKita(self, full)) { self.doKita(p); return; }
@@ -260,7 +263,7 @@
       if (p.riichi) { self.discard(p, -1, false); return; }
 
       var tiles = p.hand.concat([p.drawn]);
-      var tmp = { seat: p.seat, hand: tiles, melds: p.melds, seatWind: p.seatWind, discards: p.discards, riichi: p.riichi };
+      var tmp = { seat: p.seat, hand: tiles, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, discards: p.discards, riichi: p.riichi };
       var idx = MJ.ai.chooseDiscard(self, tmp);
       var declare = false;
       if (options.riichi) {
@@ -342,7 +345,7 @@
       if (q.isAI) {
         if (opts.ron) aiClaims.push({ seat: seat, type: 'ron', offset: off, result: opts.ron });
         else {
-          var tmp = { seat: q.seat, hand: q.hand, melds: q.melds, seatWind: q.seatWind, riichi: q.riichi, discards: q.discards };
+          var tmp = { seat: q.seat, hand: q.hand, melds: q.melds, seatWind: q.seatWind, difficulty: q.difficulty, riichi: q.riichi, discards: q.discards };
           if (opts.kan && MJ.ai.shouldMinkan(this, tmp, tile)) {
             aiClaims.push({ seat: seat, type: 'kan', offset: off });
           } else if (opts.pon && MJ.ai.shouldPon(this, tmp, tile)) {
@@ -442,7 +445,7 @@
     this.current = p.seat;
     if (p.isAI) {
       this.schedule(function () {
-        var tmp = { seat: p.seat, hand: p.hand, melds: p.melds, seatWind: p.seatWind, riichi: p.riichi, discards: p.discards };
+        var tmp = { seat: p.seat, hand: p.hand, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, riichi: p.riichi, discards: p.discards };
         var idx = MJ.ai.chooseDiscard(self, tmp);
         self.discard(p, idx, false);
       });
@@ -599,7 +602,7 @@
       isHoutei: !!(!isTsumo && extra.isHoutei),
       isTenhou: !!(isTsumo && isFirst && p.seat === this.dealer && p.discards.length === 0),
       isChiihou: !!(isTsumo && isFirst && p.seat !== this.dealer && p.discards.length === 0),
-      seatWind: p.seatWind,
+      seatWind: p.seatWind, difficulty: p.difficulty,
       roundWind: this.roundWind,
       doraIndicators: this.doraIndicators,
       uraIndicators: p.riichi ? this.uraIndicatorsFor() : [],
