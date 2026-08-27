@@ -1,0 +1,284 @@
+:root {
+  --felt: #1e6b46;
+  --felt-dark: #17553a;
+  --panel: rgba(0, 0, 0, .28);
+  --line: rgba(255, 255, 255, .18);
+  --tile-bg: #fbf7ec;
+  --tile-edge: #cdc4ae;
+  --tile-back: #2c7fbf;
+  --man: #b3403a;
+  --pin: #1f6fb2;
+  --sou: #1f7a45;
+  --honor: #2b2b2b;
+  --accent: #ffcf4d;
+  --danger: #e2564a;
+  --text: #f3f6f4;
+  --tile-w: 30px;
+  --tile-h: 41px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 0%, #2a8a5b, var(--felt) 45%, var(--felt-dark));
+  color: var(--text);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 8px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
+}
+
+/* ---- ヘッダ ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.topbar .title { font-weight: 700; letter-spacing: .04em; }
+.topbar .spacer { flex: 1; }
+.topbar .chip {
+  background: rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.btn {
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s;
+}
+.btn:hover { background: rgba(255, 255, 255, .22); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); color: #2b2205; border-color: transparent; font-weight: 700; }
+.btn.primary:hover { background: #ffdd7a; }
+.btn.warn { background: var(--danger); border-color: transparent; font-weight: 700; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* ---- 卓 ---- */
+.board {
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, 210px) 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.seat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 0;
+}
+.seat.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.seat-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.seat-head .nm { font-weight: 700; }
+.seat-head .pt { color: var(--accent); font-variant-numeric: tabular-nums; }
+.seat-head .wind {
+  background: rgba(255, 255, 255, .16);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.seat-head .wind.dealer { background: var(--accent); color: #2b2205; font-weight: 700; }
+.seat-head .riichi-mark { color: var(--danger); font-weight: 700; }
+
+.center-info {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
+}
+.center-info .round { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.center-info .dora-label { opacity: .8; margin: 6px 0 3px; }
+.center-info .rows { display: flex; flex-direction: column; gap: 2px; }
+
+/* ---- 牌 ---- */
+.tile {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  background: linear-gradient(#fffdf6, var(--tile-bg));
+  border: 1px solid var(--tile-edge);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--honor);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  flex: none;
+  vertical-align: middle;
+}
+.tile .n { font-size: calc(var(--tile-h) * .34); }
+.tile .sl { font-size: calc(var(--tile-h) * .30); margin-top: 1px; }
+.tile .z { font-size: calc(var(--tile-h) * .46); }
+.tile.m { color: var(--man); }
+.tile.p { color: var(--pin); }
+.tile.s { color: var(--sou); }
+.tile.z-haku { color: #3a6ea8; }
+.tile.z-hatsu { color: var(--sou); }
+.tile.z-chun { color: var(--man); }
+.tile.red { background: linear-gradient(#fff0ee, #ffdad4); border-color: #e3a99f; color: var(--danger); }
+.tile.back {
+  background: linear-gradient(150deg, #4a9ad6, var(--tile-back) 60%, #23648f);
+  border-color: #1c5680;
+}
+.tile.small { --tile-w: 21px; --tile-h: 29px; border-bottom-width: 1px; }
+.tile.tiny { --tile-w: 17px; --tile-h: 23px; border-bottom-width: 1px; border-radius: 3px; }
+.tile.rotated { transform: rotate(90deg); margin: calc((var(--tile-h) - var(--tile-w)) / 2) calc((var(--tile-w) - var(--tile-h)) / 2); }
+.tile.dim { opacity: .42; }
+.tile.called { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ---- 河 ---- */
+.pond {
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+  justify-content: start;
+  gap: 2px;
+  min-height: 30px;
+  margin-top: 4px;
+}
+.pond .slot { position: relative; }
+.pond .riichi-tile { outline: 2px solid var(--danger); outline-offset: -2px; }
+
+/* ---- 手牌 ---- */
+.hand-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.melds { display: flex; gap: 8px; flex-wrap: wrap; }
+.meld { display: flex; gap: 1px; }
+
+.self {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.self.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.self-hand { display: flex; align-items: flex-end; gap: 3px; flex-wrap: wrap; }
+.self-hand .tile { --tile-w: 36px; --tile-h: 49px; cursor: default; }
+.self-hand .tile.playable { cursor: pointer; }
+.self-hand .tile.playable:hover { transform: translateY(-6px); box-shadow: 0 4px 10px rgba(0, 0, 0, .35); }
+.self-hand .drawn { margin-left: 12px; }
+.self-hand .tile.choice { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 32px; }
+.actions .hint { font-size: 12px; opacity: .8; }
+
+/* ---- ログ ---- */
+.log {
+  background: rgba(0, 0, 0, .3);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.65;
+  height: 92px;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+}
+.log div { opacity: .9; }
+.log div.hl { color: var(--accent); }
+
+/* ---- 結果画面 ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 20;
+}
+.overlay[hidden] { display: none; }
+.sheet {
+  background: #14251d;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 14px;
+  padding: 16px 18px;
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+}
+.sheet h2 { margin: 0 0 8px; font-size: 19px; }
+.sheet .sub { font-size: 13px; opacity: .85; margin-bottom: 10px; }
+.sheet .agari { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
+.yaku-list { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 13px; margin: 8px 0; }
+.yaku-list .han { text-align: right; font-variant-numeric: tabular-nums; opacity: .85; }
+.sheet .score { font-size: 22px; font-weight: 700; color: var(--accent); margin: 8px 0; }
+.sheet .detail { font-size: 13px; line-height: 1.8; }
+.sheet .divider { height: 1px; background: rgba(255, 255, 255, .18); margin: 10px 0; }
+.standings { font-size: 15px; line-height: 2; font-variant-numeric: tabular-nums; }
+.standings .me { color: var(--accent); font-weight: 700; }
+
+@media (max-width: 720px) {
+  :root { --tile-w: 24px; --tile-h: 33px; }
+  #app { padding: 6px; }
+  .topbar { gap: 6px; padding: 5px 8px; }
+  .topbar .btn { padding: 4px 8px; font-size: 12px; }
+  .topbar .chip { padding: 2px 8px; font-size: 12px; }
+  .board { grid-template-columns: 1fr 1fr; }
+  /* 中央の情報は 1 行にまとめて縦を節約する */
+  .center-info {
+    grid-column: 1 / -1;
+    order: -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding: 5px 8px;
+  }
+  .center-info .round { font-size: 15px; margin: 0; }
+  .center-info .rows { flex-direction: row; gap: 8px; }
+  .center-info .dora-label { margin: 0; }
+  /* 手牌 14 枚が 1 行に収まるように牌幅を画面幅から決める */
+  .self-hand { gap: 2px; }
+  .self-hand .tile {
+    --tile-w: min(30px, calc((100vw - 60px) / 14));
+    --tile-h: calc(var(--tile-w) * 1.36);
+  }
+  .self-hand .drawn { margin-left: 7px; }
+  .log { height: 72px; }
+}

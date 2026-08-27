@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>三人麻雀 - サンマ</title>
+<meta name="description" content="ブラウザだけで遊べる軽量な三人麻雀（サンマ）。インストール不要・オフライン動作。">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e6b46'/><text y='24' x='16' text-anchor='middle' font-size='20' fill='%23fbf7ec'>牌</text></svg>">
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <span class="title">三人麻雀</span>
+    <span id="topinfo" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+    <span class="spacer"></span>
+    <button class="btn" data-act="hint">ヒント: OFF</button>
+    <button class="btn" data-act="speed">速度: ふつう</button>
+    <button class="btn" data-act="new-game">新規対局</button>
+    <button class="btn" data-act="rules">ルール</button>
+  </div>
+
+  <div class="board" id="board"></div>
+  <div id="self"></div>
+  <div class="actions" id="actions"></div>
+  <div class="log" id="log"></div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="overlay" id="rules-overlay" hidden>
+  <div class="sheet">
+    <h2>ルール</h2>
+    <div class="detail">
+      <b>基本</b><br>
+      ・使用牌は 108 枚。萬子は <b>一萬と九萬のみ</b>（二〜八萬は抜き）。<br>
+      ・赤ドラは赤五筒・赤五索が各 1 枚。<br>
+      ・東風戦（東1〜東3局）、持ち点 35000 点、親の連荘あり。<br>
+      ・誰かが飛んだ（0 点未満）時点で終了。
+      <div class="divider"></div>
+      <b>鳴き</b><br>
+      ・<b>チーはなし</b>。ポン・カン（暗槓／加槓／大明槓）は可能。<br>
+      ・北は誰の自風でもない客風なので、役牌にはなりません。<br>
+      ・ダブロンはなし（放銃者に近い方が優先＝頭ハネ）。
+      <div class="divider"></div>
+      <b>点数</b><br>
+      ・ツモ損あり。子のツモは「親 2 : 子 1」の 3 倍取りです。<br>
+      ・流局時のテンパイ料は 3000 点を分配（1人テンパイなら +3000 / -1500 ずつ）。<br>
+      ・数え役満あり。切り上げ満貫はなし。
+      <div class="divider"></div>
+      <b>操作</b><br>
+      ・自分の番は手牌をクリックして打牌します。<br>
+      ・リーチはボタンを押してから、捨てる牌を選びます。<br>
+      ・「ヒント」を ON にするとシャンテン数と待ちを表示します。
+    </div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="btn primary" data-act="close-rules">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/tiles.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/yaku.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'rules') document.getElementById('rules-overlay').hidden = false;
+    if (act === 'close-rules') document.getElementById('rules-overlay').hidden = true;
+  });
+  MJ.ui.init();
+</script>
+</body>
+</html>
