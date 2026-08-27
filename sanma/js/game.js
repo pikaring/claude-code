@@ -165,10 +165,25 @@
 
     if (p.isAI) {
       this.aiTurn(p, options);
-    } else {
-      this.awaiting = { type: 'turn', seat: p.seat, options: options };
-      this.emit('await', this.awaiting);
-      this.emit('update', {});
+      return;
+    }
+
+    // リーチ後はツモ切り以外に選べる手が無いので自動で進める。
+    // ツモ和了・暗槓・北抜きの判断が要るときだけ手を止める。
+    var auto = p.riichi && !options.tsumo && options.kans.length === 0 && !options.kita;
+    this.awaiting = { type: 'turn', seat: p.seat, options: options, auto: auto };
+    this.emit('await', this.awaiting);
+    this.emit('update', {});
+
+    if (auto) {
+      var self = this;
+      this.schedule(function () {
+        // この間にプレイヤー自身が切っていたら何もしない
+        if (self.awaiting && self.awaiting.auto) {
+          self.awaiting = null;
+          self.discard(p, -1, false);
+        }
+      });
     }
   };
 

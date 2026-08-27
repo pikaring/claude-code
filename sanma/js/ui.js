@@ -170,6 +170,7 @@
 
     var out = [];
     if (a.type === 'turn' && a.seat === 0) {
+      if (a.auto) return '<span class="hint">リーチ中 — 自動でツモ切りします（牌をクリックすると即座に切ります）</span>';
       if (riichiMode) {
         out.push('<span class="hint">リーチする牌を選んでください</span>');
         out.push('<button class="btn" data-act="riichi-cancel">キャンセル</button>');

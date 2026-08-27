@@ -376,6 +376,7 @@ html, body {
       <div class="divider"></div>
       <b>操作</b><br>
       ・自分の番は手牌をクリックして打牌します。<br>
+      ・リーチ後は自動でツモ切りします。ツモ和了・暗カン・北抜きができるときだけ手が止まります。<br>
       ・リーチはボタンを押してから、捨てる牌を選びます。<br>
       ・「ヒント」を ON にするとシャンテン数と待ちを表示します。
     </div>
@@ -1698,10 +1699,25 @@ html, body {
 
     if (p.isAI) {
       this.aiTurn(p, options);
-    } else {
-      this.awaiting = { type: 'turn', seat: p.seat, options: options };
-      this.emit('await', this.awaiting);
-      this.emit('update', {});
+      return;
+    }
+
+    // リーチ後はツモ切り以外に選べる手が無いので自動で進める。
+    // ツモ和了・暗槓・北抜きの判断が要るときだけ手を止める。
+    var auto = p.riichi && !options.tsumo && options.kans.length === 0 && !options.kita;
+    this.awaiting = { type: 'turn', seat: p.seat, options: options, auto: auto };
+    this.emit('await', this.awaiting);
+    this.emit('update', {});
+
+    if (auto) {
+      var self = this;
+      this.schedule(function () {
+        // この間にプレイヤー自身が切っていたら何もしない
+        if (self.awaiting && self.awaiting.auto) {
+          self.awaiting = null;
+          self.discard(p, -1, false);
+        }
+      });
     }
   };
 
@@ -2491,6 +2507,7 @@ html, body {
 
     var out = [];
     if (a.type === 'turn' && a.seat === 0) {
+      if (a.auto) return '<span class="hint">リーチ中 — 自動でツモ切りします（牌をクリックすると即座に切ります）</span>';
       if (riichiMode) {
         out.push('<span class="hint">リーチする牌を選んでください</span>');
         out.push('<button class="btn" data-act="riichi-cancel">キャンセル</button>');
