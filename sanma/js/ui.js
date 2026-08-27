@@ -56,6 +56,12 @@
     return out.join('');
   }
 
+  function kitaHTML(p, size) {
+    if (!p.kita || !p.kita.length) return '';
+    return '<div class="kita"><span class="label">抜き</span>' +
+      p.kita.map(function (t) { return tileHTML(t, size); }).join('') + '</div>';
+  }
+
   function pondHTML(p) {
     return '<div class="pond">' + p.discards.map(function (d) {
       var extra = 'small';
@@ -82,7 +88,8 @@
       ? '<div class="melds" style="margin-top:4px">' + p.melds.map(function (m) { return meldHTML(m, 'tiny'); }).join('') + '</div>'
       : '';
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
-      head + '<div class="hand-row">' + backs + '</div>' + melds + pondHTML(p) + '</div>';
+      head + '<div class="hand-row">' + backs + '</div>' + melds + kitaHTML(p, 'tiny') +
+      pondHTML(p) + '</div>';
   }
 
   function centerHTML() {
@@ -137,7 +144,7 @@
     }
 
     return '<div class="self' + (game.current === 0 && awaiting ? ' active' : '') + '">' +
-      head + melds + pondHTML(p) +
+      head + melds + kitaHTML(p, 'small') + pondHTML(p) +
       '<div class="self-hand" id="myhand">' + tiles + '</div>' +
       '</div>';
   }
@@ -170,6 +177,7 @@
       }
       if (a.options.tsumo) out.push('<button class="btn primary" data-act="tsumo">ツモ</button>');
       if (a.options.riichi) out.push('<button class="btn warn" data-act="riichi">リーチ</button>');
+      if (a.options.kita) out.push('<button class="btn" data-act="kita">北抜き</button>');
       (a.options.kans || []).forEach(function (k, i) {
         out.push('<button class="btn" data-act="kan" data-kan="' + i + '">' +
           (k.type === 'ankan' ? '暗カン' : '加カン') + ' ' + MJ.tileName(k.tile) + '</button>');
@@ -179,7 +187,8 @@
     }
     if (a.type === 'call' && a.seat === 0) {
       out.push('<span class="hint">' + esc(game.players[a.from].name) + ' の ' +
-        MJ.tileName(a.tile.t) + (a.chankan ? '（加カン）' : '') + '</span>');
+        MJ.tileName(a.tile.t) +
+        (a.kita ? '（北抜き）' : a.chankan ? '（加カン）' : '') + '</span>');
       if (a.options.ron) out.push('<button class="btn primary" data-act="ron">ロン</button>');
       if (a.options.pon) out.push('<button class="btn" data-act="pon">ポン</button>');
       if (a.options.kan) out.push('<button class="btn" data-act="call-kan">カン</button>');
@@ -230,6 +239,10 @@
     var handTiles = p.hand.map(function (t) { return tileHTML(t); }).join('') +
       p.melds.map(function (m) { return '<span style="margin-left:8px">' + meldHTML(m) + '</span>'; }).join('') +
       '<span style="margin-left:12px">' + tileHTML(info.winTile) + '</span>';
+    var kitaLine = p.kita.length
+      ? '<div style="margin-top:6px;font-size:12px">抜きドラ ' +
+        p.kita.map(function (t) { return tileHTML(t, 'small'); }).join('') + '</div>'
+      : '';
 
     var yakuRows = r.yaku.map(function (y) {
       return '<div>' + esc(y.name) + '</div><div class="han">' +
@@ -250,7 +263,7 @@
       '<h2>' + esc(p.name) + ' ' + (info.type === 'tsumo' ? 'ツモ' : 'ロン') + '</h2>' +
       '<div class="sub">' + (info.type === 'ron' ? esc(game.players[info.from].name) + ' から' : '') + '</div>' +
       '<div class="agari">' + handTiles + '</div>' +
-      doraRow +
+      kitaLine + doraRow +
       '<div class="yaku-list">' + yakuRows + '</div>' +
       '<div class="score">' + scoreLine + '</div>' +
       '<div class="detail">' + info.detail.map(esc).join('<br>') + '</div>' +
@@ -324,6 +337,7 @@
     switch (act) {
       case 'tsumo': game.playerTsumo(); break;
       case 'riichi': riichiMode = true; render(); break;
+      case 'kita': riichiMode = false; game.playerKita(); break;
       case 'riichi-cancel': riichiMode = false; render(); break;
       case 'kan':
         var k = game.awaiting.options.kans[parseInt(btn.getAttribute('data-kan'), 10)];

@@ -201,6 +201,8 @@ html, body {
   flex-wrap: wrap;
 }
 .melds { display: flex; gap: 8px; flex-wrap: wrap; }
+.kita { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+.kita .label { font-size: 11px; opacity: .75; margin-right: 3px; }
 .meld { display: flex; gap: 1px; }
 
 .self {

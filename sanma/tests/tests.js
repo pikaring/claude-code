@@ -49,7 +49,8 @@
       isTsumo: !!o.tsumo, isRiichi: !!o.riichi, isIppatsu: !!o.ippatsu,
       seatWind: o.seat == null ? T('1z') : T(o.seat),
       roundWind: T('1z'),
-      doraIndicators: (o.dora || []).map(T), redCount: o.red || 0
+      doraIndicators: (o.dora || []).map(T), redCount: o.red || 0,
+      kitaCount: o.kita || 0
     });
   }
   function hasYaku(r, name) {
@@ -116,6 +117,13 @@
   r = ev({ hand: '111p22p', win: '2p', melds: [{ type: 'pon', tile: T('5z') }, { type: 'pon', tile: T('3p') }, { type: 'pon', tile: T('4p') }] });
   ok('副露の役牌 白', hasYaku(r, '役牌 白'), JSON.stringify(r.yaku));
   ok('対々和', hasYaku(r, '対々和'), JSON.stringify(r.yaku));
+
+  r = ev({ hand: '234567p234s678s55p', win: '4s', kita: 2 });
+  ok('抜きドラが翻に乗る', hasYaku(r, '抜きドラ'), JSON.stringify(r.yaku));
+  eq('抜きドラ2枚で2翻増える', r.han, 4);
+
+  r = ev({ hand: '123567p234678s44z', win: '2p', kita: 4 });
+  eq('抜きドラだけでは和了できない', r.valid, false);
 
   r = ev({ hand: '234567p234s678s55p', win: '4s', dora: ['1p'], red: 1 });
   ok('ドラが乗る', hasYaku(r, 'ドラ'), JSON.stringify(r.yaku));

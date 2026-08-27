@@ -22,6 +22,7 @@
       p.melds.forEach(function (m) {
         m.tiles.forEach(function (t) { sub(t.t); });
       });
+      (p.kita || []).forEach(function (t) { sub(t.t); });
     });
     game.doraIndicators.forEach(sub);
     return c;
@@ -198,6 +199,13 @@
     return isYakuhai || after <= 0;
   }
 
+  /** 北を抜くか。基本は常に抜くが、国士無双が見えているときだけ手牌に残す */
+  function shouldKita(game, me) {
+    var counts = MJ.toCounts(me.hand);
+    if (me.melds.length === 0 && MJ.shantenKokushi(counts) <= 3) return false;
+    return true;
+  }
+
   /** 暗槓・加槓するか */
   function shouldKanSelf(game, me, tile, type) {
     if (me.riichi) return false; // 待ちが変わる可能性を避けて見送る
@@ -218,6 +226,7 @@
     shouldPon: shouldPon,
     shouldMinkan: shouldMinkan,
     shouldKanSelf: shouldKanSelf,
+    shouldKita: shouldKita,
     unseenCounts: unseenCounts
   };
 })(typeof window !== 'undefined' ? window : globalThis);

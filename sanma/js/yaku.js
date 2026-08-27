@@ -12,6 +12,7 @@
  *   seatWind:   自風の牌 ID (27-29)
  *   roundWind:  場風の牌 ID (27-)
  *   doraIndicators: [牌ID], uraIndicators: [牌ID], redCount: 赤ドラ枚数
+ *   kitaCount:  抜いた北の枚数（1枚1翻のドラ）
  * }
  */
 (function (global) {
@@ -315,6 +316,7 @@
     });
     if (n > 0) out.push({ name: 'ドラ', han: n, isDora: true });
     if (ctx.redCount > 0) out.push({ name: '赤ドラ', han: ctx.redCount, isDora: true });
+    if (ctx.kitaCount > 0) out.push({ name: '抜きドラ', han: ctx.kitaCount, isDora: true });
     if (ctx.isRiichi) {
       var u = 0;
       (ctx.uraIndicators || []).forEach(function (ind) {
@@ -354,6 +356,7 @@
     ctx.doraIndicators = ctx.doraIndicators || [];
     ctx.uraIndicators = ctx.uraIndicators || [];
     ctx.redCount = ctx.redCount || 0;
+    ctx.kitaCount = ctx.kitaCount || 0;
 
     var all = fullCounts(ctx);
     var menzen = isMenzen(ctx.melds);

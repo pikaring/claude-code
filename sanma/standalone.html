@@ -209,6 +209,8 @@ html, body {
   flex-wrap: wrap;
 }
 .melds { display: flex; gap: 8px; flex-wrap: wrap; }
+.kita { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+.kita .label { font-size: 11px; opacity: .75; margin-right: 3px; }
 .meld { display: flex; gap: 1px; }
 
 .self {
@@ -360,13 +362,16 @@ html, body {
       <div class="divider"></div>
       <b>鳴き</b><br>
       ・<b>チーはなし</b>。ポン・カン（暗槓／加槓／大明槓）は可能。<br>
-      ・北は誰の自風でもない客風なので、役牌にはなりません。<br>
+      ・<b>北は抜きドラ</b>。自分の番に「北抜き」で抜くと嶺上牌をツモり、1枚 1 翻のドラになります。<br>
+      　抜かずに手牌で使ってもかまいませんが、その場合は客風なので役にはなりません。<br>
+      ・抜いた北は搶槓の対象です（他家はその北でロンできます）。<br>
       ・ダブロンはなし（放銃者に近い方が優先＝頭ハネ）。
       <div class="divider"></div>
       <b>点数</b><br>
       ・ツモ損あり。子のツモは「親 2 : 子 1」の 3 倍取りです。<br>
       ・流局時のテンパイ料は 3000 点を分配（1人テンパイなら +3000 / -1500 ずつ）。<br>
-      ・数え役満あり。切り上げ満貫はなし。
+      ・数え役満あり。切り上げ満貫はなし。<br>
+      ・赤ドラは赤五筒・赤五索が各 1 枚（三麻に五萬は無いため 2 枚構成）。
       <div class="divider"></div>
       <b>操作</b><br>
       ・自分の番は手牌をクリックして打牌します。<br>
@@ -840,6 +845,7 @@ html, body {
  *   seatWind:   自風の牌 ID (27-29)
  *   roundWind:  場風の牌 ID (27-)
  *   doraIndicators: [牌ID], uraIndicators: [牌ID], redCount: 赤ドラ枚数
+ *   kitaCount:  抜いた北の枚数（1枚1翻のドラ）
  * }
  */
 (function (global) {
@@ -1143,6 +1149,7 @@ html, body {
     });
     if (n > 0) out.push({ name: 'ドラ', han: n, isDora: true });
     if (ctx.redCount > 0) out.push({ name: '赤ドラ', han: ctx.redCount, isDora: true });
+    if (ctx.kitaCount > 0) out.push({ name: '抜きドラ', han: ctx.kitaCount, isDora: true });
     if (ctx.isRiichi) {
       var u = 0;
       (ctx.uraIndicators || []).forEach(function (ind) {
@@ -1182,6 +1189,7 @@ html, body {
     ctx.doraIndicators = ctx.doraIndicators || [];
     ctx.uraIndicators = ctx.uraIndicators || [];
     ctx.redCount = ctx.redCount || 0;
+    ctx.kitaCount = ctx.kitaCount || 0;
 
     var all = fullCounts(ctx);
     var menzen = isMenzen(ctx.melds);
@@ -1312,6 +1320,7 @@ html, body {
       p.melds.forEach(function (m) {
         m.tiles.forEach(function (t) { sub(t.t); });
       });
+      (p.kita || []).forEach(function (t) { sub(t.t); });
     });
     game.doraIndicators.forEach(sub);
     return c;
@@ -1488,6 +1497,13 @@ html, body {
     return isYakuhai || after <= 0;
   }
 
+  /** 北を抜くか。基本は常に抜くが、国士無双が見えているときだけ手牌に残す */
+  function shouldKita(game, me) {
+    var counts = MJ.toCounts(me.hand);
+    if (me.melds.length === 0 && MJ.shantenKokushi(counts) <= 3) return false;
+    return true;
+  }
+
   /** 暗槓・加槓するか */
   function shouldKanSelf(game, me, tile, type) {
     if (me.riichi) return false; // 待ちが変わる可能性を避けて見送る
@@ -1508,6 +1524,7 @@ html, body {
     shouldPon: shouldPon,
     shouldMinkan: shouldMinkan,
     shouldKanSelf: shouldKanSelf,
+    shouldKita: shouldKita,
     unseenCounts: unseenCounts
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1521,7 +1538,8 @@ html, body {
  *   - 東1〜東3局、親の連荘あり、持ち点 35000 点
  *   - チーなし、ポン・カン・リーチ・ロン・ツモあり
  *   - ツモ損あり（子のツモは 親 2 : 子 1 の 3 倍取り）
- *   - 北は誰の自風でもない客風のため役にならない
+ *   - 北は抜きドラ。自分の番に抜いて嶺上牌をツモり、1枚1翻のドラになる
+ *     （抜かずに手牌で使ってもよいが、その場合は客風なので役にはならない）
  *   - ダブロンなし（頭ハネ）
  */
 (function (global) {
@@ -1529,6 +1547,7 @@ html, body {
 
   var MJ = global.MJ;
   var SEAT_NAMES = ['あなた', '下家CPU', '上家CPU'];
+  var KITA = 30; // 北
 
   function Game(opts) {
     opts = opts || {};
@@ -1544,7 +1563,7 @@ html, body {
         name: SEAT_NAMES[i],
         isAI: i !== 0,
         points: 0,
-        hand: [], drawn: null, melds: [], discards: [],
+        hand: [], drawn: null, melds: [], discards: [], kita: [],
         riichi: false, doubleRiichi: false, ippatsu: false, riichiTurn: -1,
         tempFuriten: false, seatWind: 27, menzen: true, drawnFromDeadWall: false
       };
@@ -1605,6 +1624,7 @@ html, body {
       p.drawn = null;
       p.melds = [];
       p.discards = [];
+      p.kita = [];
       p.riichi = false; p.doubleRiichi = false; p.ippatsu = false; p.riichiTurn = -1;
       p.tempFuriten = false;
       p.seatWind = 27 + ((i - self.dealer + 3) % 3);
@@ -1619,23 +1639,30 @@ html, body {
 
   /* --- ツモ番 ---------------------------------------------------------- */
 
-  Game.prototype.beginTurn = function (seat, fromDeadWall) {
+  /** replacement: false（通常のツモ）/ 'kan'（嶺上牌）/ 'kita'（北抜き後の補充） */
+  Game.prototype.beginTurn = function (seat, replacement) {
     if (this.gameOver || this.result) return;
     var p = this.players[seat];
     this.current = seat;
 
-    if (!fromDeadWall && this.wall.length === 0) { this.exhaustiveDraw(); return; }
+    if (!replacement && this.wall.length === 0) { this.exhaustiveDraw(); return; }
 
     var tile;
-    if (fromDeadWall) {
-      tile = this.deadWall[this.rinshanIndex++];
-      // 王牌を 14 枚に保つため、生牌山の末尾を王牌へ送る
+    if (replacement) {
+      // 王牌を 14 枚に保つため、先に生牌山の末尾を王牌へ送ってから嶺上牌を取る。
+      // 5 回目以降は補充した牌（index 14 以降）から取るので、
+      // ドラ表示牌（4-8）と裏ドラ（9-13）には手を付けない。
       if (this.wall.length > 0) this.deadWall.push(this.wall.pop());
+      var idx = this.rinshanIndex < 4 ? this.rinshanIndex : this.rinshanIndex + 10;
+      tile = this.deadWall[idx];
+      this.deadWall[idx] = null; // 取った嶺上牌は王牌から外す（表示牌の位置はずらさない）
+      this.rinshanIndex++;
+      if (!tile) { this.exhaustiveDraw(); return; }
     } else {
       tile = this.wall.shift();
     }
     p.drawn = tile;
-    p.drawnFromDeadWall = !!fromDeadWall;
+    p.drawnFromDeadWall = replacement || false;
     if (!p.riichi) p.tempFuriten = false;
 
     this.emit('update', {});
@@ -1644,7 +1671,7 @@ html, body {
 
   Game.prototype.evaluateTurnOptions = function (p) {
     var self = this;
-    var options = { tsumo: false, riichi: false, kans: [] };
+    var options = { tsumo: false, riichi: false, kans: [], kita: false };
 
     // ツモ和了
     var res = this.scoreFor(p, p.drawn, true);
@@ -1653,6 +1680,13 @@ html, body {
     // カン
     if (this.kanCount < 4 && this.wall.length > 0) {
       options.kans = this.kanOptions(p);
+    }
+
+    // 北抜き（リーチ後はツモってきた北のみ抜ける）
+    if (this.wall.length > 0) {
+      options.kita = p.riichi
+        ? !!(p.drawn && p.drawn.t === KITA)
+        : p.hand.concat(p.drawn ? [p.drawn] : []).some(function (t) { return t.t === KITA; });
     }
 
     // リーチ
@@ -1726,6 +1760,9 @@ html, body {
 
       var full = { seat: p.seat, hand: p.hand.concat(p.drawn ? [p.drawn] : []),
         melds: p.melds, seatWind: p.seatWind, riichi: p.riichi, discards: p.discards };
+
+      // 北抜き
+      if (options.kita && MJ.ai.shouldKita(self, full)) { self.doKita(p); return; }
 
       // カン
       for (var i = 0; i < options.kans.length; i++) {
@@ -1915,7 +1952,7 @@ html, body {
     if (type === 'kan') {
       this.kanCount++;
       this.revealKanDora();
-      this.schedule(function () { self.beginTurn(p.seat, true); });
+      this.schedule(function () { self.beginTurn(p.seat, 'kan'); });
       return;
     }
 
@@ -1953,7 +1990,7 @@ html, body {
       this.players.forEach(function (q) { q.ippatsu = false; });
       this.revealKanDora();
       this.emit('update', {});
-      this.schedule(function () { self.beginTurn(p.seat, true); });
+      this.schedule(function () { self.beginTurn(p.seat, 'kan'); });
       return;
     }
 
@@ -1973,7 +2010,30 @@ html, body {
     this.checkChankan(p, added);
   };
 
-  Game.prototype.checkChankan = function (from, tile) {
+  /* --- 北抜き ---------------------------------------------------------- */
+
+  Game.prototype.doKita = function (p) {
+    var tile = null;
+    if (p.drawn && p.drawn.t === KITA) {
+      tile = p.drawn;
+      p.drawn = null;
+    } else {
+      for (var i = 0; i < p.hand.length; i++) {
+        if (p.hand[i].t === KITA) { tile = p.hand.splice(i, 1)[0]; break; }
+      }
+      if (!tile) return;
+      // 手牌から抜いた場合はツモ牌を手牌に入れてから嶺上牌を引く
+      if (p.drawn) { p.hand.push(p.drawn); p.drawn = null; MJ.sortTiles(p.hand); }
+    }
+    p.kita.push(tile);
+    this.awaiting = null;
+    this.log(p.name + ' 北抜き（' + p.kita.length + '枚目）');
+    this.emit('update', {});
+    // 抜いた北は搶槓の対象
+    this.checkChankan(p, tile, { kita: true });
+  };
+
+  Game.prototype.checkChankan = function (from, tile, opts) {
     var self = this;
     var aiClaims = [];
     var humanOptions = null;
@@ -1988,7 +2048,7 @@ html, body {
     if (humanOptions) {
       this.awaiting = {
         type: 'call', seat: 0, from: from.seat, tile: tile, chankan: true,
-        options: humanOptions, aiClaims: aiClaims
+        kita: !!(opts && opts.kita), options: humanOptions, aiClaims: aiClaims
       };
       this.emit('await', this.awaiting);
       this.emit('update', {});
@@ -2002,8 +2062,13 @@ html, body {
       });
       return;
     }
+    if (opts && opts.kita) {
+      // 北抜きではドラは増えない
+      this.schedule(function () { self.beginTurn(from.seat, 'kita'); });
+      return;
+    }
     this.revealKanDora();
-    this.schedule(function () { self.beginTurn(from.seat, true); });
+    this.schedule(function () { self.beginTurn(from.seat, 'kan'); });
   };
 
   Game.prototype.revealKanDora = function () {
@@ -2044,9 +2109,10 @@ html, body {
       isRiichi: p.riichi,
       isDoubleRiichi: p.doubleRiichi,
       isIppatsu: p.ippatsu,
-      isRinshan: !!(isTsumo && p.drawnFromDeadWall),
+      isRinshan: !!(isTsumo && p.drawnFromDeadWall === 'kan'),
       isChankan: !!extra.isChankan,
       isHaitei: !!(isTsumo && this.wall.length === 0 && !p.drawnFromDeadWall),
+      kitaCount: p.kita.length,
       isHoutei: !!(!isTsumo && extra.isHoutei),
       isTenhou: !!(isTsumo && isFirst && p.seat === this.dealer && p.discards.length === 0),
       isChiihou: !!(isTsumo && isFirst && p.seat !== this.dealer && p.discards.length === 0),
@@ -2237,6 +2303,14 @@ html, body {
     return true;
   };
 
+  Game.prototype.playerKita = function () {
+    if (!this.awaiting || this.awaiting.type !== 'turn') return false;
+    if (!this.awaiting.options.kita) return false;
+    this.awaiting = null;
+    this.doKita(this.players[0]);
+    return true;
+  };
+
   Game.prototype.remaining = function () { return this.wall.length; };
 
   global.MJ.Game = Game;
@@ -2302,6 +2376,12 @@ html, body {
     return out.join('');
   }
 
+  function kitaHTML(p, size) {
+    if (!p.kita || !p.kita.length) return '';
+    return '<div class="kita"><span class="label">抜き</span>' +
+      p.kita.map(function (t) { return tileHTML(t, size); }).join('') + '</div>';
+  }
+
   function pondHTML(p) {
     return '<div class="pond">' + p.discards.map(function (d) {
       var extra = 'small';
@@ -2328,7 +2408,8 @@ html, body {
       ? '<div class="melds" style="margin-top:4px">' + p.melds.map(function (m) { return meldHTML(m, 'tiny'); }).join('') + '</div>'
       : '';
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
-      head + '<div class="hand-row">' + backs + '</div>' + melds + pondHTML(p) + '</div>';
+      head + '<div class="hand-row">' + backs + '</div>' + melds + kitaHTML(p, 'tiny') +
+      pondHTML(p) + '</div>';
   }
 
   function centerHTML() {
@@ -2383,7 +2464,7 @@ html, body {
     }
 
     return '<div class="self' + (game.current === 0 && awaiting ? ' active' : '') + '">' +
-      head + melds + pondHTML(p) +
+      head + melds + kitaHTML(p, 'small') + pondHTML(p) +
       '<div class="self-hand" id="myhand">' + tiles + '</div>' +
       '</div>';
   }
@@ -2416,6 +2497,7 @@ html, body {
       }
       if (a.options.tsumo) out.push('<button class="btn primary" data-act="tsumo">ツモ</button>');
       if (a.options.riichi) out.push('<button class="btn warn" data-act="riichi">リーチ</button>');
+      if (a.options.kita) out.push('<button class="btn" data-act="kita">北抜き</button>');
       (a.options.kans || []).forEach(function (k, i) {
         out.push('<button class="btn" data-act="kan" data-kan="' + i + '">' +
           (k.type === 'ankan' ? '暗カン' : '加カン') + ' ' + MJ.tileName(k.tile) + '</button>');
@@ -2425,7 +2507,8 @@ html, body {
     }
     if (a.type === 'call' && a.seat === 0) {
       out.push('<span class="hint">' + esc(game.players[a.from].name) + ' の ' +
-        MJ.tileName(a.tile.t) + (a.chankan ? '（加カン）' : '') + '</span>');
+        MJ.tileName(a.tile.t) +
+        (a.kita ? '（北抜き）' : a.chankan ? '（加カン）' : '') + '</span>');
       if (a.options.ron) out.push('<button class="btn primary" data-act="ron">ロン</button>');
       if (a.options.pon) out.push('<button class="btn" data-act="pon">ポン</button>');
       if (a.options.kan) out.push('<button class="btn" data-act="call-kan">カン</button>');
@@ -2476,6 +2559,10 @@ html, body {
     var handTiles = p.hand.map(function (t) { return tileHTML(t); }).join('') +
       p.melds.map(function (m) { return '<span style="margin-left:8px">' + meldHTML(m) + '</span>'; }).join('') +
       '<span style="margin-left:12px">' + tileHTML(info.winTile) + '</span>';
+    var kitaLine = p.kita.length
+      ? '<div style="margin-top:6px;font-size:12px">抜きドラ ' +
+        p.kita.map(function (t) { return tileHTML(t, 'small'); }).join('') + '</div>'
+      : '';
 
     var yakuRows = r.yaku.map(function (y) {
       return '<div>' + esc(y.name) + '</div><div class="han">' +
@@ -2496,7 +2583,7 @@ html, body {
       '<h2>' + esc(p.name) + ' ' + (info.type === 'tsumo' ? 'ツモ' : 'ロン') + '</h2>' +
       '<div class="sub">' + (info.type === 'ron' ? esc(game.players[info.from].name) + ' から' : '') + '</div>' +
       '<div class="agari">' + handTiles + '</div>' +
-      doraRow +
+      kitaLine + doraRow +
       '<div class="yaku-list">' + yakuRows + '</div>' +
       '<div class="score">' + scoreLine + '</div>' +
       '<div class="detail">' + info.detail.map(esc).join('<br>') + '</div>' +
@@ -2570,6 +2657,7 @@ html, body {
     switch (act) {
       case 'tsumo': game.playerTsumo(); break;
       case 'riichi': riichiMode = true; render(); break;
+      case 'kita': riichiMode = false; game.playerKita(); break;
       case 'riichi-cancel': riichiMode = false; render(); break;
       case 'kan':
         var k = game.awaiting.options.kans[parseInt(btn.getAttribute('data-kan'), 10)];
