@@ -15,6 +15,8 @@
   --text: #f3f6f4;
   --tile-w: 30px;
   --tile-h: 41px;
+  --font-ui: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, system-ui, sans-serif;
+  --font-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Times New Roman", serif;
 }
 
 * { box-sizing: border-box; }
@@ -25,7 +27,7 @@ html, body {
   height: 100%;
   background: radial-gradient(ellipse at 50% 0%, #2a8a5b, var(--felt) 45%, var(--felt-dark));
   color: var(--text);
-  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, system-ui, sans-serif;
+  font-family: var(--font-ui);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -51,7 +53,12 @@ html, body {
   padding: 6px 10px;
   font-size: 13px;
 }
-.topbar .title { font-weight: 700; letter-spacing: .04em; }
+.topbar .title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .16em;
+}
 .topbar .spacer { flex: 1; }
 .topbar .chip {
   background: rgba(255, 255, 255, .1);
@@ -76,6 +83,12 @@ html, body {
 .btn.primary:hover { background: #ffdd7a; }
 .btn.warn { background: var(--danger); border-color: transparent; font-weight: 700; }
 .btn:disabled { opacity: .4; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  .self-hand .tile.playable:hover { transform: none; }
+}
 
 /* ---- 卓 ---- */
 .board {
@@ -118,7 +131,13 @@ html, body {
   text-align: center;
   font-size: 12px;
 }
-.center-info .round { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.center-info .round {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  margin-bottom: 4px;
+}
 .center-info .dora-label { opacity: .8; margin: 6px 0 3px; }
 .center-info .rows { display: flex; flex-direction: column; gap: 2px; }
 
@@ -142,9 +161,9 @@ html, body {
   flex: none;
   vertical-align: middle;
 }
-.tile .n { font-size: calc(var(--tile-h) * .34); }
+.tile .n { font-family: var(--font-display); font-size: calc(var(--tile-h) * .38); }
 .tile .sl { font-size: calc(var(--tile-h) * .30); margin-top: 1px; }
-.tile .z { font-size: calc(var(--tile-h) * .46); }
+.tile .z { font-family: var(--font-display); font-size: calc(var(--tile-h) * .48); }
 .tile.m { color: var(--man); }
 .tile.p { color: var(--pin); }
 .tile.s { color: var(--sou); }
@@ -241,13 +260,27 @@ html, body {
   overflow-y: auto;
   box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
 }
-.sheet h2 { margin: 0 0 8px; font-size: 19px; }
+.sheet h2 {
+  font-family: var(--font-display);
+  margin: 0 0 8px;
+  font-size: 21px;
+  letter-spacing: .06em;
+  text-wrap: balance;
+}
 .sheet .sub { font-size: 13px; opacity: .85; margin-bottom: 10px; }
 .sheet .agari { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
 .yaku-list { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 13px; margin: 8px 0; }
 .yaku-list .han { text-align: right; font-variant-numeric: tabular-nums; opacity: .85; }
-.sheet .score { font-size: 22px; font-weight: 700; color: var(--accent); margin: 8px 0; }
-.sheet .detail { font-size: 13px; line-height: 1.8; }
+.sheet .score {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--accent);
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+.sheet .detail { font-size: 13px; line-height: 1.8; font-variant-numeric: tabular-nums; }
 .sheet .divider { height: 1px; background: rgba(255, 255, 255, .18); margin: 10px 0; }
 .standings { font-size: 15px; line-height: 2; font-variant-numeric: tabular-nums; }
 .standings .me { color: var(--accent); font-weight: 700; }

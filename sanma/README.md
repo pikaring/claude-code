@@ -7,6 +7,8 @@
 ```
 sanma/
 ├── index.html        ゲーム本体（これを開く）
+├── standalone.html   1ファイル版（build.js が生成。単体で配布できる）
+├── build.js          index.html に CSS/JS を埋め込むビルドスクリプト
 ├── css/style.css
 ├── js/
 │   ├── tiles.js      牌の定義・山・ドラ・表記
@@ -19,6 +21,9 @@ sanma/
     ├── test.html     ブラウザで開くセルフテスト
     └── run.js        `node tests/run.js` でも実行可能
 ```
+
+1 ファイルだけ配りたいときは `standalone.html` を使ってください（約 90 KB）。
+ソースを編集したあとは `node build.js` で作り直します。
 
 ## 遊び方
 
