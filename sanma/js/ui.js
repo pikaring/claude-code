@@ -84,10 +84,13 @@
 
   function headHTML(p, extraChip) {
     var isDealer = p.seat === game.dealer;
+    var ch = p.character != null ? MJ.ai.CHARACTERS[p.character] : null;
     return '<div class="seat-head">' +
       '<span class="wind' + (isDealer ? ' dealer' : '') + '">' +
       MJ.HONOR_LABEL[p.seatWind - 27] + (isDealer ? '親' : '') + '</span>' +
+      (p.seatLabel ? '<span class="seat-label">' + p.seatLabel + '</span>' : '') +
       '<span class="nm">' + esc(p.name) + '</span>' +
+      (ch ? '<span class="tag">' + ch.tag + '</span>' : '') +
       '<span class="pt">' + p.points + '</span>' +
       (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
       (extraChip ? '<span class="chip">' + esc(extraChip) + '</span>' : '') +
@@ -382,7 +385,25 @@
     game.startGame();
   }
 
+  /** ルール画面のキャラクター一覧を書き出す */
+  function renderCharacters() {
+    var el = document.getElementById('char-list');
+    if (!el) return;
+    el.innerHTML = MJ.ai.CHARACTERS.map(function (c) {
+      return '<div class="char">' +
+        '<div class="char-top"><b>' + esc(c.name) + '</b>' +
+        '<span class="tag">' + esc(c.tag) + '</span>' +
+        '<span class="nums">速 ' + c.speed.toFixed(1) +
+        '／打 ' + c.value.toFixed(1) + '／守 ' + c.defense.toFixed(1) + '</span></div>' +
+        '<div class="char-desc">' + esc(c.desc) + '</div>' +
+        '<div class="char-desc">鳴き: ' + esc(c.call_ja) +
+        '　リーチ: ' + esc(c.riichi_ja) + '　オリ: ' + esc(c.fold_ja) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
   function init() {
+    renderCharacters();
     document.addEventListener('click', function (e) {
       if (e.target.closest('#myhand')) handleHandClick(e);
       handleAction(e);

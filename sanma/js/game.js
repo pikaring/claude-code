@@ -15,6 +15,7 @@
 
   var MJ = global.MJ;
   var SEAT_NAMES = ['あなた', '下家CPU', '上家CPU'];
+  var SEAT_LABELS = ['', '下家', '上家'];
   var KITA = 30; // 北
 
   function Game(opts) {
@@ -33,6 +34,8 @@
         name: SEAT_NAMES[i],
         isAI: i !== 0,
         points: 0,
+        seatLabel: SEAT_LABELS[i],
+        character: null,
         hand: [], drawn: null, melds: [], discards: [], kita: [],
         riichi: false, doubleRiichi: false, ippatsu: false, riichiTurn: -1,
         tempFuriten: false, seatWind: 27, menzen: true, drawnFromDeadWall: false,
@@ -66,11 +69,26 @@
     var self = this;
     this.rng = this.seed != null ? MJ.mulberry32(this.seed) : Math.random;
     this.players.forEach(function (p) { p.points = self.startPoints; });
+    this.assignCharacters();
     this.kyoku = 0;
     this.honba = 0;
     this.riichiSticks = 0;
     this.gameOver = false;
     this.startHand();
+  };
+
+  /** CPU の打ち筋を半荘ごとに重複なく抽選する */
+  Game.prototype.assignCharacters = function () {
+    var pool = MJ.ai.CHARACTERS.map(function (_, i) { return i; });
+    MJ.shuffle(pool, this.rng);
+    var k = 0;
+    this.players.forEach(function (p) {
+      if (!p.isAI) { p.character = null; return; }
+      p.character = pool[k++];
+      p.name = MJ.ai.CHARACTERS[p.character].name;
+    });
+    this.log('対戦相手: ' + this.players.filter(function (p) { return p.isAI; })
+      .map(function (p) { return p.seatLabel + ' ' + p.name; }).join(' / '));
   };
 
   Game.prototype.startHand = function () {
@@ -245,7 +263,7 @@
       if (options.tsumo) { self.declareTsumo(p); return; }
 
       var full = { seat: p.seat, hand: p.hand.concat(p.drawn ? [p.drawn] : []),
-        melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, riichi: p.riichi, discards: p.discards };
+        melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, character: p.character, kita: p.kita, points: p.points, riichi: p.riichi, discards: p.discards };
 
       // 北抜き
       if (options.kita && MJ.ai.shouldKita(self, full)) { self.doKita(p); return; }
@@ -263,7 +281,7 @@
       if (p.riichi) { self.discard(p, -1, false); return; }
 
       var tiles = p.hand.concat([p.drawn]);
-      var tmp = { seat: p.seat, hand: tiles, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, discards: p.discards, riichi: p.riichi };
+      var tmp = { seat: p.seat, hand: tiles, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, character: p.character, kita: p.kita, points: p.points, discards: p.discards, riichi: p.riichi };
       var idx = MJ.ai.chooseDiscard(self, tmp);
       var declare = false;
       if (options.riichi) {
@@ -345,7 +363,7 @@
       if (q.isAI) {
         if (opts.ron) aiClaims.push({ seat: seat, type: 'ron', offset: off, result: opts.ron });
         else {
-          var tmp = { seat: q.seat, hand: q.hand, melds: q.melds, seatWind: q.seatWind, difficulty: q.difficulty, riichi: q.riichi, discards: q.discards };
+          var tmp = { seat: q.seat, hand: q.hand, melds: q.melds, seatWind: q.seatWind, difficulty: q.difficulty, character: q.character, kita: q.kita, points: q.points, riichi: q.riichi, discards: q.discards };
           if (opts.kan && MJ.ai.shouldMinkan(this, tmp, tile)) {
             aiClaims.push({ seat: seat, type: 'kan', offset: off });
           } else if (opts.pon && MJ.ai.shouldPon(this, tmp, tile)) {
@@ -445,7 +463,7 @@
     this.current = p.seat;
     if (p.isAI) {
       this.schedule(function () {
-        var tmp = { seat: p.seat, hand: p.hand, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, riichi: p.riichi, discards: p.discards };
+        var tmp = { seat: p.seat, hand: p.hand, melds: p.melds, seatWind: p.seatWind, difficulty: p.difficulty, character: p.character, kita: p.kita, points: p.points, riichi: p.riichi, discards: p.discards };
         var idx = MJ.ai.chooseDiscard(self, tmp);
         self.discard(p, idx, false);
       });
@@ -602,7 +620,7 @@
       isHoutei: !!(!isTsumo && extra.isHoutei),
       isTenhou: !!(isTsumo && isFirst && p.seat === this.dealer && p.discards.length === 0),
       isChiihou: !!(isTsumo && isFirst && p.seat !== this.dealer && p.discards.length === 0),
-      seatWind: p.seatWind, difficulty: p.difficulty,
+      seatWind: p.seatWind, difficulty: p.difficulty, character: p.character, kita: p.kita, points: p.points,
       roundWind: this.roundWind,
       doraIndicators: this.doraIndicators,
       uraIndicators: p.riichi ? this.uraIndicatorsFor() : [],
