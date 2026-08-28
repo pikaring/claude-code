@@ -213,7 +213,8 @@
   function render() {
     if (!game) return;
     $('#infobar').innerHTML = infobarHTML();
-    $('#board').innerHTML = seatHTML(game.players[2]) + seatHTML(game.players[1]);
+    // 手番は 自分 → 下家 → 上家 → 自分 と回るので、上から 下家 / 上家 の順に並べる
+    $('#board').innerHTML = seatHTML(game.players[1]) + seatHTML(game.players[2]);
     $('#self').innerHTML = selfHTML();
     $('#actions').innerHTML = actionsHTML();
     // 河が 2 段に収まりきらない場合でも最新の捨て牌が見えるようにする
