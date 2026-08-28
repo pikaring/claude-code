@@ -1,5 +1,9 @@
 /*
  * ui.js - 画面描画とプレイヤー操作
+ *
+ * レイアウトは iPhone Air（CSS 420x912）を基準にした固定配置。
+ * 段ごとの高さは CSS 側で牌の寸法から決めてあるので、
+ * 捨て牌や副露が増えても他の段はずれない。
  */
 (function (global) {
   'use strict';
@@ -14,9 +18,13 @@
   var logLines = [];
 
   function $(sel) { return document.querySelector(sel); }
-  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+    });
+  }
 
-  /* --- 牌の描画 -------------------------------------------------------- */
+  /* --- 牌 -------------------------------------------------------------- */
   function tileHTML(tile, extra) {
     var t = typeof tile === 'number' ? tile : tile.t;
     var red = typeof tile === 'object' && tile.red;
@@ -42,96 +50,84 @@
   function meldHTML(meld, size) {
     var out = ['<span class="meld">'];
     if (meld.type === 'ankan') {
-      out.push(backHTML(size));
-      out.push(tileHTML(meld.tiles[1], size));
-      out.push(tileHTML(meld.tiles[2], size));
-      out.push(backHTML(size));
+      out.push(backHTML(size), tileHTML(meld.tiles[1], size),
+        tileHTML(meld.tiles[2], size), backHTML(size));
     } else {
       meld.tiles.forEach(function (t) {
-        var isCalled = meld.calledTile && t.uid === meld.calledTile.uid;
-        out.push(tileHTML(t, size + (isCalled ? ' called' : '')));
+        var called = meld.calledTile && t.uid === meld.calledTile.uid;
+        out.push(tileHTML(t, size + (called ? ' called' : '')));
       });
     }
     out.push('</span>');
     return out.join('');
   }
 
-  function kitaHTML(p, size) {
-    if (!p.kita || !p.kita.length) return '';
-    return '<div class="kita"><span class="label">抜き</span>' +
-      p.kita.map(function (t) { return tileHTML(t, size); }).join('') + '</div>';
+  /** 副露と抜きドラを 1 段にまとめる（高さを一定に保つため） */
+  function exposedHTML(p, size) {
+    var out = p.melds.map(function (m) { return meldHTML(m, size); });
+    if (p.kita && p.kita.length) {
+      out.push('<span class="kita"><span class="label">抜</span>' +
+        p.kita.map(function (t) { return tileHTML(t, size); }).join('') + '</span>');
+    }
+    return '<div class="row-exposed">' + out.join('') + '</div>';
   }
 
-  function pondHTML(p) {
-    return '<div class="pond">' + p.discards.map(function (d) {
-      var extra = 'small';
+  /** 河。高さは CSS で 2 段ぶんに固定してある */
+  function pondHTML(p, size) {
+    return '<div class="pond-box"><div class="pond">' + p.discards.map(function (d) {
+      var extra = size;
       if (d.riichi) extra += ' riichi-tile';
       if (d.called) extra += ' dim';
       return tileHTML(d.tile, extra);
-    }).join('') + '</div>';
+    }).join('') + '</div></div>';
+  }
+
+  function headHTML(p, extraChip) {
+    var isDealer = p.seat === game.dealer;
+    return '<div class="seat-head">' +
+      '<span class="wind' + (isDealer ? ' dealer' : '') + '">' +
+      MJ.HONOR_LABEL[p.seatWind - 27] + (isDealer ? '親' : '') + '</span>' +
+      '<span class="nm">' + esc(p.name) + '</span>' +
+      '<span class="pt">' + p.points + '</span>' +
+      (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
+      (extraChip ? '<span class="chip">' + esc(extraChip) + '</span>' : '') +
+      '</div>';
   }
 
   /* --- 各席 ------------------------------------------------------------ */
   function seatHTML(p) {
-    var isDealer = p.seat === game.dealer;
-    var windName = MJ.HONOR_LABEL[p.seatWind - 27];
-    var head = '<div class="seat-head">' +
-      '<span class="wind' + (isDealer ? ' dealer' : '') + '">' + windName + (isDealer ? '(親)' : '') + '</span>' +
-      '<span class="nm">' + esc(p.name) + '</span>' +
-      '<span class="pt">' + p.points + '</span>' +
-      (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
-      '</div>';
     var backs = '';
-    for (var i = 0; i < p.hand.length; i++) backs += backHTML('tiny');
-    if (p.drawn) backs += '<span style="display:inline-block;width:5px"></span>' + backHTML('tiny');
-    var melds = p.melds.length
-      ? '<div class="melds" style="margin-top:4px">' + p.melds.map(function (m) { return meldHTML(m, 'tiny'); }).join('') + '</div>'
-      : '';
+    for (var i = 0; i < p.hand.length; i++) backs += backHTML('hidden-tile');
+    if (p.drawn) backs += '<span style="width:4px"></span>' + backHTML('hidden-tile');
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
-      head + '<div class="hand-row">' + backs + '</div>' + melds + kitaHTML(p, 'tiny') +
-      pondHTML(p) + '</div>';
-  }
-
-  function centerHTML() {
-    var dora = game.doraTiles.map(function (t) { return tileHTML(t, 'small'); }).join('');
-    var hidden = '';
-    for (var i = game.doraTiles.length; i < 5; i++) hidden += backHTML('small');
-    return '<div class="center-info">' +
-      '<div class="round">東' + (game.kyoku + 1) + '局 ' + game.honba + '本場</div>' +
-      '<div class="rows">' +
-      '<div>残り <b>' + game.remaining() + '</b> 枚</div>' +
-      '<div>供託 ' + game.riichiSticks + '本</div>' +
-      '</div>' +
-      '<div class="dora-label">ドラ表示牌</div>' +
-      '<div>' + dora + hidden + '</div>' +
+      headHTML(p) +
+      '<div class="row-back">' + backs + '</div>' +
+      exposedHTML(p, 'mini') +
+      pondHTML(p, 'mini') +
       '</div>';
   }
 
-  /* --- 自分の手牌 ------------------------------------------------------ */
+  function infobarHTML() {
+    var dora = game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('');
+    for (var i = game.doraTiles.length; i < 5; i++) dora += backHTML('mini');
+    return '<span class="round">東' + (game.kyoku + 1) + '局' + game.honba + '本場</span>' +
+      '<span class="stat">残り <b>' + game.remaining() + '</b></span>' +
+      '<span class="stat">供託 ' + game.riichiSticks + '</span>' +
+      '<span class="dora">' + dora + '</span>';
+  }
+
+  /* --- 自分 ------------------------------------------------------------ */
   function selfHTML() {
     var p = game.players[0];
     var awaiting = game.awaiting && game.awaiting.type === 'turn' && game.awaiting.seat === 0;
     var riichiChoices = riichiMode && game.awaiting && game.awaiting.options.riichiDiscards
       ? game.awaiting.options.riichiDiscards : null;
 
-    var head = '<div class="seat-head">' +
-      '<span class="wind' + (game.dealer === 0 ? ' dealer' : '') + '">' +
-      MJ.HONOR_LABEL[p.seatWind - 27] + (game.dealer === 0 ? '(親)' : '') + '</span>' +
-      '<span class="nm">あなた</span><span class="pt">' + p.points + '</span>' +
-      (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
-      (showHint ? '<span class="chip">' + hintText(p) + '</span>' : '') +
-      '</div>';
-
-    var melds = p.melds.length
-      ? '<div class="melds">' + p.melds.map(function (m) { return meldHTML(m, 'small'); }).join('') + '</div>'
-      : '';
-
     var tiles = p.hand.map(function (t, i) {
       var playable = awaiting && (!p.riichi || riichiChoices);
       if (riichiChoices) playable = riichiChoices.indexOf(i) >= 0;
       var cls = playable ? 'playable' : '';
-      if (riichiChoices && playable) cls += ' choice';
-      if (riichiChoices && !playable) cls += ' dim';
+      if (riichiChoices) cls += playable ? ' choice' : ' dim';
       return '<span data-index="' + i + '">' + tileHTML(t, cls) + '</span>';
     }).join('');
 
@@ -144,7 +140,9 @@
     }
 
     return '<div class="self' + (game.current === 0 && awaiting ? ' active' : '') + '">' +
-      head + melds + kitaHTML(p, 'small') + pondHTML(p) +
+      headHTML(p, showHint ? hintText(p) : null) +
+      pondHTML(p, '') +
+      exposedHTML(p, '') +
       '<div class="self-hand" id="myhand">' + tiles + '</div>' +
       '</div>';
   }
@@ -154,16 +152,17 @@
     var sh = MJ.shanten(MJ.toCounts(p.hand.concat(p.drawn ? [p.drawn] : [])), melds);
     if (sh === -1) return '和了形';
 
-    // 打牌前（13枚形）の待ちが分かるなら、残り枚数付きで見せる
+    // 打牌前（13 枚形）の待ちが分かるなら、残り枚数付きで見せる
     if (p.hand.length + melds * 3 === 13) {
       var base = MJ.toCounts(p.hand);
       if (MJ.shanten(base, melds) === 0) {
         var w = MJ.waits(base, melds);
         if (w.length) {
           var unseen = MJ.ai.unseenCounts(game, { seat: 0, hand: p.hand, melds: p.melds });
-          return '待ち: ' + w.map(function (t) {
-            return MJ.tileName(t) + ' ' + unseen[t] + '枚';
+          var shown = w.slice(0, 4).map(function (t) {
+            return MJ.tileName(t) + unseen[t];
           }).join('・');
+          return '待ち ' + shown + (w.length > 4 ? '…' : '');
         }
       }
     }
@@ -171,7 +170,7 @@
     return sh + 'シャンテン';
   }
 
-  /* --- 操作ボタン ------------------------------------------------------ */
+  /* --- コマンド -------------------------------------------------------- */
   function actionsHTML() {
     var a = game.awaiting;
     if (game.result || game.gameOver) return '<span class="hint">&nbsp;</span>';
@@ -179,10 +178,10 @@
 
     var out = [];
     if (a.type === 'turn' && a.seat === 0) {
-      if (a.auto) return '<span class="hint">リーチ中 — 自動でツモ切りします（牌をクリックすると即座に切ります）</span>';
+      if (a.auto) return '<span class="hint">リーチ中 — 自動でツモ切り（牌を押すと即切り）</span>';
       if (riichiMode) {
-        out.push('<span class="hint">リーチする牌を選んでください</span>');
-        out.push('<button class="btn" data-act="riichi-cancel">キャンセル</button>');
+        out.push('<span class="hint">リーチする牌を選ぶ</span>');
+        out.push('<button class="btn" data-act="riichi-cancel">やめる</button>');
         return out.join('');
       }
       if (a.options.tsumo) out.push('<button class="btn primary" data-act="tsumo">ツモ</button>');
@@ -190,15 +189,14 @@
       if (a.options.kita) out.push('<button class="btn" data-act="kita">北抜き</button>');
       (a.options.kans || []).forEach(function (k, i) {
         out.push('<button class="btn" data-act="kan" data-kan="' + i + '">' +
-          (k.type === 'ankan' ? '暗カン' : '加カン') + ' ' + MJ.tileName(k.tile) + '</button>');
+          (k.type === 'ankan' ? '暗カン' : '加カン') + MJ.tileName(k.tile) + '</button>');
       });
-      out.push('<span class="hint">牌をクリックして捨てる</span>');
+      if (!out.length) out.push('<span class="hint">牌を押して捨てる</span>');
       return out.join('');
     }
     if (a.type === 'call' && a.seat === 0) {
       out.push('<span class="hint">' + esc(game.players[a.from].name) + ' の ' +
-        MJ.tileName(a.tile.t) +
-        (a.kita ? '（北抜き）' : a.chankan ? '（加カン）' : '') + '</span>');
+        MJ.tileName(a.tile.t) + (a.kita ? '（北抜き）' : a.chankan ? '（加カン）' : '') + '</span>');
       if (a.options.ron) out.push('<button class="btn primary" data-act="ron">ロン</button>');
       if (a.options.pon) out.push('<button class="btn" data-act="pon">ポン</button>');
       if (a.options.kan) out.push('<button class="btn" data-act="call-kan">カン</button>');
@@ -208,17 +206,17 @@
     return '<span class="hint">CPU 思考中…</span>';
   }
 
-  /* --- 全体描画 -------------------------------------------------------- */
+  /* --- 描画 ------------------------------------------------------------ */
   function render() {
     if (!game) return;
-    $('#topinfo').innerHTML =
-      '<span class="chip">東' + (game.kyoku + 1) + '局 ' + game.honba + '本場</span>' +
-      '<span class="chip">残り ' + game.remaining() + '</span>' +
-      '<span class="chip">供託 ' + game.riichiSticks + '</span>';
-    $('#board').innerHTML =
-      seatHTML(game.players[2]) + centerHTML() + seatHTML(game.players[1]);
+    $('#infobar').innerHTML = infobarHTML();
+    $('#board').innerHTML = seatHTML(game.players[2]) + seatHTML(game.players[1]);
     $('#self').innerHTML = selfHTML();
     $('#actions').innerHTML = actionsHTML();
+    // 河が 2 段に収まりきらない場合でも最新の捨て牌が見えるようにする
+    Array.prototype.forEach.call(document.querySelectorAll('.pond-box'), function (el) {
+      el.scrollTop = el.scrollHeight;
+    });
   }
 
   function renderLog() {
@@ -229,15 +227,14 @@
     el.scrollTop = el.scrollHeight;
   }
 
-  /* --- 結果表示 -------------------------------------------------------- */
+  /* --- 結果 ------------------------------------------------------------ */
   function showResult(info) {
     var sheet = $('#sheet');
     if (info.type === 'draw') {
       sheet.innerHTML =
         '<h2>流局</h2>' +
         '<div class="detail">' + info.detail.map(esc).join('<br>') + '</div>' +
-        '<div class="divider"></div>' +
-        pointsRowHTML() +
+        '<div class="divider"></div>' + pointsRowHTML() +
         '<div style="margin-top:12px;text-align:right">' +
         '<button class="btn primary" data-act="next">次の局へ</button></div>';
       $('#overlay').hidden = false;
@@ -247,38 +244,32 @@
     var p = game.players[info.winner];
     var r = info.result;
     var handTiles = p.hand.map(function (t) { return tileHTML(t); }).join('') +
-      p.melds.map(function (m) { return '<span style="margin-left:8px">' + meldHTML(m) + '</span>'; }).join('') +
-      '<span style="margin-left:12px">' + tileHTML(info.winTile) + '</span>';
+      p.melds.map(function (m) { return '<span style="margin-left:6px">' + meldHTML(m, '') + '</span>'; }).join('') +
+      '<span style="margin-left:10px">' + tileHTML(info.winTile) + '</span>';
     var kitaLine = p.kita.length
       ? '<div style="margin-top:6px;font-size:12px">抜きドラ ' +
-        p.kita.map(function (t) { return tileHTML(t, 'small'); }).join('') + '</div>'
+        p.kita.map(function (t) { return tileHTML(t, 'mini'); }).join('') + '</div>'
       : '';
-
     var yakuRows = r.yaku.map(function (y) {
       return '<div>' + esc(y.name) + '</div><div class="han">' +
         (r.yakumanCount ? '役満' : y.han + '翻') + '</div>';
     }).join('');
-
-    var scoreLine = r.yakumanCount
-      ? r.limit
+    var scoreLine = r.yakumanCount ? r.limit
       : (r.fu + '符 ' + r.han + '翻' + (r.limit ? ' ' + r.limit : ''));
-
     var doraRow = '<div style="margin-top:8px;font-size:12px">ドラ表示牌 ' +
-      game.doraTiles.map(function (t) { return tileHTML(t, 'small'); }).join('') +
+      game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('') +
       (info.uraTiles && info.uraTiles.length
-        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, 'small'); }).join('')
+        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('')
         : '') + '</div>';
 
     sheet.innerHTML =
       '<h2>' + esc(p.name) + ' ' + (info.type === 'tsumo' ? 'ツモ' : 'ロン') + '</h2>' +
       '<div class="sub">' + (info.type === 'ron' ? esc(game.players[info.from].name) + ' から' : '') + '</div>' +
-      '<div class="agari">' + handTiles + '</div>' +
-      kitaLine + doraRow +
+      '<div class="agari">' + handTiles + '</div>' + kitaLine + doraRow +
       '<div class="yaku-list">' + yakuRows + '</div>' +
       '<div class="score">' + scoreLine + '</div>' +
       '<div class="detail">' + info.detail.map(esc).join('<br>') + '</div>' +
-      '<div class="divider"></div>' +
-      pointsRowHTML() +
+      '<div class="divider"></div>' + pointsRowHTML() +
       '<div style="margin-top:12px;text-align:right">' +
       '<button class="btn primary" data-act="next">次の局へ</button></div>';
     $('#overlay').hidden = false;
@@ -305,7 +296,7 @@
     $('#overlay').hidden = false;
   }
 
-  /* --- イベント処理 ---------------------------------------------------- */
+  /* --- イベント -------------------------------------------------------- */
   function onEvent(type, data) {
     if (type === 'log') {
       logLines.push({ text: data.message, hl: /===|ツモ|ロン|リーチ/.test(data.message) });
@@ -343,42 +334,38 @@
   function handleAction(e) {
     var btn = e.target.closest('[data-act]');
     if (!btn) return;
-    var act = btn.getAttribute('data-act');
-    switch (act) {
+    switch (btn.getAttribute('data-act')) {
       case 'tsumo': game.playerTsumo(); break;
       case 'riichi': riichiMode = true; render(); break;
-      case 'kita': riichiMode = false; game.playerKita(); break;
       case 'riichi-cancel': riichiMode = false; render(); break;
+      case 'kita': riichiMode = false; game.playerKita(); break;
       case 'kan':
-        var k = game.awaiting.options.kans[parseInt(btn.getAttribute('data-kan'), 10)];
         riichiMode = false;
-        game.playerKan(k);
+        game.playerKan(game.awaiting.options.kans[parseInt(btn.getAttribute('data-kan'), 10)]);
         break;
       case 'ron': game.respondCall('ron'); break;
       case 'pon': game.respondCall('pon'); break;
       case 'call-kan': game.respondCall('kan'); break;
       case 'pass': game.respondCall('pass'); break;
-      case 'next':
-        $('#overlay').hidden = true;
-        game.nextHand();
-        break;
-      case 'restart':
-        $('#overlay').hidden = true;
-        startGame();
-        break;
+      case 'next': $('#overlay').hidden = true; game.nextHand(); break;
+      case 'restart': $('#overlay').hidden = true; startGame(); break;
       case 'new-game': startGame(); break;
-      case 'hint': showHint = !showHint; btn.textContent = showHint ? 'ヒント: ON' : 'ヒント: OFF'; render(); break;
+      case 'hint':
+        showHint = !showHint;
+        btn.textContent = showHint ? 'ヒントON' : 'ヒント';
+        render();
+        break;
       case 'difficulty':
         var levels = MJ.ai.LEVELS;
         game.difficulty = ((game.difficulty == null ? 1 : game.difficulty) + 1) % levels.length;
-        btn.textContent = '敵: ' + levels[game.difficulty].name;
+        btn.textContent = '敵:' + levels[game.difficulty].name;
         break;
       case 'speed':
         var speeds = [1100, 650, 300, 60];
-        var labels = ['ゆっくり', 'ふつう', 'はやい', '最速'];
+        var labels = ['遅', '普', '速', '瞬'];
         var i = (speeds.indexOf(game.speed) + 1) % speeds.length;
         game.speed = speeds[i];
-        btn.textContent = '速度: ' + labels[i];
+        btn.textContent = '速度:' + labels[i];
         break;
     }
   }

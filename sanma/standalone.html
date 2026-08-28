@@ -6,6 +6,18 @@
 <title>サンマ荘</title>
 <meta name="description" content="ブラウザだけで遊べる軽量な三人麻雀（サンマ）。インストール不要・オフライン動作。">
 <style>
+/*
+ * style.css
+ *
+ * iPhone Air（CSS ピクセルで 420 x 912）を基準にした固定レイアウト。
+ * 捨て牌が増えても他の要素がずれないよう、各段の高さを内容ではなく
+ * 牌のサイズから決めている。
+ *
+ *   上から  操作ボタン / 局情報 / 対面2人（手牌1段・副露1段・河2段）/
+ *           ログ（余白を吸収）/ 自分の河2段 / 自分の副露1段 / 自分の手牌1段 /
+ *           コマンド（最下段に固定）
+ */
+
 :root {
   --felt: #1e6b46;
   --felt-dark: #17553a;
@@ -22,10 +34,24 @@
   --accent: #ffcf4d;
   --danger: #e2564a;
   --text: #f3f6f4;
-  --tile-w: 30px;
-  --tile-h: 41px;
   --font-ui: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, system-ui, sans-serif;
   --font-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Times New Roman", serif;
+
+  /* 盤面の幅（iPhone Air は 420px）。牌の寸法はすべてここから決まる */
+  --app-w: min(100vw, 430px);
+  --seat-w: calc(var(--app-w) / 2 - 13px);
+
+  --hand-w: min(30px, calc((var(--app-w) - 68px) / 14));   /* 手牌 14 枚が 1 段に収まる幅 */
+  --hand-h: calc(var(--hand-w) * 1.36);
+  --pond-w: min(21px, calc((var(--app-w) - 58px) / 12));   /* 自分の河は 12 列 */
+  --pond-h: calc(var(--pond-w) * 1.36);
+  --mini-w: min(17px, calc((var(--seat-w) - 30px) / 11));  /* 相手の河は 11 列 */
+  --mini-h: calc(var(--mini-w) * 1.36);
+  --back-w: min(15px, calc((var(--seat-w) - 28px) / 14));  /* 相手の伏せ牌 */
+  --back-h: calc(var(--back-w) * 1.4);
+
+  --tile-w: var(--pond-w);
+  --tile-h: var(--pond-h);
 }
 
 * { box-sizing: border-box; }
@@ -34,121 +60,217 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  overflow: hidden;
   background: radial-gradient(ellipse at 50% 0%, #2a8a5b, var(--felt) 45%, var(--felt-dark));
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
 }
 
 #app {
-  max-width: 980px;
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
   margin: 0 auto;
-  padding: 8px 10px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 100%;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  gap: 5px;
+  overflow: hidden;
 }
 
-/* ---- ヘッダ ---- */
+/* ---- 上部の操作ボタン ---- */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   flex-wrap: wrap;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 13px;
+  border-radius: 9px;
+  padding: 5px 7px;
 }
 .topbar .title {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 15px;
-  letter-spacing: .16em;
-}
-.topbar .spacer { flex: 1; }
-.topbar .chip {
-  background: rgba(255, 255, 255, .1);
-  border-radius: 999px;
-  padding: 2px 10px;
-  white-space: nowrap;
+  font-size: 14px;
+  letter-spacing: .12em;
+  margin-right: 2px;
 }
 .btn {
   background: rgba(255, 255, 255, .12);
   border: 1px solid var(--line);
   color: var(--text);
-  border-radius: 8px;
-  padding: 5px 11px;
-  font-size: 13px;
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 12px;
   font-family: inherit;
+  line-height: 1.3;
   cursor: pointer;
   transition: background .12s;
+  white-space: nowrap;
 }
 .btn:hover { background: rgba(255, 255, 255, .22); }
 .btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn.primary { background: var(--accent); color: #2b2205; border-color: transparent; font-weight: 700; }
 .btn.primary:hover { background: #ffdd7a; }
 .btn.warn { background: var(--danger); border-color: transparent; font-weight: 700; }
 .btn:disabled { opacity: .4; cursor: default; }
-.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
-  .self-hand .tile.playable:hover { transform: none; }
-}
-
-/* ---- 卓 ---- */
-.board {
-  display: grid;
-  grid-template-columns: 1fr minmax(150px, 210px) 1fr;
+/* ---- 局情報 ---- */
+.infobar {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  align-items: start;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 4px 8px;
+  font-size: 12px;
+  height: calc(var(--pond-h) + 12px);
+  overflow: hidden;
 }
+.infobar .round {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.infobar .stat { white-space: nowrap; font-variant-numeric: tabular-nums; opacity: .9; }
+.infobar .stat b { color: var(--accent); }
+.infobar .dora { margin-left: auto; display: flex; gap: 2px; align-items: center; }
+
+/* ---- 対面 2 人 ---- */
+.board { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .seat {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 6px;
+  border-radius: 9px;
+  padding: 4px 5px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .seat.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .seat-head {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 12px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  height: 15px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .seat-head .nm { font-weight: 700; }
 .seat-head .pt { color: var(--accent); font-variant-numeric: tabular-nums; }
-.seat-head .wind {
-  background: rgba(255, 255, 255, .16);
-  border-radius: 4px;
-  padding: 0 5px;
-}
+.seat-head .wind { background: rgba(255, 255, 255, .16); border-radius: 3px; padding: 0 4px; }
 .seat-head .wind.dealer { background: var(--accent); color: #2b2205; font-weight: 700; }
 .seat-head .riichi-mark { color: var(--danger); font-weight: 700; }
+.seat-head .chip { background: rgba(255, 255, 255, .12); border-radius: 999px; padding: 0 7px; }
 
-.center-info {
+/* 段の高さは中身ではなく牌の寸法で決める（増減でずれないように） */
+.row-back {
+  display: flex;
+  gap: 1px;
+  height: calc(var(--back-h) + 1px);
+  align-items: flex-end;
+  overflow: hidden;
+}
+.row-exposed {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: calc(var(--mini-h) + 2px);
+  overflow: hidden;
+}
+.meld { display: flex; gap: 1px; }
+.kita { display: flex; align-items: center; gap: 1px; }
+.kita .label { font-size: 9px; opacity: .7; margin-right: 1px; }
+
+.pond-box {
+  height: calc(var(--mini-h) * 2 + 2px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.pond-box::-webkit-scrollbar { display: none; }
+.pond {
+  display: grid;
+  grid-template-columns: repeat(11, var(--mini-w));
+  gap: 2px 1px;
+  justify-content: center;
+}
+.pond .riichi-tile { outline: 2px solid var(--danger); outline-offset: -2px; }
+
+/* ---- ログ（余った高さを吸収する。卓の中央に直接刷る） ---- */
+.log {
+  padding: 2px 8px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  scrollbar-width: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+.log::-webkit-scrollbar { display: none; }
+.log div { opacity: .8; flex: none; }
+.log div.hl { color: var(--accent); }
+
+/* ---- 自分 ---- */
+.self {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
-  text-align: center;
-  font-size: 12px;
+  border-radius: 9px;
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.center-info .round {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  margin-bottom: 4px;
+.self.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.self .seat-head { font-size: 12px; height: 17px; }
+.self .pond-box { height: calc(var(--pond-h) * 2 + 3px); }
+.self .pond { grid-template-columns: repeat(12, var(--pond-w)); gap: 3px 2px; }
+.self .row-exposed { height: calc(var(--pond-h) + 2px); }
+
+.self-hand {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 2px;
+  height: calc(var(--hand-h) + 8px);
+  padding-top: 6px;
 }
-.center-info .dora-label { opacity: .8; margin: 6px 0 3px; }
-.center-info .rows { display: flex; flex-direction: column; gap: 2px; }
+.self-hand .tile { --tile-w: var(--hand-w); --tile-h: var(--hand-h); cursor: default; }
+.self-hand .tile.playable { cursor: pointer; }
+.self-hand .tile.playable:hover { transform: translateY(-5px); box-shadow: 0 4px 10px rgba(0, 0, 0, .35); }
+.self-hand .drawn { margin-left: 7px; }
+.self-hand .tile.choice { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ---- コマンド（最下段に固定） ---- */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  height: 44px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 4px 8px;
+}
+.actions::-webkit-scrollbar { display: none; }
+.actions .btn { padding: 7px 12px; font-size: 13px; font-weight: 700; }
+.actions .hint { font-size: 11.5px; opacity: .8; line-height: 1.3; white-space: nowrap; }
 
 /* ---- 牌 ---- */
 .tile {
@@ -162,7 +284,7 @@ html, body {
   background: linear-gradient(#fffdf6, var(--tile-bg));
   border: 1px solid var(--tile-edge);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: 3px;
   color: var(--honor);
   font-weight: 700;
   line-height: 1;
@@ -184,72 +306,12 @@ html, body {
   background: linear-gradient(150deg, #4a9ad6, var(--tile-back) 60%, #23648f);
   border-color: #1c5680;
 }
-.tile.small { --tile-w: 21px; --tile-h: 29px; border-bottom-width: 1px; }
-.tile.tiny { --tile-w: 17px; --tile-h: 23px; border-bottom-width: 1px; border-radius: 3px; }
-.tile.rotated { transform: rotate(90deg); margin: calc((var(--tile-h) - var(--tile-w)) / 2) calc((var(--tile-w) - var(--tile-h)) / 2); }
-.tile.dim { opacity: .42; }
+.tile.mini { --tile-w: var(--mini-w); --tile-h: var(--mini-h); border-bottom-width: 1px; }
+.tile.hidden-tile { --tile-w: var(--back-w); --tile-h: var(--back-h); border-bottom-width: 1px; border-radius: 2px; }
+.tile.dim { opacity: .4; }
 .tile.called { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* ---- 河 ---- */
-.pond {
-  display: grid;
-  grid-template-columns: repeat(6, auto);
-  justify-content: start;
-  gap: 2px;
-  min-height: 30px;
-  margin-top: 4px;
-}
-.pond .slot { position: relative; }
-.pond .riichi-tile { outline: 2px solid var(--danger); outline-offset: -2px; }
-
-/* ---- 手牌 ---- */
-.hand-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  flex-wrap: wrap;
-}
-.melds { display: flex; gap: 8px; flex-wrap: wrap; }
-.kita { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
-.kita .label { font-size: 11px; opacity: .75; margin-right: 3px; }
-.meld { display: flex; gap: 1px; }
-
-.self {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.self.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-.self-hand { display: flex; align-items: flex-end; gap: 3px; flex-wrap: wrap; }
-.self-hand .tile { --tile-w: 36px; --tile-h: 49px; cursor: default; }
-.self-hand .tile.playable { cursor: pointer; }
-.self-hand .tile.playable:hover { transform: translateY(-6px); box-shadow: 0 4px 10px rgba(0, 0, 0, .35); }
-.self-hand .drawn { margin-left: 12px; }
-.self-hand .tile.choice { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 32px; }
-.actions .hint { font-size: 12px; opacity: .8; }
-
-/* ---- ログ ---- */
-.log {
-  background: rgba(0, 0, 0, .3);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1.65;
-  height: 92px;
-  overflow-y: auto;
-  font-variant-numeric: tabular-nums;
-}
-.log div { opacity: .9; }
-.log div.hl { color: var(--accent); }
-
-/* ---- 結果画面 ---- */
+/* ---- 結果表示 ---- */
 .overlay {
   position: fixed;
   inset: 0;
@@ -257,74 +319,49 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 14px;
   z-index: 20;
 }
 .overlay[hidden] { display: none; }
 .sheet {
   background: #14251d;
   border: 1px solid rgba(255, 255, 255, .22);
-  border-radius: 14px;
-  padding: 16px 18px;
-  width: min(560px, 100%);
-  max-height: 90vh;
+  border-radius: 13px;
+  padding: 14px 16px;
+  width: min(430px, 100%);
+  max-height: 88dvh;
   overflow-y: auto;
   box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
 }
 .sheet h2 {
   font-family: var(--font-display);
-  margin: 0 0 8px;
-  font-size: 21px;
-  letter-spacing: .06em;
+  margin: 0 0 6px;
+  font-size: 20px;
+  letter-spacing: .05em;
   text-wrap: balance;
 }
-.sheet .sub { font-size: 13px; opacity: .85; margin-bottom: 10px; }
-.sheet .agari { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
-.yaku-list { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 13px; margin: 8px 0; }
+.sheet .sub { font-size: 12px; opacity: .85; margin-bottom: 8px; }
+.sheet .agari { display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 8px; align-items: flex-end; }
+.sheet .agari .tile { --tile-w: var(--hand-w); --tile-h: var(--hand-h); }
+.yaku-list { display: grid; grid-template-columns: 1fr auto; gap: 1px 12px; font-size: 12.5px; margin: 8px 0; }
 .yaku-list .han { text-align: right; font-variant-numeric: tabular-nums; opacity: .85; }
 .sheet .score {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 700;
   letter-spacing: .04em;
   color: var(--accent);
-  margin: 8px 0;
+  margin: 6px 0;
   font-variant-numeric: tabular-nums;
 }
-.sheet .detail { font-size: 13px; line-height: 1.8; font-variant-numeric: tabular-nums; }
-.sheet .divider { height: 1px; background: rgba(255, 255, 255, .18); margin: 10px 0; }
-.standings { font-size: 15px; line-height: 2; font-variant-numeric: tabular-nums; }
+.sheet .detail { font-size: 12.5px; line-height: 1.75; font-variant-numeric: tabular-nums; }
+.sheet .divider { height: 1px; background: rgba(255, 255, 255, .18); margin: 9px 0; }
+.standings { font-size: 14px; line-height: 1.9; font-variant-numeric: tabular-nums; }
 .standings .me { color: var(--accent); font-weight: 700; }
 
-@media (max-width: 720px) {
-  :root { --tile-w: 24px; --tile-h: 33px; }
-  #app { padding: 6px; }
-  .topbar { gap: 6px; padding: 5px 8px; }
-  .topbar .btn { padding: 4px 8px; font-size: 12px; }
-  .topbar .chip { padding: 2px 8px; font-size: 12px; }
-  .board { grid-template-columns: 1fr 1fr; }
-  /* 中央の情報は 1 行にまとめて縦を節約する */
-  .center-info {
-    grid-column: 1 / -1;
-    order: -1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    padding: 5px 8px;
-  }
-  .center-info .round { font-size: 15px; margin: 0; }
-  .center-info .rows { flex-direction: row; gap: 8px; }
-  .center-info .dora-label { margin: 0; }
-  /* 手牌 14 枚が 1 行に収まるように牌幅を画面幅から決める */
-  .self-hand { gap: 2px; }
-  .self-hand .tile {
-    --tile-w: min(30px, calc((100vw - 60px) / 14));
-    --tile-h: calc(var(--tile-w) * 1.36);
-  }
-  .self-hand .drawn { margin-left: 7px; }
-  .log { height: 72px; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  .self-hand .tile.playable:hover { transform: none; }
 }
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e6b46'/><text y='24' x='16' text-anchor='middle' font-size='20' fill='%23fbf7ec'>牌</text></svg>">
@@ -333,19 +370,18 @@ html, body {
 <div id="app">
   <div class="topbar">
     <span class="title">三人麻雀</span>
-    <span id="topinfo" style="display:flex;gap:6px;flex-wrap:wrap"></span>
-    <span class="spacer"></span>
-    <button class="btn" data-act="difficulty">敵: ふつう</button>
-    <button class="btn" data-act="hint">ヒント: OFF</button>
-    <button class="btn" data-act="speed">速度: ふつう</button>
-    <button class="btn" data-act="new-game">新規対局</button>
+    <button class="btn" data-act="difficulty">敵:ふつう</button>
+    <button class="btn" data-act="hint">ヒント</button>
+    <button class="btn" data-act="speed">速度:普</button>
+    <button class="btn" data-act="new-game">新規</button>
     <button class="btn" data-act="rules">ルール</button>
   </div>
 
+  <div class="infobar" id="infobar"></div>
   <div class="board" id="board"></div>
+  <div class="log" id="log"></div>
   <div id="self"></div>
   <div class="actions" id="actions"></div>
-  <div class="log" id="log"></div>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -2383,6 +2419,10 @@ html, body {
 <script>
 /*
  * ui.js - 画面描画とプレイヤー操作
+ *
+ * レイアウトは iPhone Air（CSS 420x912）を基準にした固定配置。
+ * 段ごとの高さは CSS 側で牌の寸法から決めてあるので、
+ * 捨て牌や副露が増えても他の段はずれない。
  */
 (function (global) {
   'use strict';
@@ -2397,9 +2437,13 @@ html, body {
   var logLines = [];
 
   function $(sel) { return document.querySelector(sel); }
-  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+    });
+  }
 
-  /* --- 牌の描画 -------------------------------------------------------- */
+  /* --- 牌 -------------------------------------------------------------- */
   function tileHTML(tile, extra) {
     var t = typeof tile === 'number' ? tile : tile.t;
     var red = typeof tile === 'object' && tile.red;
@@ -2425,96 +2469,84 @@ html, body {
   function meldHTML(meld, size) {
     var out = ['<span class="meld">'];
     if (meld.type === 'ankan') {
-      out.push(backHTML(size));
-      out.push(tileHTML(meld.tiles[1], size));
-      out.push(tileHTML(meld.tiles[2], size));
-      out.push(backHTML(size));
+      out.push(backHTML(size), tileHTML(meld.tiles[1], size),
+        tileHTML(meld.tiles[2], size), backHTML(size));
     } else {
       meld.tiles.forEach(function (t) {
-        var isCalled = meld.calledTile && t.uid === meld.calledTile.uid;
-        out.push(tileHTML(t, size + (isCalled ? ' called' : '')));
+        var called = meld.calledTile && t.uid === meld.calledTile.uid;
+        out.push(tileHTML(t, size + (called ? ' called' : '')));
       });
     }
     out.push('</span>');
     return out.join('');
   }
 
-  function kitaHTML(p, size) {
-    if (!p.kita || !p.kita.length) return '';
-    return '<div class="kita"><span class="label">抜き</span>' +
-      p.kita.map(function (t) { return tileHTML(t, size); }).join('') + '</div>';
+  /** 副露と抜きドラを 1 段にまとめる（高さを一定に保つため） */
+  function exposedHTML(p, size) {
+    var out = p.melds.map(function (m) { return meldHTML(m, size); });
+    if (p.kita && p.kita.length) {
+      out.push('<span class="kita"><span class="label">抜</span>' +
+        p.kita.map(function (t) { return tileHTML(t, size); }).join('') + '</span>');
+    }
+    return '<div class="row-exposed">' + out.join('') + '</div>';
   }
 
-  function pondHTML(p) {
-    return '<div class="pond">' + p.discards.map(function (d) {
-      var extra = 'small';
+  /** 河。高さは CSS で 2 段ぶんに固定してある */
+  function pondHTML(p, size) {
+    return '<div class="pond-box"><div class="pond">' + p.discards.map(function (d) {
+      var extra = size;
       if (d.riichi) extra += ' riichi-tile';
       if (d.called) extra += ' dim';
       return tileHTML(d.tile, extra);
-    }).join('') + '</div>';
+    }).join('') + '</div></div>';
+  }
+
+  function headHTML(p, extraChip) {
+    var isDealer = p.seat === game.dealer;
+    return '<div class="seat-head">' +
+      '<span class="wind' + (isDealer ? ' dealer' : '') + '">' +
+      MJ.HONOR_LABEL[p.seatWind - 27] + (isDealer ? '親' : '') + '</span>' +
+      '<span class="nm">' + esc(p.name) + '</span>' +
+      '<span class="pt">' + p.points + '</span>' +
+      (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
+      (extraChip ? '<span class="chip">' + esc(extraChip) + '</span>' : '') +
+      '</div>';
   }
 
   /* --- 各席 ------------------------------------------------------------ */
   function seatHTML(p) {
-    var isDealer = p.seat === game.dealer;
-    var windName = MJ.HONOR_LABEL[p.seatWind - 27];
-    var head = '<div class="seat-head">' +
-      '<span class="wind' + (isDealer ? ' dealer' : '') + '">' + windName + (isDealer ? '(親)' : '') + '</span>' +
-      '<span class="nm">' + esc(p.name) + '</span>' +
-      '<span class="pt">' + p.points + '</span>' +
-      (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
-      '</div>';
     var backs = '';
-    for (var i = 0; i < p.hand.length; i++) backs += backHTML('tiny');
-    if (p.drawn) backs += '<span style="display:inline-block;width:5px"></span>' + backHTML('tiny');
-    var melds = p.melds.length
-      ? '<div class="melds" style="margin-top:4px">' + p.melds.map(function (m) { return meldHTML(m, 'tiny'); }).join('') + '</div>'
-      : '';
+    for (var i = 0; i < p.hand.length; i++) backs += backHTML('hidden-tile');
+    if (p.drawn) backs += '<span style="width:4px"></span>' + backHTML('hidden-tile');
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
-      head + '<div class="hand-row">' + backs + '</div>' + melds + kitaHTML(p, 'tiny') +
-      pondHTML(p) + '</div>';
-  }
-
-  function centerHTML() {
-    var dora = game.doraTiles.map(function (t) { return tileHTML(t, 'small'); }).join('');
-    var hidden = '';
-    for (var i = game.doraTiles.length; i < 5; i++) hidden += backHTML('small');
-    return '<div class="center-info">' +
-      '<div class="round">東' + (game.kyoku + 1) + '局 ' + game.honba + '本場</div>' +
-      '<div class="rows">' +
-      '<div>残り <b>' + game.remaining() + '</b> 枚</div>' +
-      '<div>供託 ' + game.riichiSticks + '本</div>' +
-      '</div>' +
-      '<div class="dora-label">ドラ表示牌</div>' +
-      '<div>' + dora + hidden + '</div>' +
+      headHTML(p) +
+      '<div class="row-back">' + backs + '</div>' +
+      exposedHTML(p, 'mini') +
+      pondHTML(p, 'mini') +
       '</div>';
   }
 
-  /* --- 自分の手牌 ------------------------------------------------------ */
+  function infobarHTML() {
+    var dora = game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('');
+    for (var i = game.doraTiles.length; i < 5; i++) dora += backHTML('mini');
+    return '<span class="round">東' + (game.kyoku + 1) + '局' + game.honba + '本場</span>' +
+      '<span class="stat">残り <b>' + game.remaining() + '</b></span>' +
+      '<span class="stat">供託 ' + game.riichiSticks + '</span>' +
+      '<span class="dora">' + dora + '</span>';
+  }
+
+  /* --- 自分 ------------------------------------------------------------ */
   function selfHTML() {
     var p = game.players[0];
     var awaiting = game.awaiting && game.awaiting.type === 'turn' && game.awaiting.seat === 0;
     var riichiChoices = riichiMode && game.awaiting && game.awaiting.options.riichiDiscards
       ? game.awaiting.options.riichiDiscards : null;
 
-    var head = '<div class="seat-head">' +
-      '<span class="wind' + (game.dealer === 0 ? ' dealer' : '') + '">' +
-      MJ.HONOR_LABEL[p.seatWind - 27] + (game.dealer === 0 ? '(親)' : '') + '</span>' +
-      '<span class="nm">あなた</span><span class="pt">' + p.points + '</span>' +
-      (p.riichi ? '<span class="riichi-mark">リーチ</span>' : '') +
-      (showHint ? '<span class="chip">' + hintText(p) + '</span>' : '') +
-      '</div>';
-
-    var melds = p.melds.length
-      ? '<div class="melds">' + p.melds.map(function (m) { return meldHTML(m, 'small'); }).join('') + '</div>'
-      : '';
-
     var tiles = p.hand.map(function (t, i) {
       var playable = awaiting && (!p.riichi || riichiChoices);
       if (riichiChoices) playable = riichiChoices.indexOf(i) >= 0;
       var cls = playable ? 'playable' : '';
-      if (riichiChoices && playable) cls += ' choice';
-      if (riichiChoices && !playable) cls += ' dim';
+      if (riichiChoices) cls += playable ? ' choice' : ' dim';
       return '<span data-index="' + i + '">' + tileHTML(t, cls) + '</span>';
     }).join('');
 
@@ -2527,7 +2559,9 @@ html, body {
     }
 
     return '<div class="self' + (game.current === 0 && awaiting ? ' active' : '') + '">' +
-      head + melds + kitaHTML(p, 'small') + pondHTML(p) +
+      headHTML(p, showHint ? hintText(p) : null) +
+      pondHTML(p, '') +
+      exposedHTML(p, '') +
       '<div class="self-hand" id="myhand">' + tiles + '</div>' +
       '</div>';
   }
@@ -2537,16 +2571,17 @@ html, body {
     var sh = MJ.shanten(MJ.toCounts(p.hand.concat(p.drawn ? [p.drawn] : [])), melds);
     if (sh === -1) return '和了形';
 
-    // 打牌前（13枚形）の待ちが分かるなら、残り枚数付きで見せる
+    // 打牌前（13 枚形）の待ちが分かるなら、残り枚数付きで見せる
     if (p.hand.length + melds * 3 === 13) {
       var base = MJ.toCounts(p.hand);
       if (MJ.shanten(base, melds) === 0) {
         var w = MJ.waits(base, melds);
         if (w.length) {
           var unseen = MJ.ai.unseenCounts(game, { seat: 0, hand: p.hand, melds: p.melds });
-          return '待ち: ' + w.map(function (t) {
-            return MJ.tileName(t) + ' ' + unseen[t] + '枚';
+          var shown = w.slice(0, 4).map(function (t) {
+            return MJ.tileName(t) + unseen[t];
           }).join('・');
+          return '待ち ' + shown + (w.length > 4 ? '…' : '');
         }
       }
     }
@@ -2554,7 +2589,7 @@ html, body {
     return sh + 'シャンテン';
   }
 
-  /* --- 操作ボタン ------------------------------------------------------ */
+  /* --- コマンド -------------------------------------------------------- */
   function actionsHTML() {
     var a = game.awaiting;
     if (game.result || game.gameOver) return '<span class="hint">&nbsp;</span>';
@@ -2562,10 +2597,10 @@ html, body {
 
     var out = [];
     if (a.type === 'turn' && a.seat === 0) {
-      if (a.auto) return '<span class="hint">リーチ中 — 自動でツモ切りします（牌をクリックすると即座に切ります）</span>';
+      if (a.auto) return '<span class="hint">リーチ中 — 自動でツモ切り（牌を押すと即切り）</span>';
       if (riichiMode) {
-        out.push('<span class="hint">リーチする牌を選んでください</span>');
-        out.push('<button class="btn" data-act="riichi-cancel">キャンセル</button>');
+        out.push('<span class="hint">リーチする牌を選ぶ</span>');
+        out.push('<button class="btn" data-act="riichi-cancel">やめる</button>');
         return out.join('');
       }
       if (a.options.tsumo) out.push('<button class="btn primary" data-act="tsumo">ツモ</button>');
@@ -2573,15 +2608,14 @@ html, body {
       if (a.options.kita) out.push('<button class="btn" data-act="kita">北抜き</button>');
       (a.options.kans || []).forEach(function (k, i) {
         out.push('<button class="btn" data-act="kan" data-kan="' + i + '">' +
-          (k.type === 'ankan' ? '暗カン' : '加カン') + ' ' + MJ.tileName(k.tile) + '</button>');
+          (k.type === 'ankan' ? '暗カン' : '加カン') + MJ.tileName(k.tile) + '</button>');
       });
-      out.push('<span class="hint">牌をクリックして捨てる</span>');
+      if (!out.length) out.push('<span class="hint">牌を押して捨てる</span>');
       return out.join('');
     }
     if (a.type === 'call' && a.seat === 0) {
       out.push('<span class="hint">' + esc(game.players[a.from].name) + ' の ' +
-        MJ.tileName(a.tile.t) +
-        (a.kita ? '（北抜き）' : a.chankan ? '（加カン）' : '') + '</span>');
+        MJ.tileName(a.tile.t) + (a.kita ? '（北抜き）' : a.chankan ? '（加カン）' : '') + '</span>');
       if (a.options.ron) out.push('<button class="btn primary" data-act="ron">ロン</button>');
       if (a.options.pon) out.push('<button class="btn" data-act="pon">ポン</button>');
       if (a.options.kan) out.push('<button class="btn" data-act="call-kan">カン</button>');
@@ -2591,17 +2625,17 @@ html, body {
     return '<span class="hint">CPU 思考中…</span>';
   }
 
-  /* --- 全体描画 -------------------------------------------------------- */
+  /* --- 描画 ------------------------------------------------------------ */
   function render() {
     if (!game) return;
-    $('#topinfo').innerHTML =
-      '<span class="chip">東' + (game.kyoku + 1) + '局 ' + game.honba + '本場</span>' +
-      '<span class="chip">残り ' + game.remaining() + '</span>' +
-      '<span class="chip">供託 ' + game.riichiSticks + '</span>';
-    $('#board').innerHTML =
-      seatHTML(game.players[2]) + centerHTML() + seatHTML(game.players[1]);
+    $('#infobar').innerHTML = infobarHTML();
+    $('#board').innerHTML = seatHTML(game.players[2]) + seatHTML(game.players[1]);
     $('#self').innerHTML = selfHTML();
     $('#actions').innerHTML = actionsHTML();
+    // 河が 2 段に収まりきらない場合でも最新の捨て牌が見えるようにする
+    Array.prototype.forEach.call(document.querySelectorAll('.pond-box'), function (el) {
+      el.scrollTop = el.scrollHeight;
+    });
   }
 
   function renderLog() {
@@ -2612,15 +2646,14 @@ html, body {
     el.scrollTop = el.scrollHeight;
   }
 
-  /* --- 結果表示 -------------------------------------------------------- */
+  /* --- 結果 ------------------------------------------------------------ */
   function showResult(info) {
     var sheet = $('#sheet');
     if (info.type === 'draw') {
       sheet.innerHTML =
         '<h2>流局</h2>' +
         '<div class="detail">' + info.detail.map(esc).join('<br>') + '</div>' +
-        '<div class="divider"></div>' +
-        pointsRowHTML() +
+        '<div class="divider"></div>' + pointsRowHTML() +
         '<div style="margin-top:12px;text-align:right">' +
         '<button class="btn primary" data-act="next">次の局へ</button></div>';
       $('#overlay').hidden = false;
@@ -2630,38 +2663,32 @@ html, body {
     var p = game.players[info.winner];
     var r = info.result;
     var handTiles = p.hand.map(function (t) { return tileHTML(t); }).join('') +
-      p.melds.map(function (m) { return '<span style="margin-left:8px">' + meldHTML(m) + '</span>'; }).join('') +
-      '<span style="margin-left:12px">' + tileHTML(info.winTile) + '</span>';
+      p.melds.map(function (m) { return '<span style="margin-left:6px">' + meldHTML(m, '') + '</span>'; }).join('') +
+      '<span style="margin-left:10px">' + tileHTML(info.winTile) + '</span>';
     var kitaLine = p.kita.length
       ? '<div style="margin-top:6px;font-size:12px">抜きドラ ' +
-        p.kita.map(function (t) { return tileHTML(t, 'small'); }).join('') + '</div>'
+        p.kita.map(function (t) { return tileHTML(t, 'mini'); }).join('') + '</div>'
       : '';
-
     var yakuRows = r.yaku.map(function (y) {
       return '<div>' + esc(y.name) + '</div><div class="han">' +
         (r.yakumanCount ? '役満' : y.han + '翻') + '</div>';
     }).join('');
-
-    var scoreLine = r.yakumanCount
-      ? r.limit
+    var scoreLine = r.yakumanCount ? r.limit
       : (r.fu + '符 ' + r.han + '翻' + (r.limit ? ' ' + r.limit : ''));
-
     var doraRow = '<div style="margin-top:8px;font-size:12px">ドラ表示牌 ' +
-      game.doraTiles.map(function (t) { return tileHTML(t, 'small'); }).join('') +
+      game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('') +
       (info.uraTiles && info.uraTiles.length
-        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, 'small'); }).join('')
+        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('')
         : '') + '</div>';
 
     sheet.innerHTML =
       '<h2>' + esc(p.name) + ' ' + (info.type === 'tsumo' ? 'ツモ' : 'ロン') + '</h2>' +
       '<div class="sub">' + (info.type === 'ron' ? esc(game.players[info.from].name) + ' から' : '') + '</div>' +
-      '<div class="agari">' + handTiles + '</div>' +
-      kitaLine + doraRow +
+      '<div class="agari">' + handTiles + '</div>' + kitaLine + doraRow +
       '<div class="yaku-list">' + yakuRows + '</div>' +
       '<div class="score">' + scoreLine + '</div>' +
       '<div class="detail">' + info.detail.map(esc).join('<br>') + '</div>' +
-      '<div class="divider"></div>' +
-      pointsRowHTML() +
+      '<div class="divider"></div>' + pointsRowHTML() +
       '<div style="margin-top:12px;text-align:right">' +
       '<button class="btn primary" data-act="next">次の局へ</button></div>';
     $('#overlay').hidden = false;
@@ -2688,7 +2715,7 @@ html, body {
     $('#overlay').hidden = false;
   }
 
-  /* --- イベント処理 ---------------------------------------------------- */
+  /* --- イベント -------------------------------------------------------- */
   function onEvent(type, data) {
     if (type === 'log') {
       logLines.push({ text: data.message, hl: /===|ツモ|ロン|リーチ/.test(data.message) });
@@ -2726,42 +2753,38 @@ html, body {
   function handleAction(e) {
     var btn = e.target.closest('[data-act]');
     if (!btn) return;
-    var act = btn.getAttribute('data-act');
-    switch (act) {
+    switch (btn.getAttribute('data-act')) {
       case 'tsumo': game.playerTsumo(); break;
       case 'riichi': riichiMode = true; render(); break;
-      case 'kita': riichiMode = false; game.playerKita(); break;
       case 'riichi-cancel': riichiMode = false; render(); break;
+      case 'kita': riichiMode = false; game.playerKita(); break;
       case 'kan':
-        var k = game.awaiting.options.kans[parseInt(btn.getAttribute('data-kan'), 10)];
         riichiMode = false;
-        game.playerKan(k);
+        game.playerKan(game.awaiting.options.kans[parseInt(btn.getAttribute('data-kan'), 10)]);
         break;
       case 'ron': game.respondCall('ron'); break;
       case 'pon': game.respondCall('pon'); break;
       case 'call-kan': game.respondCall('kan'); break;
       case 'pass': game.respondCall('pass'); break;
-      case 'next':
-        $('#overlay').hidden = true;
-        game.nextHand();
-        break;
-      case 'restart':
-        $('#overlay').hidden = true;
-        startGame();
-        break;
+      case 'next': $('#overlay').hidden = true; game.nextHand(); break;
+      case 'restart': $('#overlay').hidden = true; startGame(); break;
       case 'new-game': startGame(); break;
-      case 'hint': showHint = !showHint; btn.textContent = showHint ? 'ヒント: ON' : 'ヒント: OFF'; render(); break;
+      case 'hint':
+        showHint = !showHint;
+        btn.textContent = showHint ? 'ヒントON' : 'ヒント';
+        render();
+        break;
       case 'difficulty':
         var levels = MJ.ai.LEVELS;
         game.difficulty = ((game.difficulty == null ? 1 : game.difficulty) + 1) % levels.length;
-        btn.textContent = '敵: ' + levels[game.difficulty].name;
+        btn.textContent = '敵:' + levels[game.difficulty].name;
         break;
       case 'speed':
         var speeds = [1100, 650, 300, 60];
-        var labels = ['ゆっくり', 'ふつう', 'はやい', '最速'];
+        var labels = ['遅', '普', '速', '瞬'];
         var i = (speeds.indexOf(game.speed) + 1) % speeds.length;
         game.speed = speeds[i];
-        btn.textContent = '速度: ' + labels[i];
+        btn.textContent = '速度:' + labels[i];
         break;
     }
   }

@@ -12,19 +12,18 @@
 <div id="app">
   <div class="topbar">
     <span class="title">三人麻雀</span>
-    <span id="topinfo" style="display:flex;gap:6px;flex-wrap:wrap"></span>
-    <span class="spacer"></span>
-    <button class="btn" data-act="difficulty">敵: ふつう</button>
-    <button class="btn" data-act="hint">ヒント: OFF</button>
-    <button class="btn" data-act="speed">速度: ふつう</button>
-    <button class="btn" data-act="new-game">新規対局</button>
+    <button class="btn" data-act="difficulty">敵:ふつう</button>
+    <button class="btn" data-act="hint">ヒント</button>
+    <button class="btn" data-act="speed">速度:普</button>
+    <button class="btn" data-act="new-game">新規</button>
     <button class="btn" data-act="rules">ルール</button>
   </div>
 
+  <div class="infobar" id="infobar"></div>
   <div class="board" id="board"></div>
+  <div class="log" id="log"></div>
   <div id="self"></div>
   <div class="actions" id="actions"></div>
-  <div class="log" id="log"></div>
 </div>
 
 <div class="overlay" id="overlay" hidden>
