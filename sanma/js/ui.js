@@ -72,10 +72,16 @@
     return '<div class="row-exposed">' + out.join('') + '</div>';
   }
 
-  /** 河。高さは CSS で 2 段ぶんに固定してある */
+  /**
+   * 河。高さは CSS で 2 段ぶんに固定してある。
+   * ツモ切り（引いてきた牌をそのまま切った牌）は牌面を沈ませて、
+   * 手出し（手牌から選んで切った牌）と見分けられるようにする。
+   * 手出しのほうが多いので、少数派のツモ切り側に印を付けて河を騒がしくしない。
+   */
   function pondHTML(p, size) {
     return '<div class="pond-box"><div class="pond">' + p.discards.map(function (d) {
       var extra = size;
+      if (d.tsumogiri) extra += ' tsumogiri';
       if (d.riichi) extra += ' riichi-tile';
       if (d.called) extra += ' dim';
       return tileHTML(d.tile, extra);
@@ -105,14 +111,14 @@
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
       headHTML(p) +
       '<div class="row-back">' + backs + '</div>' +
-      exposedHTML(p, 'mini') +
-      pondHTML(p, 'mini') +
+      exposedHTML(p, '') +
+      pondHTML(p, '') +
       '</div>';
   }
 
   function infobarHTML() {
-    var dora = game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('');
-    for (var i = game.doraTiles.length; i < 5; i++) dora += backHTML('mini');
+    var dora = game.doraTiles.map(function (t) { return tileHTML(t, ''); }).join('');
+    for (var i = game.doraTiles.length; i < 5; i++) dora += backHTML('');
     return '<span class="round">東' + (game.kyoku + 1) + '局' + game.honba + '本場</span>' +
       '<span class="stat">残り <b>' + game.remaining() + '</b></span>' +
       '<span class="stat">供託 ' + game.riichiSticks + '</span>' +
@@ -252,7 +258,7 @@
       '<span style="margin-left:10px">' + tileHTML(info.winTile) + '</span>';
     var kitaLine = p.kita.length
       ? '<div style="margin-top:6px;font-size:12px">抜きドラ ' +
-        p.kita.map(function (t) { return tileHTML(t, 'mini'); }).join('') + '</div>'
+        p.kita.map(function (t) { return tileHTML(t, ''); }).join('') + '</div>'
       : '';
     var yakuRows = r.yaku.map(function (y) {
       return '<div>' + esc(y.name) + '</div><div class="han">' +
@@ -261,9 +267,9 @@
     var scoreLine = r.yakumanCount ? r.limit
       : (r.fu + '符 ' + r.han + '翻' + (r.limit ? ' ' + r.limit : ''));
     var doraRow = '<div style="margin-top:8px;font-size:12px">ドラ表示牌 ' +
-      game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('') +
+      game.doraTiles.map(function (t) { return tileHTML(t, ''); }).join('') +
       (info.uraTiles && info.uraTiles.length
-        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('')
+        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, ''); }).join('')
         : '') + '</div>';
 
     sheet.innerHTML =

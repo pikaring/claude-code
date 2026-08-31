@@ -219,6 +219,12 @@ html, body {
   justify-content: center;
 }
 .pond .riichi-tile { outline: 2px solid var(--danger); outline-offset: -2px; }
+/* ツモ切りの牌は牌面を沈ませる。明るいままの牌が手出し */
+.pond .tsumogiri {
+  background: linear-gradient(#ddd9cc, #c9c4b3);
+  border-color: #ada693;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05);
+}
 
 /* ---- ログ（余った高さを吸収する。卓の中央に直接刷る） ---- */
 .log {
@@ -320,7 +326,6 @@ html, body {
   background: linear-gradient(150deg, #4a9ad6, var(--tile-back) 60%, #23648f);
   border-color: #1c5680;
 }
-.tile.mini { --tile-w: var(--mini-w); --tile-h: var(--mini-h); border-bottom-width: 1px; }
 .tile.hidden-tile { --tile-w: var(--back-w); --tile-h: var(--back-h); border-bottom-width: 1px; border-radius: 2px; }
 .tile.dim { opacity: .4; }
 .tile.called { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -449,6 +454,9 @@ html, body {
       ・自分の番は手牌をクリックして打牌します。<br>
       ・リーチ後は自動でツモ切りします。ツモ和了・暗カン・北抜きができるときだけ手が止まります。<br>
       ・リーチはボタンを押してから、捨てる牌を選びます。<br>
+      ・河の牌は、<b>下辺が金色のものが手出し</b>（手牌から選んで切った牌）、
+      　無地がツモ切り（引いた牌をそのまま切った牌）です。<br>
+      ・赤枠はリーチ宣言牌、薄くなっている牌は鳴かれた牌です。<br>
       ・「ヒント」を ON にするとシャンテン数と、待ちの残り枚数を表示します。<br>
       ・「敵」で CPU の腕前を やさしい／ふつう／つよい から選べます。
       　打ち筋（上のキャラクター）が「どう打ちたいか」、腕前が「それをどれだけ正確に実行できるか」です。<br>
@@ -2072,9 +2080,10 @@ html, body {
 
   /* --- 打牌 ------------------------------------------------------------ */
 
-  /** index: 手牌のインデックス。-1 はツモ切り */
+  /** index: 手牌のインデックス。-1（または手牌の末尾+1）はツモ切り */
   Game.prototype.discard = function (p, index, declareRiichi) {
     var tile;
+    var tsumogiri = (index === -1 || index === p.hand.length) && !!p.drawn;
     if (index === -1 || index === p.hand.length) {
       tile = p.drawn;
       p.drawn = null;
@@ -2097,7 +2106,7 @@ html, body {
 
     p.discards.push({
       tile: tile, turn: this.turnCount, riichi: !!declareRiichi,
-      tsumogiri: index === -1, called: false
+      tsumogiri: tsumogiri, called: false
     });
     // 一発は「リーチ宣言者が次に打牌するまで」有効
     if (p.ippatsu && !declareRiichi) p.ippatsu = false;
@@ -2669,10 +2678,16 @@ html, body {
     return '<div class="row-exposed">' + out.join('') + '</div>';
   }
 
-  /** 河。高さは CSS で 2 段ぶんに固定してある */
+  /**
+   * 河。高さは CSS で 2 段ぶんに固定してある。
+   * ツモ切り（引いてきた牌をそのまま切った牌）は牌面を沈ませて、
+   * 手出し（手牌から選んで切った牌）と見分けられるようにする。
+   * 手出しのほうが多いので、少数派のツモ切り側に印を付けて河を騒がしくしない。
+   */
   function pondHTML(p, size) {
     return '<div class="pond-box"><div class="pond">' + p.discards.map(function (d) {
       var extra = size;
+      if (d.tsumogiri) extra += ' tsumogiri';
       if (d.riichi) extra += ' riichi-tile';
       if (d.called) extra += ' dim';
       return tileHTML(d.tile, extra);
@@ -2702,14 +2717,14 @@ html, body {
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
       headHTML(p) +
       '<div class="row-back">' + backs + '</div>' +
-      exposedHTML(p, 'mini') +
-      pondHTML(p, 'mini') +
+      exposedHTML(p, '') +
+      pondHTML(p, '') +
       '</div>';
   }
 
   function infobarHTML() {
-    var dora = game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('');
-    for (var i = game.doraTiles.length; i < 5; i++) dora += backHTML('mini');
+    var dora = game.doraTiles.map(function (t) { return tileHTML(t, ''); }).join('');
+    for (var i = game.doraTiles.length; i < 5; i++) dora += backHTML('');
     return '<span class="round">東' + (game.kyoku + 1) + '局' + game.honba + '本場</span>' +
       '<span class="stat">残り <b>' + game.remaining() + '</b></span>' +
       '<span class="stat">供託 ' + game.riichiSticks + '</span>' +
@@ -2849,7 +2864,7 @@ html, body {
       '<span style="margin-left:10px">' + tileHTML(info.winTile) + '</span>';
     var kitaLine = p.kita.length
       ? '<div style="margin-top:6px;font-size:12px">抜きドラ ' +
-        p.kita.map(function (t) { return tileHTML(t, 'mini'); }).join('') + '</div>'
+        p.kita.map(function (t) { return tileHTML(t, ''); }).join('') + '</div>'
       : '';
     var yakuRows = r.yaku.map(function (y) {
       return '<div>' + esc(y.name) + '</div><div class="han">' +
@@ -2858,9 +2873,9 @@ html, body {
     var scoreLine = r.yakumanCount ? r.limit
       : (r.fu + '符 ' + r.han + '翻' + (r.limit ? ' ' + r.limit : ''));
     var doraRow = '<div style="margin-top:8px;font-size:12px">ドラ表示牌 ' +
-      game.doraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('') +
+      game.doraTiles.map(function (t) { return tileHTML(t, ''); }).join('') +
       (info.uraTiles && info.uraTiles.length
-        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, 'mini'); }).join('')
+        ? '　裏ドラ ' + info.uraTiles.map(function (t) { return tileHTML(t, ''); }).join('')
         : '') + '</div>';
 
     sheet.innerHTML =

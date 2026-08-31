@@ -211,6 +211,12 @@ html, body {
   justify-content: center;
 }
 .pond .riichi-tile { outline: 2px solid var(--danger); outline-offset: -2px; }
+/* ツモ切りの牌は牌面を沈ませる。明るいままの牌が手出し */
+.pond .tsumogiri {
+  background: linear-gradient(#ddd9cc, #c9c4b3);
+  border-color: #ada693;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05);
+}
 
 /* ---- ログ（余った高さを吸収する。卓の中央に直接刷る） ---- */
 .log {
@@ -312,7 +318,6 @@ html, body {
   background: linear-gradient(150deg, #4a9ad6, var(--tile-back) 60%, #23648f);
   border-color: #1c5680;
 }
-.tile.mini { --tile-w: var(--mini-w); --tile-h: var(--mini-h); border-bottom-width: 1px; }
 .tile.hidden-tile { --tile-w: var(--back-w); --tile-h: var(--back-h); border-bottom-width: 1px; border-radius: 2px; }
 .tile.dim { opacity: .4; }
 .tile.called { outline: 2px solid var(--accent); outline-offset: -2px; }

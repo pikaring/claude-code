@@ -299,9 +299,10 @@
 
   /* --- 打牌 ------------------------------------------------------------ */
 
-  /** index: 手牌のインデックス。-1 はツモ切り */
+  /** index: 手牌のインデックス。-1（または手牌の末尾+1）はツモ切り */
   Game.prototype.discard = function (p, index, declareRiichi) {
     var tile;
+    var tsumogiri = (index === -1 || index === p.hand.length) && !!p.drawn;
     if (index === -1 || index === p.hand.length) {
       tile = p.drawn;
       p.drawn = null;
@@ -324,7 +325,7 @@
 
     p.discards.push({
       tile: tile, turn: this.turnCount, riichi: !!declareRiichi,
-      tsumogiri: index === -1, called: false
+      tsumogiri: tsumogiri, called: false
     });
     // 一発は「リーチ宣言者が次に打牌するまで」有効
     if (p.ippatsu && !declareRiichi) p.ippatsu = false;
