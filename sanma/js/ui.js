@@ -17,6 +17,11 @@
   var showHint = false;
   var logLines = [];
 
+  /* 裏技: 相手の手牌を公開する表示モード。
+     見えるようになるのは画面だけで、CPU の思考には一切影響しない。 */
+  var openMode = false;
+  var titleTaps = [];
+
   function $(sel) { return document.querySelector(sel); }
   function esc(s) {
     return String(s).replace(/[&<>]/g, function (c) {
@@ -49,7 +54,7 @@
 
   function meldHTML(meld, size) {
     var out = ['<span class="meld">'];
-    if (meld.type === 'ankan') {
+    if (meld.type === 'ankan' && !openMode) {
       out.push(backHTML(size), tileHTML(meld.tiles[1], size),
         tileHTML(meld.tiles[2], size), backHTML(size));
     } else {
@@ -106,10 +111,17 @@
   /* --- 各席 ------------------------------------------------------------ */
   function seatHTML(p) {
     var backs = '';
-    for (var i = 0; i < p.hand.length; i++) backs += backHTML('hidden-tile');
-    if (p.drawn) backs += '<span style="width:4px"></span>' + backHTML('hidden-tile');
+    if (openMode) {
+      backs = p.hand.map(function (t) { return tileHTML(t, 'hand-size'); }).join('');
+      if (p.drawn) {
+        backs += '<span style="width:6px;flex:none"></span>' + tileHTML(p.drawn, 'hand-size');
+      }
+    } else {
+      for (var i = 0; i < p.hand.length; i++) backs += backHTML('hand-size');
+      if (p.drawn) backs += '<span style="width:6px;flex:none"></span>' + backHTML('hand-size');
+    }
     return '<div class="seat' + (game.current === p.seat && !game.result ? ' active' : '') + '">' +
-      headHTML(p) +
+      headHTML(p, openMode ? hintText(p) : null) +
       '<div class="row-back">' + backs + '</div>' +
       exposedHTML(p, '') +
       pondHTML(p, '') +
@@ -167,7 +179,7 @@
       if (MJ.shanten(base, melds) === 0) {
         var w = MJ.waits(base, melds);
         if (w.length) {
-          var unseen = MJ.ai.unseenCounts(game, { seat: 0, hand: p.hand, melds: p.melds });
+          var unseen = MJ.ai.unseenCounts(game, { seat: p.seat, hand: p.hand, melds: p.melds });
           var shown = w.slice(0, 4).map(function (t) {
             return MJ.tileName(t) + unseen[t];
           }).join('・');
@@ -341,10 +353,34 @@
     game.playerDiscard(index, false);
   }
 
+  /** タイトルを 3 秒以内に 5 回叩くと、相手の手牌の公開を切り替える */
+  function handleTitleTap() {
+    var now = Date.now();
+    titleTaps = titleTaps.filter(function (t) { return now - t < 3000; });
+    titleTaps.push(now);
+    if (titleTaps.length < 5) return;
+    titleTaps = [];
+    setOpenMode(!openMode);
+  }
+
+  function setOpenMode(on) {
+    openMode = on;
+    var title = document.querySelector('.title');
+    if (title) title.classList.toggle('open-mode', openMode);
+    logLines.push({
+      text: openMode ? '裏技: 相手の手牌を公開しました（CPU の打ち方は変わりません）'
+        : '裏技: 相手の手牌を伏せました',
+      hl: true
+    });
+    renderLog();
+    render();
+  }
+
   function handleAction(e) {
     var btn = e.target.closest('[data-act]');
     if (!btn) return;
     switch (btn.getAttribute('data-act')) {
+      case 'title': handleTitleTap(); break;
       case 'tsumo': game.playerTsumo(); break;
       case 'riichi': riichiMode = true; render(); break;
       case 'riichi-cancel': riichiMode = false; render(); break;
@@ -411,6 +447,7 @@
 
   function init() {
     renderCharacters();
+    if (global.location && global.location.hash === '#open') setOpenMode(true);
     document.addEventListener('click', function (e) {
       if (e.target.closest('#myhand')) handleHandClick(e);
       handleAction(e);
