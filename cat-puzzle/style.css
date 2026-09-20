@@ -1,154 +1,452 @@
-/* ネコおち - 暫定アート（黒丸・白丸）版スタイル
-   猫の見た目は .cat__body--* だけで決まるので、画像に差し替えるときもここだけ見ればよい。 */
+@charset "UTF-8";
+/* =========================================================
+   ネコおち  ―  スタイル
+   ・前作「ねこの ともだち」（tap-on-neko）の みため に あわせてある
+   ・おおきい文字・おおきいボタン・たかいコントラスト
+   ・ねこの みための きめては .cat__body--* だけ（画像に さしかえる ときも ここだけ）
+   ========================================================= */
 
 :root {
-  --bg: #f6efe4;
-  --panel: #fffaf2;
-  --ink: #3a3027;
-  --ink-soft: #8a7a68;
-  --line: #e2d5c2;
-  --accent: #d9843b;
+  /* いろ（前作と おなじ） */
+  --c-text:        #1b1b1b;
+  --c-bg:          #fff8ec;
+  --c-header:      #2f5d3a;
+  --c-header-text: #ffffff;
+  --c-board-wall:  #ffe9c7;
+  --c-board-floor: #d9a15b;
+  --c-again:       #c65a00;   /* はじめから：オレンジ */
+  --c-kind:        #1f7a3d;   /* ねこの かず：みどり */
+  --c-close:       #444c55;
+  --c-ok:          #1f7a3d;
+  --c-accent:      #ffe36e;
+
+  /* もじの おおきさ（画面の 幅に あわせて 自動で かわる） */
+  --fs-message: clamp(18px, 4.4vw, 28px);
+  --fs-button:  clamp(22px, 5.4vw, 34px);
+
+  /* ばんめんの マスの おおきさ（game.js が 画面に あわせて 書きかえる） */
   --cell: 56px;
+
+  /* アニメーションの ながさ（game.js の SWAP_MS / FALL_MS / FLEE_MS と そろえる） */
   --swap-ms: 170ms;
   --fall-ms: 260ms;
-  --flee-ms: 520ms; /* game.js の FLEE_MS と合わせること */
+  --flee-ms: 520ms;
 }
 
 * { box-sizing: border-box; }
 
-body {
+html, body {
   margin: 0;
-  padding: 16px 12px 32px;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  font-weight: 700;
+  line-height: 1.5;
+  line-break: strict;
+  word-break: normal;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-}
-
-.app { max-width: 480px; margin: 0 auto; }
-
-.head { text-align: center; margin-bottom: 12px; }
-.title { margin: 0 0 4px; font-size: 26px; letter-spacing: .08em; }
-.lead { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
-.lead strong { color: var(--accent); }
-
-.hud {
-  display: flex; gap: 8px; margin: 0 0 12px;
-}
-.hud__item {
-  flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 6px 4px; text-align: center;
-}
-.hud__label { display: block; font-size: 11px; color: var(--ink-soft); }
-.hud__value { display: block; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-.board-wrap { position: relative; display: flex; justify-content: center; }
-
-.board {
-  position: relative;
+  overflow: hidden;            /* ページは スクロールさせない */
+  overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+}
+
+/* ========== ヘッダー ========== */
+.header {
+  flex: 0 0 auto;
+  background: var(--c-header);
+  color: var(--c-header-text);
+  padding: 12px 16px 14px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .18);
+}
+
+.status {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status__label { font-size: clamp(18px, 4.2vw, 26px); }
+
+.status__value {
+  font-size: clamp(34px, 8vw, 54px);
+  line-height: 1;
+  color: var(--c-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.status__level {
+  font-size: clamp(16px, 3.8vw, 22px);
+  background: #ffffff;
+  color: var(--c-header);
+  border-radius: 999px;
+  padding: 4px 14px;
+  white-space: nowrap;
+}
+
+.message {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: var(--fs-message);
+  background: #ffffff;
+  color: var(--c-text);
+  border-radius: 18px;
+  padding: 10px 12px;
+  min-height: 2.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== メインビュー：ねこの ばん ========== */
+.board-area {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  /* かべと ゆか（前作の へやと おなじ かんじ） */
+  background:
+    linear-gradient(to bottom,
+      var(--c-board-wall) 0%,
+      var(--c-board-wall) 78%,
+      var(--c-board-floor) 78%,
+      var(--c-board-floor) 100%);
+}
+
+.board {
+  position: absolute;
+  box-sizing: content-box;   /* game.js が きめる 大きさは マスの ぶんだけ（わくは そと がわ） */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  border: 6px solid var(--c-header);
+  border-radius: 24px;
   overflow: hidden;
   touch-action: none;
-  box-shadow: 0 6px 18px rgba(90, 70, 45, .12);
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .22);
 }
+
+/* マスの くぎり */
 .board::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(120, 95, 60, .07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(120, 95, 60, .07) 1px, transparent 1px);
+    linear-gradient(to right, rgba(47, 93, 58, .13) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(47, 93, 58, .13) 2px, transparent 2px);
   background-size: var(--cell) var(--cell);
 }
 
-/* --- 猫1匹 --- */
+/* ========== ねこ 1ぴき ========== */
 .cat {
-  position: absolute; top: 0; left: 0;
-  width: var(--cell); height: var(--cell);
-  display: flex; align-items: center; justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cell);
+  height: var(--cell);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: transform var(--fall-ms) cubic-bezier(.34, 1.25, .64, 1);
   will-change: transform;
 }
+
 .cat.is-swapping { transition-duration: var(--swap-ms); transition-timing-function: ease-out; }
+
+/* えらんでいる ねこ（ふとい オレンジの わく） */
 .cat.is-selected { z-index: 3; }
-.cat.is-selected .cat__body { box-shadow: 0 0 0 3px var(--accent); }
+.cat.is-selected .cat__body { box-shadow: 0 0 0 5px var(--c-again); }
 
 .cat__body {
-  width: 78%;
-  -webkit-user-drag: none; height: 78%;
+  width: 80%;
+  height: 80%;
   border-radius: 50%;
-  background-size: contain; background-position: center; background-repeat: no-repeat;
-  transition: box-shadow .15s ease;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  -webkit-user-drag: none;
+  transition: box-shadow .12s ease;
 }
-/* 画像を入れたときは丸の塗り・枠を消す */
-.cat__body--image { background-color: transparent !important; border: 0 !important; box-shadow: none; }
 
-/* 暫定アート：黒丸・白丸のバリエーション */
-.cat__body--kuro  { background-color: #23201d; border: 2px solid #100e0c; }
-.cat__body--shiro { background-color: #fdfbf7; border: 2px solid #b9ab97; }
-.cat__body--hai   { background-color: #9a9186; border: 2px solid #6f6960; }
-.cat__body--buchi { background-color: #fdfbf7; border: 6px solid #23201d; }
-.cat__body--tora  { background-color: #23201d; border: 6px solid #fdfbf7; box-shadow: 0 0 0 2px #b9ab97; }
+/* 画像が よみこめた ときは 丸の ぬりと わくを けす
+   （よみこめない ときは 下の 丸の ままで あそべる） */
+.cat__body--image {
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none;
+}
 
-/* 入れかえ失敗のぷるぷる */
+/* 前作と おなじ 3×3の スプライトシートを つかう とき（CAT_TYPES の sheet: true）。
+   9マスの うち 左上（おすわり）だけを みせる。 */
+.cat__body--sheet {
+  background-size: 300% 300%;
+  background-position: 0% 0%;
+}
+
+/* ざんていの みため：くろ丸・しろ丸（Geminiの 画像が できるまで） */
+.cat__body--kuro      { background-color: #23201d; border: 3px solid #100e0c; }
+.cat__body--chashiro  { background-color: #fdfbf7; border: 3px solid #b9ab97; }
+.cat__body--kijitora  { background-color: #9a9186; border: 3px solid #6f6960; }
+.cat__body--hachiware { background-color: #fdfbf7; border: 8px solid #23201d; }
+.cat__body--mike      { background-color: #23201d; border: 8px solid #fdfbf7; box-shadow: inset 0 0 0 2px #23201d, 0 0 0 2px #8d8378; }
+
+/* そろわなかった ときの ぷるぷる */
 .cat.is-nope .cat__body { animation: nope 220ms ease; }
 @keyframes nope {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-12%); }
-  60% { transform: translateX(10%); }
+  25%      { transform: translateX(-14%); }
+  60%      { transform: translateX(12%); }
 }
 
-/* そろった猫が走って画面外へ逃げる */
+/* そろった ねこが はしって にげる */
 .cat.is-fleeing { z-index: 4; }
 .cat.is-fleeing .cat__body {
   animation: flee var(--flee-ms) cubic-bezier(.5, -0.3, .75, .2) forwards;
 }
 @keyframes flee {
   0%   { transform: translateX(0) scale(1); }
-  18%  { transform: translateX(calc(var(--flee) * -0.06)) scale(1.12, .88); } /* ためる */
-  30%  { transform: translateX(calc(var(--flee) * -0.06)) scale(.92, 1.08); }
-  100% { transform: translateX(var(--flee)) scale(.85) rotate(calc(var(--spin) * 1deg)); opacity: .15; }
+  18%  { transform: translateX(calc(var(--flee) * -0.07)) scale(1.14, .86); }  /* ためる */
+  30%  { transform: translateX(calc(var(--flee) * -0.07)) scale(.9, 1.1); }
+  100% { transform: translateX(var(--flee)) scale(.8) rotate(calc(var(--spin) * 1deg)); opacity: .1; }
 }
 
-/* 連鎖表示 */
-.chain {
-  position: absolute; left: 50%; top: 32%;
-  transform: translate(-50%, -50%) scale(.6);
-  font-size: 30px; font-weight: 800; color: var(--accent);
-  text-shadow: 0 2px 0 #fff, 0 0 12px rgba(255, 255, 255, .9);
-  opacity: 0; pointer-events: none;
-}
-.chain.is-on { animation: pop 900ms ease forwards; }
-@keyframes pop {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
-  25%  { opacity: 1; transform: translate(-50%, -70%) scale(1.1); }
-  70%  { opacity: 1; transform: translate(-50%, -80%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -110%) scale(.95); }
+/* ========== したの おおきな ボタン ========== */
+.actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border-top: 6px solid var(--c-header);
 }
 
-.status {
-  min-height: 1.4em; margin: 10px 0 12px; text-align: center;
-  font-size: 13px; color: var(--ink-soft);
+.btn {
+  flex: 1 1 0;
+  min-height: 88px;             /* タップ領域は 48px 以上 */
+  padding: 8px 6px;
+  border: 5px solid rgba(0, 0, 0, .28);
+  border-radius: 24px;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: var(--fs-button);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .25);
+  transition: transform .08s ease, box-shadow .08s ease;
+  touch-action: manipulation;
 }
 
-.controls { display: flex; gap: 10px; align-items: center; justify-content: center; }
-.ctl { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
-.ctl select, .btn {
-  font: inherit; font-size: 14px; color: var(--ink);
-  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-  padding: 7px 12px;
+.btn:active { transform: translateY(6px); box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
+.btn:focus-visible { outline: 6px solid var(--c-accent); outline-offset: 3px; }
+
+.btn__icon { font-size: 1.05em; line-height: 1; }
+.btn__sub  { font-size: .56em; }
+
+.btn--again { background: var(--c-again); }
+.btn--kind  { background: var(--c-kind); }
+
+.btn--close {
+  background: var(--c-close);
+  width: 100%;
+  min-height: 72px;
+  font-size: clamp(22px, 5.4vw, 30px);
 }
-.btn { cursor: pointer; }
-.btn:active { transform: translateY(1px); }
 
-.note { margin: 18px 0 0; font-size: 12px; color: var(--ink-soft); line-height: 1.7; }
-.note summary { cursor: pointer; }
-.note code { background: #efe6d8; border-radius: 4px; padding: 1px 4px; }
+/* ========== ねこの かずを えらぶ がめん ========== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  z-index: 20;
+}
 
+.modal[hidden] { display: none; }
+
+.modal__panel {
+  width: 100%;
+  max-width: 620px;
+  max-height: 98dvh;
+  overflow-y: auto;
+  background: var(--c-bg);
+  border: 6px solid var(--c-header);
+  border-radius: 24px;
+  padding: 16px;
+  animation: pop-in .25s ease both;
+}
+
+.modal__title {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: clamp(22px, 5.2vw, 30px);
+  background: var(--c-header);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 8px;
+}
+
+.modal__note {
+  margin: 12px 0;
+  text-align: center;
+  font-size: clamp(15px, 3.6vw, 20px);
+  color: var(--c-header);
+}
+
+.cat-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cat-choice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 150px;
+  padding: 12px 8px;
+  background: #ffffff;
+  color: var(--c-text);
+  border: 5px solid var(--c-header);
+  border-radius: 20px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: clamp(20px, 5vw, 28px);
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .2);
+  touch-action: manipulation;
+}
+
+.cat-choice:active { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
+.cat-choice:focus-visible { outline: 6px solid var(--c-again); outline-offset: 3px; }
+
+.cat-choice.is-current { background: #e7f4ea; border-color: var(--c-ok); }
+
+.cat-choice__mark {
+  position: absolute;
+  top: 2px;
+  right: 10px;
+  color: var(--c-ok);
+  font-size: 1.2em;
+}
+
+.cat-choice__sub { font-size: .66em; color: var(--c-header); }
+
+/* えらぶ がめんの みほん（ばんめんと おなじ 丸を ならべる） */
+.cat-choice__sample {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.cat-choice__sample .cat__body {
+  flex: 0 0 auto;
+  width: clamp(20px, 5.4vw, 30px);
+  height: clamp(20px, 5.4vw, 30px);
+}
+
+/* ========== おおきな おしらせ（2れんさ！ など） ========== */
+.bignews {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 26dvh;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.bignews[hidden] { display: none; }
+
+.bignews__text {
+  margin: 0;
+  padding: 14px 26px;
+  text-align: center;
+  font-size: clamp(36px, 10vw, 76px);
+  color: #ffffff;
+  background: var(--c-ok);
+  border: 8px solid #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, .3);
+  animation: bignews-in .5s ease both;
+}
+
+/* ========== アニメーション ========== */
+@keyframes pop-in {
+  0%   { transform: scale(.7); opacity: 0; }
+  100% { transform: scale(1);  opacity: 1; }
+}
+
+@keyframes bignews-in {
+  0%   { transform: scale(.4) rotate(-6deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ========== せの ひくい 画面 ========== */
+@media (max-height: 700px) {
+  .header { padding: 8px 14px 10px; }
+  .message { margin-top: 8px; padding: 8px 10px; min-height: 2em; }
+  .btn { min-height: 74px; }
+  .btn--close { min-height: 64px; }
+  .cat-choice { min-height: 128px; }
+}
+
+@media (max-height: 480px) {
+  :root { --fs-message: 16px; --fs-button: 20px; }
+
+  .header { padding: 6px 12px 8px; }
+  .status { gap: 8px; }
+  .status__label { font-size: 16px; }
+  .status__value { font-size: 26px; }
+  .status__level { font-size: 14px; padding: 2px 10px; }
+  .message { margin-top: 6px; padding: 5px 8px; min-height: 1.6em; border-radius: 12px; }
+
+  .board { border-width: 4px; border-radius: 16px; }
+
+  .actions { padding: 8px; gap: 8px; border-top-width: 4px; }
+  .btn { min-height: 56px; border-width: 4px; border-radius: 18px; }
+  .btn__icon, .btn__sub { display: none; }
+
+  .modal__panel { padding: 10px; }
+  .modal__title { font-size: 18px; padding: 5px; margin-bottom: 8px; }
+  .cat-choice { min-height: 96px; font-size: 17px; }
+  .modal__note { margin: 8px 0; font-size: 14px; }
+  .btn--close { min-height: 48px; font-size: 18px; }
+
+  .bignews { padding-top: 18dvh; }
+  .bignews__text { font-size: 34px; border-width: 5px; padding: 8px 18px; }
+}
+
+/* アニメーションが にがてな ひとの ために */
 @media (prefers-reduced-motion: reduce) {
   .cat { transition-duration: 1ms; }
-  .cat.is-fleeing .cat__body, .chain.is-on { animation-duration: 1ms; }
+  * { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
 }

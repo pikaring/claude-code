@@ -1,13 +1,13 @@
-/* ネコおち - 猫の落ちものパズル
+/* ネコおち - ねこの おちもの パズル
  *
  * ルール
- *   - 隣り合う猫をドラッグ（またはタップ2回）で入れかえる
- *   - タテかヨコに同じ猫が MIN_MATCH 匹そろうと、走って画面外へ逃げる
- *   - 空いたところには上から新しい猫が降ってくる（連鎖あり）
+ *   - となりあう ねこを ドラッグ（または タップ2かい）で いれかえる
+ *   - たてか よこに おなじ ねこが MIN_MATCH ひき そろうと、はしって 画面の そとへ にげる
+ *   - あいた ところには 上から あたらしい ねこが ふってくる（れんさ あり）
  *
- * 猫の絵の差し替え
- *   CAT_TYPES の image に画像パスを入れるだけ。null のあいだは style.css の
- *   .cat__body--<key> で定義した暫定の黒丸・白丸で描画される。
+ * ねこの 絵の さしかえ
+ *   CAT_TYPES の image に 画像の パスを いれるだけ。よみこめた ときだけ 画像に なり、
+ *   よみこめない ときは style.css の .cat__body--<key>（ざんていの くろ丸・しろ丸）の ままで あそべる。
  */
 (() => {
   'use strict';
@@ -16,28 +16,37 @@
   const ROWS = 8;
   const MIN_MATCH = 4;
 
-  const SWAP_MS = 170;   // style.css の --swap-ms と合わせる
-  const FALL_MS = 260;   // style.css の --fall-ms と合わせる
-  const FLEE_MS = 520;   // style.css の --flee-ms と合わせる
+  const SWAP_MS = 170;   // style.css の --swap-ms と そろえる
+  const FALL_MS = 260;   // style.css の --fall-ms と そろえる
+  const FLEE_MS = 520;   // style.css の --flee-ms と そろえる
   const BEST_KEY = 'nekoochi.best';
+  const KIND_KEY = 'nekoochi.kinds';
 
-  /** 猫の種類。image に 'assets/cat-kuro.png' のようなパスを入れると画像表示になる。 */
+  /** ねこの しゅるい。image に 'assets/cat-kuro.png' のような パスを いれると 画像に なる。
+   *  ならびは 前作「ねこの ともだち」の ねこに あわせてある。
+   *  前作の 3×3スプライトシートを そのまま つかう ときは sheet: true を つける。 */
   const CAT_TYPES = [
-    { key: 'kuro',  name: '黒猫',   image: null },
-    { key: 'shiro', name: '白猫',   image: null },
-    { key: 'hai',   name: '灰猫',   image: null },
-    { key: 'buchi', name: 'ぶち猫', image: null },
-    { key: 'tora',  name: 'とら猫', image: null },
+    { key: 'kuro',      name: 'くろねこ',   image: null },
+    { key: 'chashiro',  name: 'ちゃしろ',   image: null },
+    { key: 'kijitora',  name: 'キジトラ',   image: null },
+    { key: 'hachiware', name: 'ハチワレ',   image: null },
+    { key: 'mike',      name: 'みけねこ',   image: null },
   ];
 
-  const boardEl  = document.getElementById('board');
-  const scoreEl  = document.getElementById('score');
-  const bestEl   = document.getElementById('best');
-  const movesEl  = document.getElementById('moves');
-  const chainEl  = document.getElementById('chain');
-  const statusEl = document.getElementById('status');
-  const levelEl  = document.getElementById('level');
-  const resetEl  = document.getElementById('reset');
+  const boardEl    = document.getElementById('board');
+  const areaEl     = document.getElementById('boardArea');
+  const scoreEl    = document.getElementById('score');
+  const bestEl     = document.getElementById('best');
+  const movesEl    = document.getElementById('moves');
+  const messageEl  = document.getElementById('message');
+  const bignewsEl  = document.getElementById('bignews');
+  const bignewsTxt = document.getElementById('bignewsText');
+  const kindSubEl  = document.getElementById('kindSub');
+  const kindModal  = document.getElementById('kindModal');
+  const kindChoice = document.getElementById('kindChoices');
+  const resetBtn   = document.getElementById('btnReset');
+  const kindBtn    = document.getElementById('btnKind');
+  const closeBtn   = document.getElementById('btnCloseKind');
 
   /** grid[r][c] = tile | null */
   let grid = [];
@@ -49,17 +58,32 @@
   let busy = true;
   let selected = null;
   let uid = 0;
+  let bignewsTimer = 0;
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const rand = (n) => Math.floor(Math.random() * n);
 
+  /* ---------------- 画像の よみこみ（よみこめない ときは 丸の まま） ---------------- */
+
+  function loadImages() {
+    CAT_TYPES.forEach((def) => {
+      def.ready = false;
+      if (!def.image) return;
+      const img = new Image();
+      img.onload = () => {
+        def.ready = true;
+        eachTile((tile) => { if (tile.type === CAT_TYPES.indexOf(def)) paint(tile); });
+      };
+      img.src = def.image;
+    });
+  }
+
   /* ---------------- レイアウト ---------------- */
 
   function layout() {
-    const availW = boardEl.parentElement.clientWidth || 360;
-    const availH = Math.max(window.innerHeight * 0.58, 260);
-    const size = Math.min(availW / COLS, availH / ROWS);
-    cell = Math.max(32, Math.min(76, Math.floor(size)));
+    const availW = (areaEl.clientWidth || 360) - 20;
+    const availH = (areaEl.clientHeight || 420) - 20;
+    cell = Math.max(30, Math.min(78, Math.floor(Math.min(availW / COLS, availH / ROWS))));
 
     boardEl.style.setProperty('--cell', cell + 'px');
     boardEl.style.width = COLS * cell + 'px';
@@ -71,12 +95,12 @@
   function eachTile(fn) {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (grid[r][c]) fn(grid[r][c]);
+        if (grid[r] && grid[r][c]) fn(grid[r][c]);
       }
     }
   }
 
-  /* ---------------- 猫（タイル） ---------------- */
+  /* ---------------- ねこ（タイル） ---------------- */
 
   function createTile(type) {
     const el = document.createElement('div');
@@ -94,8 +118,9 @@
   function paint(tile) {
     const def = CAT_TYPES[tile.type];
     tile.body.className = 'cat__body cat__body--' + def.key;
-    if (def.image) {
+    if (def.image && def.ready) {
       tile.body.classList.add('cat__body--image');
+      if (def.sheet) tile.body.classList.add('cat__body--sheet');
       tile.body.style.backgroundImage = 'url("' + def.image + '")';
     } else {
       tile.body.style.backgroundImage = '';
@@ -110,24 +135,20 @@
     if (instant) {
       tile.el.style.transition = 'none';
       tile.el.style.transform = transform;
-      void tile.el.offsetWidth; // 再描画を挟んでトランジションを無効化
+      void tile.el.offsetWidth; // さいびょうがを はさんで アニメを きる
       tile.el.style.transition = '';
     } else {
       tile.el.style.transform = transform;
     }
   }
 
-  function destroy(tile) {
-    tile.el.remove();
-  }
-
-  /* ---------------- 盤面の判定 ---------------- */
+  /* ---------------- ばんめんの はんてい ---------------- */
 
   function typeGrid() {
     return grid.map((row) => row.map((tile) => (tile ? tile.type : -1)));
   }
 
-  /** タテヨコに MIN_MATCH 以上つながっている並びを返す */
+  /** たて・よこに MIN_MATCH いじょう つながった ならびを かえす */
   function findRuns(tg) {
     const runs = [];
 
@@ -160,7 +181,7 @@
     return runs;
   }
 
-  /** 1手でも 4 そろいを作れる入れかえが残っているか */
+  /** 1てでも そろえられる いれかえが のこっているか */
   function hasMove(tg) {
     const swapCheck = (r1, c1, r2, c2) => {
       const tmp = tg[r1][c1];
@@ -180,7 +201,7 @@
     return false;
   }
 
-  /** その場に置いても 4 そろいにならない種類を選ぶ */
+  /** おいても すぐには そろわない しゅるいを えらぶ */
   function safeType(types, r, c) {
     const pool = [];
     for (let t = 0; t < typeCount; t++) {
@@ -196,31 +217,25 @@
   }
 
   function makeTypes() {
+    let types = null;
     for (let attempt = 0; attempt < 60; attempt++) {
-      const types = [];
+      types = [];
       for (let r = 0; r < ROWS; r++) {
         types.push([]);
         for (let c = 0; c < COLS; c++) types[r].push(safeType(types, r, c));
       }
-      if (findRuns(types).length === 0 && hasMove(types)) return types;
-    }
-    // 保険（ほぼ通らない）
-    const types = [];
-    for (let r = 0; r < ROWS; r++) {
-      types.push([]);
-      for (let c = 0; c < COLS; c++) types[r].push(safeType(types, r, c));
+      if (findRuns(types).length === 0 && hasMove(types)) break;
     }
     return types;
   }
 
-  /* ---------------- ゲーム進行 ---------------- */
+  /* ---------------- ゲームの すすみ ---------------- */
 
   function newGame() {
     busy = true;
     selected = null;
     score = 0;
     moves = 0;
-    typeCount = Number(levelEl.value) || 4;
     boardEl.innerHTML = '';
 
     const types = makeTypes();
@@ -236,32 +251,32 @@
 
     layout();
     updateHud();
-    setStatus('ドラッグ、またはタップ2回で隣の猫と入れかえます。');
+    say('ねこを うごかして 4ひき そろえるニャ！');
     busy = false;
   }
 
   function updateHud() {
     scoreEl.textContent = String(score);
-    movesEl.textContent = String(moves);
+    movesEl.textContent = 'てすう ' + moves;
     if (score > best) {
       best = score;
-      try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) { /* 保存できなくても続行 */ }
+      try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) { /* ほぞん できなくても つづける */ }
     }
-    bestEl.textContent = String(best);
+    bestEl.textContent = 'さいこう ' + best;
   }
 
-  function setStatus(text) {
-    statusEl.textContent = text;
+  function say(text) {
+    messageEl.textContent = text;
   }
 
-  function showChain(n) {
-    chainEl.textContent = n + '連鎖！';
-    chainEl.classList.remove('is-on');
-    void chainEl.offsetWidth;
-    chainEl.classList.add('is-on');
+  function bignews(text) {
+    bignewsTxt.textContent = text;
+    bignewsEl.hidden = false;
+    clearTimeout(bignewsTimer);
+    bignewsTimer = setTimeout(() => { bignewsEl.hidden = true; }, 900);
   }
 
-  /** そろった猫を走らせて逃がす */
+  /** そろった ねこを はしらせて にがす */
   function flee(tiles) {
     tiles.forEach((tile) => {
       const toLeft = tile.c < COLS / 2;
@@ -272,7 +287,7 @@
     });
   }
 
-  /** 猫を下に詰めて、空いたぶんを上から降らせる */
+  /** ねこを 下に つめて、あいた ぶんを 上から ふらせる */
   function collapseAndRefill() {
     for (let c = 0; c < COLS; c++) {
       let write = ROWS - 1;
@@ -290,14 +305,14 @@
       for (let r = write; r >= 0; r--) {
         const tile = createTile(rand(typeCount));
         grid[r][c] = tile;
-        moveTo(tile, r - missing, c, true); // 盤の上（画面外）から
+        moveTo(tile, r - missing, c, true); // ばんの 上（画面の そと）から
         const target = r;
         requestAnimationFrame(() => moveTo(tile, target, c, false));
       }
     }
   }
 
-  /** そろい → 逃走 → 落下 を連鎖が止まるまで繰り返す */
+  /** そろい → にげる → おちる を れんさが とまるまで くりかえす */
   async function resolveBoard() {
     let chain = 0;
 
@@ -319,27 +334,28 @@
 
       score += (doomed.size * 10 + bonus) * chain;
       updateHud();
-      if (chain >= 2) showChain(chain);
-      setStatus(doomed.size + '匹が逃げていった！');
+      if (chain >= 2) bignews(chain + 'れんさ！');
+      say(doomed.size + 'ひき にげていった！');
 
       const tiles = Array.from(doomed);
       flee(tiles);
       tiles.forEach((tile) => { grid[tile.r][tile.c] = null; });
       await sleep(FLEE_MS);
-      tiles.forEach(destroy);
+      tiles.forEach((tile) => tile.el.remove());
 
       collapseAndRefill();
       await sleep(FALL_MS + 60);
     }
 
-    if (chain > 0) setStatus(chain >= 2 ? chain + '連鎖！' : 'にげられた！');
+    if (chain >= 2) say(chain + 'れんさ！ すごいニャ');
+    else if (chain === 1) say('にげられたニャ〜');
 
     if (!hasMove(typeGrid())) await reshuffle();
   }
 
-  /** 手詰まりになったら並びかえる */
+  /** てづまりに なったら ならびなおす */
   async function reshuffle() {
-    setStatus('手がなくなったので、猫たちが並びなおしました。');
+    say('うごかせる てが ないので ならびなおすニャ');
     const tiles = [];
     eachTile((tile) => tiles.push(tile));
 
@@ -350,9 +366,7 @@
         const tmp = types[i]; types[i] = types[j]; types[j] = tmp;
       }
       const candidate = [];
-      for (let r = 0; r < ROWS; r++) {
-        candidate.push(types.slice(r * COLS, (r + 1) * COLS));
-      }
+      for (let r = 0; r < ROWS; r++) candidate.push(types.slice(r * COLS, (r + 1) * COLS));
       if (findRuns(candidate).length === 0 && hasMove(candidate)) {
         tiles.forEach((tile, i) => {
           tile.type = types[i];
@@ -373,7 +387,7 @@
     await sleep(340);
   }
 
-  /* ---------------- 操作 ---------------- */
+  /* ---------------- そうさ ---------------- */
 
   function selectTile(tile) {
     if (selected) selected.el.classList.remove('is-selected');
@@ -390,7 +404,7 @@
     busy = true;
     selectTile(null);
 
-    swapTiles(a, b, true);
+    swapTiles(a, b);
     await sleep(SWAP_MS);
 
     if (findRuns(typeGrid()).length) {
@@ -398,10 +412,10 @@
       updateHud();
       await resolveBoard();
     } else {
-      swapTiles(a, b, true);
+      swapTiles(a, b);
       a.el.classList.add('is-nope');
       b.el.classList.add('is-nope');
-      setStatus('そろわないので、猫はもどってしまった。');
+      say('そろわないから もどったニャ');
       await sleep(Math.max(SWAP_MS, 240));
       a.el.classList.remove('is-nope');
       b.el.classList.remove('is-nope');
@@ -410,42 +424,29 @@
     busy = false;
   }
 
-  function swapTiles(a, b, animate) {
+  function swapTiles(a, b) {
     const ar = a.r, ac = a.c, br = b.r, bc = b.c;
     grid[ar][ac] = b;
     grid[br][bc] = a;
-    if (animate) {
-      a.el.classList.add('is-swapping');
-      b.el.classList.add('is-swapping');
-      setTimeout(() => {
-        a.el.classList.remove('is-swapping');
-        b.el.classList.remove('is-swapping');
-      }, SWAP_MS + 20);
-    }
+    a.el.classList.add('is-swapping');
+    b.el.classList.add('is-swapping');
+    setTimeout(() => {
+      a.el.classList.remove('is-swapping');
+      b.el.classList.remove('is-swapping');
+    }, SWAP_MS + 20);
     moveTo(a, br, bc, false);
     moveTo(b, ar, ac, false);
   }
 
   function cellAt(clientX, clientY) {
     const rect = boardEl.getBoundingClientRect();
-    const c = Math.floor((clientX - rect.left) / cell);
-    const r = Math.floor((clientY - rect.top) / cell);
+    const c = Math.floor((clientX - rect.left - boardEl.clientLeft) / cell);
+    const r = Math.floor((clientY - rect.top - boardEl.clientTop) / cell);
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return null;
     return grid[r][c];
   }
 
-  let drag = null;
-
-  boardEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); // 文字選択やネイティブのドラッグが始まると以降のイベントが途切れるため
-    if (busy) return;
-    const tile = cellAt(e.clientX, e.clientY);
-    if (!tile) return;
-    drag = { tile, x: e.clientX, y: e.clientY, moved: false };
-    try { boardEl.setPointerCapture(e.pointerId); } catch (err) { /* 取れなくても操作は続く */ }
-  });
-
-  /** ドラッグ量から入れかえ先を決める。しきい値に満たなければ null。 */
+  /** ドラッグの むきから いれかえ先を きめる。みじかすぎる ときは null。 */
   function swipeTarget(tile, dx, dy) {
     if (Math.max(Math.abs(dx), Math.abs(dy)) < cell * 0.4) return null;
     let r = tile.r;
@@ -456,11 +457,24 @@
     return grid[r][c];
   }
 
+  let drag = null;
+
+  boardEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); // 文字えらびや ネイティブの ドラッグが はじまると イベントが とぎれる ため
+    if (busy) return;
+    const tile = cellAt(e.clientX, e.clientY);
+    if (!tile) return;
+    drag = { tile, x: e.clientX, y: e.clientY, moved: false };
+    try { boardEl.setPointerCapture(e.pointerId); } catch (err) { /* とれなくても そうさは つづく */ }
+  });
+
   boardEl.addEventListener('pointermove', (e) => {
     if (!drag || drag.moved || busy) return;
-    const target = swipeTarget(drag.tile, e.clientX - drag.x, e.clientY - drag.y);
-    if (!target && Math.max(Math.abs(e.clientX - drag.x), Math.abs(e.clientY - drag.y)) < cell * 0.4) return;
-    drag.moved = true; // しきい値を越えたら、盤外方向でもタップ扱いにはしない
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < cell * 0.4) return;
+    drag.moved = true; // ばんの そとむきでも タップあつかいには しない
+    const target = swipeTarget(drag.tile, dx, dy);
     if (target) trySwap(drag.tile, target);
   });
 
@@ -470,9 +484,9 @@
     drag = null;
     if (started.moved || busy) return;
 
-    // 速いフリックで pointermove がほとんど届かなかった場合もここで拾う
-    const target = swipeTarget(started.tile, e.clientX - started.x, e.clientY - started.y);
-    if (target) { trySwap(started.tile, target); return; }
+    // はやい フリックで pointermove が ほとんど とどかなかった ときも ここで ひろう
+    const flick = swipeTarget(started.tile, e.clientX - started.x, e.clientY - started.y);
+    if (flick) { trySwap(started.tile, flick); return; }
 
     const tile = cellAt(e.clientX, e.clientY);
     if (!tile) { selectTile(null); return; }
@@ -486,10 +500,71 @@
   boardEl.addEventListener('dragstart', (e) => e.preventDefault());
   boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
+  /* ---------------- ねこの かずを えらぶ がめん ---------------- */
+
+  function buildKindChoices() {
+    kindChoice.innerHTML = '';
+    [{ n: 4, sub: 'やさしい' }, { n: 5, sub: 'むずかしい' }].forEach((item) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cat-choice' + (item.n === typeCount ? ' is-current' : '');
+
+      const sample = document.createElement('span');
+      sample.className = 'cat-choice__sample';
+      for (let i = 0; i < item.n; i++) {
+        const dot = document.createElement('span');
+        const def = CAT_TYPES[i];
+        dot.className = 'cat__body cat__body--' + def.key;
+        if (def.image && def.ready) {
+          dot.classList.add('cat__body--image');
+          if (def.sheet) dot.classList.add('cat__body--sheet');
+          dot.style.backgroundImage = 'url("' + def.image + '")';
+        }
+        sample.appendChild(dot);
+      }
+
+      const name = document.createElement('span');
+      name.textContent = item.n + 'しゅるい';
+
+      const sub = document.createElement('span');
+      sub.className = 'cat-choice__sub';
+      sub.textContent = item.sub;
+
+      if (item.n === typeCount) {
+        const mark = document.createElement('span');
+        mark.className = 'cat-choice__mark';
+        mark.textContent = '✔';
+        btn.appendChild(mark);
+      }
+
+      btn.append(sample, name, sub);
+      btn.addEventListener('click', () => {
+        typeCount = item.n;
+        try { localStorage.setItem(KIND_KEY, String(typeCount)); } catch (e) { /* つづける */ }
+        kindSubEl.textContent = typeCount + 'しゅるい';
+        kindModal.hidden = true;
+        newGame();
+      });
+      kindChoice.appendChild(btn);
+    });
+  }
+
+  kindBtn.addEventListener('click', () => {
+    buildKindChoices();
+    kindModal.hidden = false;
+  });
+  closeBtn.addEventListener('click', () => { kindModal.hidden = true; });
+  kindModal.addEventListener('click', (e) => { if (e.target === kindModal) kindModal.hidden = true; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') kindModal.hidden = true; });
+
+  resetBtn.addEventListener('click', newGame);
   window.addEventListener('resize', layout);
-  resetEl.addEventListener('click', newGame);
-  levelEl.addEventListener('change', newGame);
+  window.addEventListener('orientationchange', layout);
 
   try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) { best = 0; }
+  try { typeCount = Number(localStorage.getItem(KIND_KEY)) === 5 ? 5 : 4; } catch (e) { typeCount = 4; }
+  kindSubEl.textContent = typeCount + 'しゅるい';
+
+  loadImages();
   newGame();
 })();
