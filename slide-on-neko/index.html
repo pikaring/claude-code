@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slide on NEKO｜ねこを すべらせて 4ひき そろえる、おちもの パズル</title>
+<meta name="description" content="インストール不要・通信なし・ブラウザだけで動く、ねこの おちもの パズル。ねこの顔をスライドしてタテかヨコに4匹そろえると、走って画面の右へ逃げていきます。制限時間もゲームオーバーもありません。">
+<meta name="theme-color" content="#2f5d3a">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Slide on NEKO｜ねこを すべらせて 4ひき そろえる、おちもの パズル">
+<meta property="og:description" content="ねこの顔をスライドして4匹そろえると、走って画面の右へ逃げていきます。インストール不要・通信なし。">
+<meta property="og:url" content="https://pikaring.github.io/slide-on-neko/">
+<meta property="og:image" content="https://pikaring.github.io/slide-on-neko/assets/icon.png">
+
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+  /* ホーム画面に くわえた アイコンから 開いた ときは、紹介ページを とばして
+     そのまま ゲームへ（すでに 入れて ある 方の 使い勝手を かえない ため） */
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    location.replace('app/');
+  }
+</script>
+</head>
+<body>
+
+<header class="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="./">Slide on NEKO</a>
+    <nav class="nav">
+      <a href="#about">どんなゲーム</a>
+      <a href="#howto">あそびかた</a>
+      <a href="#make">つくり</a>
+      <a href="#faq">よくある質問</a>
+      <a class="btn btn-main" href="app/">あそぶ</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pill"><b>無料</b> · インストール不要 · 通信なし · MIT License</span>
+      <h1>そろえたら、<br>ねこは 走りだす。</h1>
+      <p class="lead">ねこの顔を となりと いれかえて、タテか ヨコに 4匹そろえるパズル。
+        そろった ねこは ぎょうれつを つくって、画面の 右へ 走って 逃げていきます。
+        あいた ところには 上から 新しい ねこが 落ちてきて、また そろえば 連鎖。
+        制限時間も、減点も、ゲームオーバーも ありません。</p>
+      <div class="hero-actions">
+        <a class="btn btn-main" href="app/">いますぐ あそぶ</a>
+        <a class="btn btn-sub" href="https://github.com/pikaring/slide-on-neko">GitHubで見る</a>
+      </div>
+      <p class="hero-note">ホーム画面に追加すると、アプリのように全画面で開けます。</p>
+    </div>
+
+    <div class="phone" aria-hidden="true">
+      <div class="screen screen-slide">
+        <div class="sbar">
+          <p class="sscore">スコア <b>1240</b> <span class="sbadge">さいこう 1240</span></p>
+          <p class="smsg">4ひき 右へ にげていった！</p>
+        </div>
+        <div class="sfield">
+          <div class="sboard">
+          <span class="sdot t"></span><span class="sdot c"></span><span class="sdot h"></span><span class="sdot k"></span><span class="sdot k"></span><span class="sdot k"></span><span class="sdot t"></span>
+          <span class="sdot k"></span><span class="sdot c"></span><span class="sdot k"></span><span class="sdot k"></span><span class="sdot h"></span><span class="sdot h"></span><span class="sdot k"></span>
+          <span class="sdot c"></span><span class="sdot k"></span><span class="sdot h"></span><span class="sdot k"></span><span class="sdot k"></span><span class="sdot c"></span><span class="sdot k"></span>
+          <span class="sdot h"></span><span class="sdot k"></span><span class="sdot c"></span><span class="sdot c"></span><span class="sdot c"></span><span class="sdot t"></span><span class="sdot h"></span>
+          <span class="sdot c"></span><span class="sdot k"></span><span class="sdot t"></span><span class="sdot c"></span><span class="sdot k"></span><span class="sdot c"></span><span class="sdot t"></span>
+          <span class="sdot k"></span><span class="sdot h"></span><span class="sdot k"></span><span class="sdot k"></span><span class="sdot c"></span><span class="sdot h"></span><span class="sdot h"></span>
+          </div>
+          <span class="srunner srunner--a"></span>
+          <span class="srunner srunner--b"></span>
+          <span class="srunner srunner--c"></span>
+        </div>
+        <div class="sbtns"><b>はじめから</b><i>ねこの かず</i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="specs">
+  <div class="wrap specs-grid">
+    <div class="spec"><b>インストール不要</b><span>ブラウザで開くだけ</span></div>
+    <div class="spec"><b>通信なし</b><span>読みこんだ あとは オフラインでも</span></div>
+    <div class="spec"><b>制限時間なし</b><span>手づまりは 自動で ならびなおし</span></div>
+    <div class="spec"><b>スマホもPCも</b><span>ドラッグでも タップ2回でも</span></div>
+  </div>
+</div>
+
+<section id="about" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">どんなゲーム</p>
+      <h2>4匹そろうと、走って逃げる。</h2>
+      <p>よくある「3つそろえ」ではなく、<b>4匹そろえ</b>。
+        そろった ねこは その場で消えるのではなく、ぎょうれつを つくって 画面の 右へ 走りぬけます。</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>ねこの顔だけを ならべる</h3>
+        <p>マスいっぱいに 顔を 大きく 出すので、小さい画面でも どの ねこか ひと目で わかります。</p>
+        <ul>
+          <li>4しゅるい（やさしい）／5しゅるい（むずかしい）を 切りかえ</li>
+          <li>選んだ ねこは オレンジの わくで はっきり表示</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>逃げる → 落ちる → 連鎖</h3>
+        <p>ねこが 走って いる あいだに 上から 新しい ねこが 落ちてきます。落ちた先で また そろえば 連鎖で 得点が 倍々に。</p>
+        <ul>
+          <li>連鎖は 画面まんなかに 大きく表示</li>
+          <li>5匹以上 そろえると ボーナス</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>おおきな文字・おおきなボタン</h3>
+        <p>前作 Tap on NEKO と 同じ 見やすさの つくり。高コントラストで、押すところは すべて 48px 以上です。</p>
+        <ul>
+          <li>ひらがな中心の わかち書き</li>
+          <li>ねこが「〜ニャ」と 今の ようすを 教えてくれます</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">04</span>
+        <h3>やめどきが 自由</h3>
+        <p>制限時間も ゲームオーバーも ありません。手が なくなったら ねこたちが 自動で ならびなおします。</p>
+        <ul>
+          <li>最高得点と 設定は この端末の中だけに 保存</li>
+          <li>いつ やめても、いつ 始めても だいじょうぶ</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="howto">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">あそびかた</p>
+      <h2>となりと いれかえるだけ。</h2>
+    </div>
+    <div class="steps-box" style="background:#fff;border:1px solid var(--line)">
+      <div class="flow-step"><em>1</em><span>ねこを となりの マスへ ドラッグする（タップ2回でも いれかえられます）</span></div>
+      <div class="flow-step"><em>2</em><span>タテか ヨコに 同じ ねこが 4匹そろうと、走って 画面の 右へ 逃げていく</span></div>
+      <div class="flow-step"><em>3</em><span>あいた ところに 上から 新しい ねこが 落ちてくる。そろえば そのまま 連鎖</span></div>
+      <div class="flow-step"><em>4</em><span>そろわない いれかえは 元に もどります（手数は ふえません）</span></div>
+    </div>
+    <p class="note">パソコンでは マウスの ドラッグ、スマホ・タブレットでは 指で すべらせて あそべます。</p>
+  </div>
+</section>
+
+<section id="make" class="night">
+  <div class="wrap night-grid">
+    <div>
+      <p class="eyebrow">つくり</p>
+      <h2>HTML / CSS / JavaScript だけ。</h2>
+      <p>フレームワークも ビルドも 使っていません。<code>app/index.html</code> を 開けば そのまま 動きます。
+        猫の絵は あとから 差しかえられるように、1か所に まとめてあります。</p>
+    </div>
+    <div class="night-list">
+      <div class="night-item"><b>絵の 差しかえ口</b><span><code>main.js</code> の <code>CAT_TYPES</code> に 画像の パスを 書くだけ。読みこめない ときは 暫定の 丸のままで あそべます。</span></div>
+      <div class="night-item"><b>保存</b><span>最高得点と 設定は LocalStorage に。サーバーには 何も 送りません。</span></div>
+      <div class="night-item"><b>画面サイズ</b><span>マスの 大きさは 画面に あわせて 自動計算。横向きでも スクロールなしで 収まります。</span></div>
+      <div class="night-item"><b>動きが 苦手な 方へ</b><span><code>prefers-reduced-motion</code> に 対応。アニメーションを 切って あそべます。</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">よくある質問</p>
+      <h2>気になるところ</h2>
+    </div>
+    <details open><summary>お金は かかりますか？</summary><p>かかりません。無料で、広告も 課金も ありません。</p></details>
+    <details><summary>インストールは 必要ですか？</summary><p>不要です。ブラウザで開くだけ。ホーム画面に追加すると、アプリのように 全画面で 開けます。</p></details>
+    <details><summary>データは どこかに 送られますか？</summary><p>送られません。最高得点も 設定も、お使いの端末の中だけに 保存されます。</p></details>
+    <details><summary>猫の絵が 丸なのは なぜ？</summary><p>絵を 用意するまでの 暫定表示です。画像を <code>app/images/</code> に置いて <code>CAT_TYPES</code> に パスを書くと、そのまま 猫の顔に なります。</p></details>
+    <details><summary>前作との ちがいは？</summary><p><a href="https://pikaring.github.io/tap-on-neko/">Tap on NEKO</a> は ねこの お世話と クイズ、こちらは パズルです。見た目と 操作の かんじは そろえてあります。</p></details>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>ねこを すべらせて、ひと休み。</h2>
+    <div class="hero-actions">
+      <a class="btn btn-main" href="app/">いますぐ あそぶ</a>
+      <a class="btn btn-sub" href="https://github.com/pikaring/slide-on-neko">GitHubで見る</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>Slide on NEKO</span>
+    <a href="https://github.com/pikaring/slide-on-neko">GitHub</a>
+    <a href="https://pikaring.github.io/tap-on-neko/">Tap on NEKO</a>
+    <span class="sep">MIT License</span>
+  </div>
+</footer>
+
+</body>
+</html>

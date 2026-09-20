@@ -1,13 +1,14 @@
-/* ネコおち - ねこの おちもの パズル
+/* ねこ ならべ（Slide on NEKO）
  *
  * ルール
- *   - となりあう ねこを ドラッグ（または タップ2かい）で いれかえる
- *   - たてか よこに おなじ ねこが MIN_MATCH ひき そろうと、はしって 画面の そとへ にげる
+ *   - となりあう ねこの かおを ドラッグ（または タップ2かい）で いれかえる
+ *   - たてか よこに おなじ ねこが MIN_MATCH ひき そろうと、画面の 右へ はしって にげる
  *   - あいた ところには 上から あたらしい ねこが ふってくる（れんさ あり）
  *
  * ねこの 絵の さしかえ
  *   CAT_TYPES の image に 画像の パスを いれるだけ。よみこめた ときだけ 画像に なり、
  *   よみこめない ときは style.css の .cat__body--<key>（ざんていの くろ丸・しろ丸）の ままで あそべる。
+ *   絵は「顔だけ」の 正方形。3×3の スプライトシートを つかう ときは sheet: true を つける。
  */
 (() => {
   'use strict';
@@ -16,25 +17,28 @@
   const ROWS = 8;
   const MIN_MATCH = 4;
 
-  const SWAP_MS = 170;   // style.css の --swap-ms と そろえる
-  const FALL_MS = 260;   // style.css の --fall-ms と そろえる
-  const FLEE_MS = 520;   // style.css の --flee-ms と そろえる
-  const BEST_KEY = 'nekoochi.best';
-  const KIND_KEY = 'nekoochi.kinds';
+  const SWAP_MS = 170;      // style.css の --swap-ms と そろえる
+  const FALL_MS = 260;      // style.css の --fall-ms と そろえる
+  const RUN_MS = 900;       // style.css の --run-ms と そろえる（右へ はしりぬける ながさ）
+  const RUN_STAGGER = 55;   // ぎょうれつに なって はしりだす ずれ
+  const ESCAPE_HOLD = 230;  // はしりだしてから ばんを つめるまで
 
-  /** ねこの しゅるい。image に 'assets/cat-kuro.png' のような パスを いれると 画像に なる。
-   *  ならびは 前作「ねこの ともだち」の ねこに あわせてある。
-   *  前作の 3×3スプライトシートを そのまま つかう ときは sheet: true を つける。 */
+  const BEST_KEY = 'nekonarabe.best';
+  const KIND_KEY = 'nekonarabe.kinds';
+
+  /** ねこの しゅるい。image に 'images/face-kuro.png' のような パスを いれると 画像に なる。
+   *  ならびは 前作「ねこの ともだち」の ねこに あわせてある。 */
   const CAT_TYPES = [
-    { key: 'kuro',      name: 'くろねこ',   image: null },
-    { key: 'chashiro',  name: 'ちゃしろ',   image: null },
-    { key: 'kijitora',  name: 'キジトラ',   image: null },
-    { key: 'hachiware', name: 'ハチワレ',   image: null },
-    { key: 'mike',      name: 'みけねこ',   image: null },
+    { key: 'kuro',      name: 'くろねこ', image: null },
+    { key: 'chashiro',  name: 'ちゃしろ', image: null },
+    { key: 'kijitora',  name: 'キジトラ', image: null },
+    { key: 'hachiware', name: 'ハチワレ', image: null },
+    { key: 'mike',      name: 'みけねこ', image: null },
   ];
 
   const boardEl    = document.getElementById('board');
   const areaEl     = document.getElementById('boardArea');
+  const runwayEl   = document.getElementById('runway');
   const scoreEl    = document.getElementById('score');
   const bestEl     = document.getElementById('best');
   const movesEl    = document.getElementById('moves');
@@ -66,13 +70,13 @@
   /* ---------------- 画像の よみこみ（よみこめない ときは 丸の まま） ---------------- */
 
   function loadImages() {
-    CAT_TYPES.forEach((def) => {
+    CAT_TYPES.forEach((def, type) => {
       def.ready = false;
       if (!def.image) return;
       const img = new Image();
       img.onload = () => {
         def.ready = true;
-        eachTile((tile) => { if (tile.type === CAT_TYPES.indexOf(def)) paint(tile); });
+        eachTile((tile) => { if (tile.type === type) paint(tile); });
       };
       img.src = def.image;
     });
@@ -115,17 +119,22 @@
     return tile;
   }
 
-  function paint(tile) {
-    const def = CAT_TYPES[tile.type];
-    tile.body.className = 'cat__body cat__body--' + def.key;
+  /** ねこの みためを つける（丸、または 顔の 画像） */
+  function dressBody(body, type) {
+    const def = CAT_TYPES[type];
+    body.className = 'cat__body cat__body--' + def.key;
     if (def.image && def.ready) {
-      tile.body.classList.add('cat__body--image');
-      if (def.sheet) tile.body.classList.add('cat__body--sheet');
-      tile.body.style.backgroundImage = 'url("' + def.image + '")';
+      body.classList.add('cat__body--image');
+      if (def.sheet) body.classList.add('cat__body--sheet');
+      body.style.backgroundImage = 'url("' + def.image + '")';
     } else {
-      tile.body.style.backgroundImage = '';
+      body.style.backgroundImage = '';
     }
-    tile.el.setAttribute('aria-label', def.name);
+  }
+
+  function paint(tile) {
+    dressBody(tile.body, tile.type);
+    tile.el.setAttribute('aria-label', CAT_TYPES[tile.type].name);
   }
 
   function moveTo(tile, r, c, instant) {
@@ -237,6 +246,7 @@
     score = 0;
     moves = 0;
     boardEl.innerHTML = '';
+    runwayEl.innerHTML = '';
 
     const types = makeTypes();
     grid = [];
@@ -251,7 +261,7 @@
 
     layout();
     updateHud();
-    say('ねこを うごかして 4ひき そろえるニャ！');
+    say('ねこを すべらせて 4ひき そろえるニャ！');
     busy = false;
   }
 
@@ -276,14 +286,31 @@
     bignewsTimer = setTimeout(() => { bignewsEl.hidden = true; }, 900);
   }
 
-  /** そろった ねこを はしらせて にがす */
-  function flee(tiles) {
-    tiles.forEach((tile) => {
-      const toLeft = tile.c < COLS / 2;
-      const dist = toLeft ? -(tile.c + 1.4) * cell : (COLS - tile.c + 0.4) * cell;
-      tile.body.style.setProperty('--flee', Math.round(dist) + 'px');
-      tile.body.style.setProperty('--spin', String(toLeft ? -18 : 18));
-      tile.el.classList.add('is-fleeing');
+  /** そろった ねこを 画面の 右へ はしらせる。
+   *  ばんの そとの レイヤー（runway）に うつしかえるので、
+   *  ねこが はしって いる あいだに ばんは どんどん つまって いく。 */
+  function escapeRight(tiles) {
+    const vw = window.innerWidth;
+    // 右の ねこから、すこしずつ ずれて はしりだす（ぎょうれつに みえる）
+    const ordered = tiles.slice().sort((a, b) => (b.c - a.c) || (a.r - b.r));
+
+    ordered.forEach((tile, i) => {
+      const rect = tile.el.getBoundingClientRect();
+      const runner = document.createElement('div');
+      runner.className = 'runner';
+      runner.style.left = rect.left + 'px';
+      runner.style.top = rect.top + 'px';
+      runner.style.width = rect.width + 'px';
+      runner.style.height = rect.height + 'px';
+      runner.style.setProperty('--run', Math.round(vw - rect.left + rect.width) + 'px');
+      runner.style.animationDelay = (i * RUN_STAGGER) + 'ms';
+
+      const body = document.createElement('div');
+      dressBody(body, tile.type);
+      runner.appendChild(body);
+
+      runwayEl.appendChild(runner);
+      setTimeout(() => runner.remove(), RUN_MS + i * RUN_STAGGER + 150);
     });
   }
 
@@ -335,13 +362,15 @@
       score += (doomed.size * 10 + bonus) * chain;
       updateHud();
       if (chain >= 2) bignews(chain + 'れんさ！');
-      say(doomed.size + 'ひき にげていった！');
+      say(doomed.size + 'ひき 右へ にげていった！');
 
       const tiles = Array.from(doomed);
-      flee(tiles);
-      tiles.forEach((tile) => { grid[tile.r][tile.c] = null; });
-      await sleep(FLEE_MS);
-      tiles.forEach((tile) => tile.el.remove());
+      escapeRight(tiles);
+      tiles.forEach((tile) => {
+        grid[tile.r][tile.c] = null;
+        tile.el.remove();
+      });
+      await sleep(ESCAPE_HOLD);
 
       collapseAndRefill();
       await sleep(FALL_MS + 60);
@@ -513,13 +542,7 @@
       sample.className = 'cat-choice__sample';
       for (let i = 0; i < item.n; i++) {
         const dot = document.createElement('span');
-        const def = CAT_TYPES[i];
-        dot.className = 'cat__body cat__body--' + def.key;
-        if (def.image && def.ready) {
-          dot.classList.add('cat__body--image');
-          if (def.sheet) dot.classList.add('cat__body--sheet');
-          dot.style.backgroundImage = 'url("' + def.image + '")';
-        }
+        dressBody(dot, i);
         sample.appendChild(dot);
       }
 

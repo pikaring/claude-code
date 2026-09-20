@@ -1,9 +1,9 @@
 @charset "UTF-8";
 /* =========================================================
-   ネコおち  ―  スタイル
-   ・前作「ねこの ともだち」（tap-on-neko）の みため に あわせてある
+   ねこ ならべ（Slide on NEKO）  ―  スタイル
+   ・前作「ねこの ともだち」（tap-on-neko）の みため に そろえてある
    ・おおきい文字・おおきいボタン・たかいコントラスト
-   ・ねこの みための きめては .cat__body--* だけ（画像に さしかえる ときも ここだけ）
+   ・ねこの みための きめては .cat__body--* だけ（顔の 画像に さしかえる ときも ここだけ）
    ========================================================= */
 
 :root {
@@ -24,13 +24,13 @@
   --fs-message: clamp(18px, 4.4vw, 28px);
   --fs-button:  clamp(22px, 5.4vw, 34px);
 
-  /* ばんめんの マスの おおきさ（game.js が 画面に あわせて 書きかえる） */
+  /* ばんめんの マスの おおきさ（main.js が 画面に あわせて 書きかえる） */
   --cell: 56px;
 
-  /* アニメーションの ながさ（game.js の SWAP_MS / FALL_MS / FLEE_MS と そろえる） */
+  /* アニメーションの ながさ（main.js の SWAP_MS / FALL_MS / RUN_MS と そろえる） */
   --swap-ms: 170ms;
   --fall-ms: 260ms;
-  --flee-ms: 520ms;
+  --run-ms:  900ms;
 }
 
 * { box-sizing: border-box; }
@@ -126,7 +126,7 @@ body {
 
 .board {
   position: absolute;
-  box-sizing: content-box;   /* game.js が きめる 大きさは マスの ぶんだけ（わくは そと がわ） */
+  box-sizing: content-box;   /* main.js が きめる 大きさは マスの ぶんだけ（わくは そと がわ） */
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -152,7 +152,7 @@ body {
   background-size: var(--cell) var(--cell);
 }
 
-/* ========== ねこ 1ぴき ========== */
+/* ========== ねこの かお 1つ ========== */
 .cat {
   position: absolute;
   top: 0;
@@ -172,9 +172,10 @@ body {
 .cat.is-selected { z-index: 3; }
 .cat.is-selected .cat__body { box-shadow: 0 0 0 5px var(--c-again); }
 
+/* ねこの かお。マスいっぱいに 大きく みせる（顔だけの 絵なので 小さく ならない） */
 .cat__body {
-  width: 80%;
-  height: 80%;
+  width: 88%;
+  height: 88%;
   border-radius: 50%;
   background-size: contain;
   background-position: center;
@@ -191,14 +192,14 @@ body {
   box-shadow: none;
 }
 
-/* 前作と おなじ 3×3の スプライトシートを つかう とき（CAT_TYPES の sheet: true）。
-   9マスの うち 左上（おすわり）だけを みせる。 */
+/* 3×3の スプライトシートを つかう とき（CAT_TYPES の sheet: true）。
+   9マスの うち 左上だけを みせる。 */
 .cat__body--sheet {
   background-size: 300% 300%;
   background-position: 0% 0%;
 }
 
-/* ざんていの みため：くろ丸・しろ丸（Geminiの 画像が できるまで） */
+/* ざんていの みため：くろ丸・しろ丸（顔の 画像が できるまで） */
 .cat__body--kuro      { background-color: #23201d; border: 3px solid #100e0c; }
 .cat__body--chashiro  { background-color: #fdfbf7; border: 3px solid #b9ab97; }
 .cat__body--kijitora  { background-color: #9a9186; border: 3px solid #6f6960; }
@@ -213,16 +214,41 @@ body {
   60%      { transform: translateX(12%); }
 }
 
-/* そろった ねこが はしって にげる */
-.cat.is-fleeing { z-index: 4; }
-.cat.is-fleeing .cat__body {
-  animation: flee var(--flee-ms) cubic-bezier(.5, -0.3, .75, .2) forwards;
+/* ========== そろった ねこが 画面の 右へ はしって にげる ========== */
+.runway {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 30;
 }
-@keyframes flee {
-  0%   { transform: translateX(0) scale(1); }
-  18%  { transform: translateX(calc(var(--flee) * -0.07)) scale(1.14, .86); }  /* ためる */
-  30%  { transform: translateX(calc(var(--flee) * -0.07)) scale(.9, 1.1); }
-  100% { transform: translateX(var(--flee)) scale(.8) rotate(calc(var(--spin) * 1deg)); opacity: .1; }
+
+.runner {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: run-right var(--run-ms) cubic-bezier(.4, .02, .7, .35) both;
+}
+
+/* 右の はしまで はしりぬける（--run は main.js が いれる） */
+@keyframes run-right {
+  0%   { transform: translateX(0) scaleX(1); }
+  10%  { transform: translateX(-9%) scaleX(.86); }   /* びくっと ためる */
+  20%  { transform: translateX(-5%) scaleX(1.06); }
+  100% { transform: translateX(var(--run)) scaleX(1); }
+}
+
+/* はしる ときの たてゆれ。ばんの ねこと まぎれない よう、すこし 大きく＋かげを つける */
+.runner .cat__body {
+  width: 96%;
+  height: 96%;
+  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, .38));
+  animation: run-bob 190ms linear infinite;
+}
+@keyframes run-bob {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-14%) rotate(6deg); }
 }
 
 /* ========== したの おおきな ボタン ========== */
@@ -281,7 +307,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 12px;
-  z-index: 20;
+  z-index: 40;
 }
 
 .modal[hidden] { display: none; }
@@ -357,7 +383,6 @@ body {
 
 .cat-choice__sub { font-size: .66em; color: var(--c-header); }
 
-/* えらぶ がめんの みほん（ばんめんと おなじ 丸を ならべる） */
 .cat-choice__sample {
   display: flex;
   flex-wrap: wrap;
@@ -379,7 +404,7 @@ body {
   align-items: flex-start;
   justify-content: center;
   padding-top: 26dvh;
-  z-index: 40;
+  z-index: 50;
   pointer-events: none;
 }
 
