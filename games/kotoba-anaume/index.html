@@ -25,8 +25,13 @@
   html,body{margin:0;height:100%}
   body{
     background:var(--bg); color:var(--ink);
-    font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;
-    font-feature-settings:"palt";
+    /* メイリオ(Windows)を最優先。無い端末は各OS標準のゴシックへ順に落ちる:
+       iOS/Mac=ヒラギノ角ゴ、Android=Noto Sans JP、Windows新環境=游ゴシック */
+    font-family:"Meiryo","メイリオ",
+                "Hiragino Sans","ヒラギノ角ゴシック","Hiragino Kaku Gothic ProN",
+                "Noto Sans JP","Noto Sans CJK JP",
+                "Yu Gothic UI","Yu Gothic","游ゴシック体","YuGothic",
+                system-ui,sans-serif;
     overflow:hidden; touch-action:manipulation;
     -webkit-text-size-adjust:100%;
   }
@@ -61,7 +66,7 @@
   .stage{display:flex; flex-direction:column; align-items:center; justify-content:center;
          gap:var(--gap); min-height:0; text-align:center}
   .qlabel{margin:0; font-size:clamp(12px,3dvh,20px); letter-spacing:.3em; color:var(--sub)}
-  .quiz{width:100%; white-space:nowrap; line-height:1.15; font-weight:600;
+  .quiz{width:100%; white-space:nowrap; line-height:1.2; font-weight:700;
         max-height:46dvh; overflow:hidden;
         font-size:clamp(26px,min(18dvh,8.6vw),80px)}
   .quiz.yoji{letter-spacing:.06em}
@@ -79,7 +84,7 @@
   .choice{
     border:3px solid var(--line); background:var(--panel); border-radius:14px;
     min-height:clamp(54px,23dvh,108px); padding:.1em .2em;
-    font-size:clamp(20px,min(10dvh,4.4vw),48px); font-weight:600; line-height:1.1;
+    font-size:clamp(20px,min(10dvh,4.4vw),48px); font-weight:700; line-height:1.1;
     white-space:nowrap; box-shadow:0 3px 0 #E0D5BE;
   }
   .choice:active:not(:disabled){transform:translateY(3px); box-shadow:none}
@@ -116,7 +121,7 @@
 
   /* ───── 縦持ち(ポートレート) ───── */
   @media (orientation:portrait){
-    .quiz{white-space:normal; max-height:42dvh;
+    .quiz{white-space:normal; max-height:42dvh; line-height:1.35;
           font-size:clamp(30px,min(12dvh,16vw),96px)}
     .qlabel{font-size:clamp(13px,min(2.6dvh,3.6vw),22px)}
     .msg{font-size:clamp(15px,min(2.8dvh,4.4vw),28px)}
