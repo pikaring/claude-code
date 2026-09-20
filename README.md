@@ -281,4 +281,4 @@ QommonsAI自体のダッシュボードにある「主に会話された分野�
 
 | ゲーム | 内容 |
 |---|---|
-| [`games/kotoba-anaume/`](games/kotoba-anaume/) | ことば穴うめパズル(四字熟語・ことわざ)。横向きスマホ前提・大きな文字・アクション性なし。単一HTMLで動く |
+| [`games/kotoba-anaume/`](games/kotoba-anaume/) | ことば穴うめパズル(四字熟語・ことわざ)。横向き・縦向き両対応、大きな文字、アクション性なし。単一HTMLで動く |

@@ -62,6 +62,7 @@
          gap:var(--gap); min-height:0; text-align:center}
   .qlabel{margin:0; font-size:clamp(12px,3dvh,20px); letter-spacing:.3em; color:var(--sub)}
   .quiz{width:100%; white-space:nowrap; line-height:1.15; font-weight:600;
+        max-height:46dvh; overflow:hidden;
         font-size:clamp(26px,min(18dvh,8.6vw),80px)}
   .quiz.yoji{letter-spacing:.06em}
   .blank{
@@ -92,8 +93,9 @@
   .answer{display:grid; grid-template-columns:1fr auto; align-items:center;
           gap:clamp(8px,2vw,18px); background:var(--ok-bg);
           border:3px solid var(--ok); border-radius:14px; padding:clamp(6px,1.6dvh,14px)}
-  .yomi{display:block; font-size:clamp(13px,3.2dvh,22px); color:var(--sub)}
-  .imi{display:block; font-size:clamp(16px,4.6dvh,30px); line-height:1.35; margin-top:.15em}
+  .yomi{display:block; font-size:clamp(13px,min(4.2dvh,2.4vw),24px); color:var(--sub)}
+  .imi{display:block; font-size:clamp(17px,min(7dvh,3.6vw),34px); line-height:1.4;
+       margin-top:.1em; font-weight:600}
   .next{
     border:none; background:var(--ok); color:#fff; border-radius:12px;
     font-size:clamp(17px,5dvh,32px); font-weight:600; padding:.4em 1em;
@@ -111,9 +113,23 @@
   .again{border:none; background:var(--accent); color:#fff; border-radius:14px;
          font-size:clamp(18px,5.5dvh,34px); font-weight:600; padding:.5em 1.6em;
          min-height:clamp(48px,14dvh,88px)}
-  .rot-icon{font-size:clamp(30px,12dvh,64px)}
-  .ghost{background:none; border:2px solid var(--line); border-radius:99px;
-         font-size:clamp(14px,4dvh,22px); padding:.4em 1.4em; min-height:44px}
+
+  /* ───── 縦持ち(ポートレート) ───── */
+  @media (orientation:portrait){
+    .quiz{white-space:normal; max-height:42dvh;
+          font-size:clamp(30px,min(12dvh,16vw),96px)}
+    .qlabel{font-size:clamp(13px,min(2.6dvh,3.6vw),22px)}
+    .msg{font-size:clamp(15px,min(2.8dvh,4.4vw),28px)}
+    .choices{grid-template-columns:repeat(2,1fr)}
+    .choice{min-height:clamp(64px,11dvh,130px);
+            font-size:clamp(24px,min(6dvh,10vw),56px)}
+    .answer{grid-template-columns:1fr; gap:clamp(8px,1.4dvh,16px)}
+    .yomi{font-size:clamp(15px,min(2.6dvh,4.4vw),26px)}
+    .imi{font-size:clamp(19px,min(3.6dvh,6.2vw),38px)}
+    .next{width:100%; min-height:clamp(54px,8dvh,96px)}
+    .count{font-size:clamp(14px,3.6vw,22px)}
+    .tool{font-size:clamp(13px,3.4vw,20px)}
+  }
 
   :focus-visible{outline:4px solid var(--accent); outline-offset:3px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
@@ -153,13 +169,6 @@
   <button class="again" id="again" type="button">もう一度 あそぶ</button>
 </div>
 
-<div class="overlay" id="rotate" hidden>
-  <div class="rot-icon">🔄</div>
-  <p class="big">画面を 横向きに<br>してください</p>
-  <p class="mid">大きな文字で 見やすくなります</p>
-  <button class="ghost" id="stay" type="button">このまま あそぶ</button>
-</div>
-
 <script src="questions.js"></script>
 <script>
 (function(){
@@ -171,7 +180,7 @@
   var dotsEl=$("dots"), countEl=$("count"), hintBtn=$("hint"), soundBtn=$("sound"),
       qlabelEl=$("qlabel"), quizEl=$("quiz"), msgEl=$("msg"), choicesEl=$("choices"),
       answerEl=$("answer"), yomiEl=$("yomi"), imiEl=$("imi"), nextBtn=$("next"),
-      resultEl=$("result"), rotateEl=$("rotate");
+      resultEl=$("result");
 
   /* ── 音(短い和音。WebAudio が無い端末では黙って無効) ── */
   var actx = null;
@@ -201,13 +210,17 @@
     return a;
   }
 
-  /* ── 横幅からはみ出さないよう文字を自動で縮める ── */
+  /* ── 枠からはみ出さないよう文字を自動で縮める
+        (横向き=1行なので横幅、縦向き=折り返すので高さが効く) ── */
+  function over(el){
+    return el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+  }
   function fit(el, maxPx){
     el.style.fontSize = "";
     var size = maxPx || parseFloat(getComputedStyle(el).fontSize);
     el.style.fontSize = size + "px";
     var guard = 0;
-    while(el.scrollWidth > el.clientWidth && size > 12 && guard++ < 60){
+    while(over(el) && size > 12 && guard++ < 60){
       size -= Math.max(1, size * 0.05);
       el.style.fontSize = size + "px";
     }
@@ -345,14 +358,6 @@
     if(soundOn) beep([660], 0.12);
   });
 
-  /* ── 縦向きのときだけ案内を出す(「このまま あそぶ」で解除できる) ── */
-  var ignoreRotate = false;
-  function checkOrientation(){
-    var portrait = window.innerHeight > window.innerWidth;
-    rotateEl.hidden = ignoreRotate || !portrait;
-  }
-  $("stay").addEventListener("click", function(){ ignoreRotate = true; checkOrientation(); });
-
   /* ── キーボード(PC確認用): 1〜4で選択、Enter/スペースで次へ ── */
   document.addEventListener("keydown", function(e){
     if(!resultEl.hidden){
@@ -367,12 +372,11 @@
     }
   });
 
-  window.addEventListener("resize", function(){ checkOrientation(); fitAll(); });
+  window.addEventListener("resize", fitAll);
   window.addEventListener("orientationchange", function(){
-    setTimeout(function(){ checkOrientation(); fitAll(); }, 250);
+    setTimeout(fitAll, 250);
   });
 
-  checkOrientation();
   newGame();
 })();
 </script>
