@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ネコおち - 猫の落ちものパズル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="head">
+    <h1 class="title">ネコおち</h1>
+    <p class="lead">猫をスライドしてタテかヨコに<strong>4匹</strong>そろえると、猫たちは走って逃げていきます。</p>
+  </header>
+
+  <section class="hud" aria-label="スコア">
+    <div class="hud__item"><span class="hud__label">スコア</span><span class="hud__value" id="score">0</span></div>
+    <div class="hud__item"><span class="hud__label">最高</span><span class="hud__value" id="best">0</span></div>
+    <div class="hud__item"><span class="hud__label">手数</span><span class="hud__value" id="moves">0</span></div>
+  </section>
+
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="猫のボード"></div>
+    <div class="chain" id="chain" aria-live="polite"></div>
+  </div>
+
+  <p class="status" id="status" aria-live="polite">ドラッグ、またはタップ2回で隣の猫と入れかえます。</p>
+
+  <section class="controls">
+    <label class="ctl">
+      <span class="ctl__label">猫の種類</span>
+      <select id="level">
+        <option value="4" selected>4種類（やさしい）</option>
+        <option value="5">5種類（むずかしい）</option>
+      </select>
+    </label>
+    <button type="button" id="reset" class="btn">最初から</button>
+  </section>
+
+  <details class="note">
+    <summary>猫の絵を差し替えるには</summary>
+    <p>
+      <code>game.js</code> 冒頭の <code>CAT_TYPES</code> にある <code>image</code> に画像のパスを入れるだけです。<br>
+      例: <code>image: 'assets/cat-kuro.png'</code>（正方形・背景透過のPNG推奨）。<br>
+      <code>image</code> が <code>null</code> のあいだは暫定の黒丸・白丸で表示されます。
+    </p>
+  </details>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

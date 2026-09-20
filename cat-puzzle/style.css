@@ -1,0 +1,154 @@
+/* ネコおち - 暫定アート（黒丸・白丸）版スタイル
+   猫の見た目は .cat__body--* だけで決まるので、画像に差し替えるときもここだけ見ればよい。 */
+
+:root {
+  --bg: #f6efe4;
+  --panel: #fffaf2;
+  --ink: #3a3027;
+  --ink-soft: #8a7a68;
+  --line: #e2d5c2;
+  --accent: #d9843b;
+  --cell: 56px;
+  --swap-ms: 170ms;
+  --fall-ms: 260ms;
+  --flee-ms: 520ms; /* game.js の FLEE_MS と合わせること */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px 12px 32px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app { max-width: 480px; margin: 0 auto; }
+
+.head { text-align: center; margin-bottom: 12px; }
+.title { margin: 0 0 4px; font-size: 26px; letter-spacing: .08em; }
+.lead { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
+.lead strong { color: var(--accent); }
+
+.hud {
+  display: flex; gap: 8px; margin: 0 0 12px;
+}
+.hud__item {
+  flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 6px 4px; text-align: center;
+}
+.hud__label { display: block; font-size: 11px; color: var(--ink-soft); }
+.hud__value { display: block; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.board-wrap { position: relative; display: flex; justify-content: center; }
+
+.board {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  touch-action: none;
+  box-shadow: 0 6px 18px rgba(90, 70, 45, .12);
+}
+.board::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(120, 95, 60, .07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(120, 95, 60, .07) 1px, transparent 1px);
+  background-size: var(--cell) var(--cell);
+}
+
+/* --- 猫1匹 --- */
+.cat {
+  position: absolute; top: 0; left: 0;
+  width: var(--cell); height: var(--cell);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform var(--fall-ms) cubic-bezier(.34, 1.25, .64, 1);
+  will-change: transform;
+}
+.cat.is-swapping { transition-duration: var(--swap-ms); transition-timing-function: ease-out; }
+.cat.is-selected { z-index: 3; }
+.cat.is-selected .cat__body { box-shadow: 0 0 0 3px var(--accent); }
+
+.cat__body {
+  width: 78%;
+  -webkit-user-drag: none; height: 78%;
+  border-radius: 50%;
+  background-size: contain; background-position: center; background-repeat: no-repeat;
+  transition: box-shadow .15s ease;
+}
+/* 画像を入れたときは丸の塗り・枠を消す */
+.cat__body--image { background-color: transparent !important; border: 0 !important; box-shadow: none; }
+
+/* 暫定アート：黒丸・白丸のバリエーション */
+.cat__body--kuro  { background-color: #23201d; border: 2px solid #100e0c; }
+.cat__body--shiro { background-color: #fdfbf7; border: 2px solid #b9ab97; }
+.cat__body--hai   { background-color: #9a9186; border: 2px solid #6f6960; }
+.cat__body--buchi { background-color: #fdfbf7; border: 6px solid #23201d; }
+.cat__body--tora  { background-color: #23201d; border: 6px solid #fdfbf7; box-shadow: 0 0 0 2px #b9ab97; }
+
+/* 入れかえ失敗のぷるぷる */
+.cat.is-nope .cat__body { animation: nope 220ms ease; }
+@keyframes nope {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-12%); }
+  60% { transform: translateX(10%); }
+}
+
+/* そろった猫が走って画面外へ逃げる */
+.cat.is-fleeing { z-index: 4; }
+.cat.is-fleeing .cat__body {
+  animation: flee var(--flee-ms) cubic-bezier(.5, -0.3, .75, .2) forwards;
+}
+@keyframes flee {
+  0%   { transform: translateX(0) scale(1); }
+  18%  { transform: translateX(calc(var(--flee) * -0.06)) scale(1.12, .88); } /* ためる */
+  30%  { transform: translateX(calc(var(--flee) * -0.06)) scale(.92, 1.08); }
+  100% { transform: translateX(var(--flee)) scale(.85) rotate(calc(var(--spin) * 1deg)); opacity: .15; }
+}
+
+/* 連鎖表示 */
+.chain {
+  position: absolute; left: 50%; top: 32%;
+  transform: translate(-50%, -50%) scale(.6);
+  font-size: 30px; font-weight: 800; color: var(--accent);
+  text-shadow: 0 2px 0 #fff, 0 0 12px rgba(255, 255, 255, .9);
+  opacity: 0; pointer-events: none;
+}
+.chain.is-on { animation: pop 900ms ease forwards; }
+@keyframes pop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+  25%  { opacity: 1; transform: translate(-50%, -70%) scale(1.1); }
+  70%  { opacity: 1; transform: translate(-50%, -80%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -110%) scale(.95); }
+}
+
+.status {
+  min-height: 1.4em; margin: 10px 0 12px; text-align: center;
+  font-size: 13px; color: var(--ink-soft);
+}
+
+.controls { display: flex; gap: 10px; align-items: center; justify-content: center; }
+.ctl { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.ctl select, .btn {
+  font: inherit; font-size: 14px; color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 12px;
+}
+.btn { cursor: pointer; }
+.btn:active { transform: translateY(1px); }
+
+.note { margin: 18px 0 0; font-size: 12px; color: var(--ink-soft); line-height: 1.7; }
+.note summary { cursor: pointer; }
+.note code { background: #efe6d8; border-radius: 4px; padding: 1px 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cat { transition-duration: 1ms; }
+  .cat.is-fleeing .cat__body, .chain.is-on { animation-duration: 1ms; }
+}
