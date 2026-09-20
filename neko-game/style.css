@@ -1,0 +1,459 @@
+@charset "UTF-8";
+/* =========================================================
+   ねこの ともだち  ―  スタイル
+   ・高齢者向け：おおきい文字・おおきいボタン・たかいコントラスト
+   ・タップ領域は すべて 48px 以上（じっさいは 80px 以上）
+   ========================================================= */
+
+:root {
+  /* いろ（コントラストを たかく） */
+  --c-text:        #1b1b1b;
+  --c-bg:          #fff8ec;
+  --c-header:      #2f5d3a;
+  --c-header-text: #ffffff;
+  --c-room-wall:   #ffe9c7;
+  --c-room-floor:  #d9a15b;
+  --c-pet:         #1f7a3d;   /* なでる：みどり */
+  --c-feed:        #c65a00;   /* ごはん：オレンジ */
+  --c-close:       #444c55;
+  --c-choice:      #ffffff;
+  --c-choice-line: #2f5d3a;
+  --c-ok:          #1f7a3d;
+  --c-ng:          #b3261e;
+
+  /* もじの おおきさ（画面の幅に あわせて 自動で かわる） */
+  --fs-message: clamp(22px, 5.2vw, 34px);
+  --fs-button:  clamp(26px, 6.4vw, 40px);
+  --fs-quiz:    clamp(24px, 5.8vw, 38px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  font-weight: 700;
+  line-height: 1.5;
+  line-break: strict;          /* 「ャ」「ョ」などが 行あたまに こない ように */
+  word-break: normal;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;            /* スワイプを させない（タップだけ） */
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+/* ========== ヘッダー ========== */
+.header {
+  flex: 0 0 auto;
+  background: var(--c-header);
+  color: var(--c-header-text);
+  padding: 14px 16px 16px;
+  box-shadow: 0 4px 0 rgba(0,0,0,.18);
+}
+
+.status {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status__label { font-size: clamp(20px, 4.6vw, 28px); }
+
+.status__value {
+  font-size: clamp(38px, 9vw, 60px);
+  line-height: 1;
+  color: #ffe36e;
+}
+
+.status__level {
+  font-size: clamp(20px, 4.6vw, 28px);
+  background: #ffffff;
+  color: var(--c-header);
+  border-radius: 999px;
+  padding: 4px 16px;
+}
+
+/* つぎの レベルまでの バー */
+.gauge {
+  margin: 10px auto 0;
+  max-width: 560px;
+  height: 18px;
+  background: rgba(255,255,255,.35);
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gauge__bar {
+  height: 100%;
+  width: 0%;
+  background: #ffe36e;
+  transition: width .5s ease;
+}
+
+.message {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: var(--fs-message);
+  background: #ffffff;
+  color: var(--c-text);
+  border-radius: 18px;
+  padding: 12px 14px;
+  min-height: 2.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== メインビュー（へや） ========== */
+.room {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 220px;
+  overflow: hidden;
+  /* かべと ゆか */
+  background:
+    linear-gradient(to bottom,
+      var(--c-room-wall) 0%,
+      var(--c-room-wall) 62%,
+      var(--c-room-floor) 62%,
+      var(--c-room-floor) 100%);
+}
+
+/* あとで へやの 画像に さしかえる ときは この クラスを つかう
+.room--image {
+  background-image: url("images/room.png");
+  background-size: cover;
+  background-position: center bottom;
+}
+*/
+
+/* へやの かざり */
+.room-items {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.room-item {
+  position: absolute;
+  text-align: center;
+  animation: pop-in .6s ease both;
+}
+
+.room-item__emoji {
+  display: block;
+  font-size: clamp(40px, 11vw, 72px);
+  line-height: 1;
+}
+
+.room-item__name {
+  display: block;
+  font-size: clamp(14px, 3.2vw, 18px);
+  background: rgba(255,255,255,.85);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-top: 2px;
+}
+
+.room-item--cushion { left: 6%;  bottom: 6%; }
+.room-item--toy     { right: 7%; bottom: 8%; }
+.room-item--flower  { left: 8%;  top: 8%; }
+.room-item--fish    { right: 8%; top: 8%; }
+
+/* ========== ねこ ========== */
+.cat-stage {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  width: min(56vw, 300px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cat {
+  position: relative;
+  font-size: clamp(90px, 26vw, 170px);
+  line-height: 1;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+
+/* ねこを 画像に さしかえる ときは HTML の class に cat--image を たす
+.cat--image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-image: url("images/cat.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.cat--image .cat__emoji { display: none; }
+*/
+
+.cat__emoji { display: block; }
+
+.cat__shadow {
+  width: 62%;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.22);
+  filter: blur(2px);
+}
+
+/* うれしい ときの ねこ */
+.cat.is-happy   { animation: hop .6s ease 2; }
+/* ごはんを たべている ときの ねこ */
+.cat.is-eating  { animation: munch .35s ease-in-out 5; }
+
+/* ========== エフェクト（ハートや ごはん） ========== */
+.effects {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 40%;
+  height: 0;
+  pointer-events: none;
+}
+
+.effect {
+  position: absolute;
+  left: 50%;
+  font-size: clamp(34px, 9vw, 56px);
+  line-height: 1;
+  animation: float-up 1.8s ease-out forwards;
+}
+
+/* ========== したの おおきな ボタン ========== */
+.actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: #ffffff;
+  border-top: 6px solid var(--c-header);
+}
+
+.btn {
+  flex: 1 1 0;
+  min-height: 104px;            /* 48px 以上を じゅうぶんに こえる おおきさ */
+  padding: 10px 6px;
+  border: 5px solid rgba(0,0,0,.28);
+  border-radius: 24px;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: var(--fs-button);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 rgba(0,0,0,.25);
+  transition: transform .08s ease, box-shadow .08s ease;
+  touch-action: manipulation;
+}
+
+.btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 rgba(0,0,0,.25);
+}
+
+.btn:focus-visible {
+  outline: 6px solid #ffe36e;
+  outline-offset: 3px;
+}
+
+.btn__icon { font-size: 1.1em; line-height: 1; }
+.btn__sub  { font-size: .58em; }
+
+.btn--pet   { background: var(--c-pet); }
+.btn--feed  { background: var(--c-feed); }
+.btn--close { background: var(--c-close); width: 100%; min-height: 88px; }
+
+/* ========== クイズの がめん ========== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  z-index: 20;
+}
+
+.modal[hidden] { display: none; }
+
+.modal__panel {
+  width: 100%;
+  max-width: 620px;
+  max-height: 96dvh;
+  overflow-y: auto;
+  background: var(--c-bg);
+  border: 6px solid var(--c-header);
+  border-radius: 24px;
+  padding: 16px;
+  animation: pop-in .25s ease both;
+}
+
+.modal__title {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: clamp(24px, 5.6vw, 34px);
+  background: var(--c-header);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 8px;
+}
+
+.quiz__silhouette {
+  text-align: center;
+  font-size: clamp(80px, 22vw, 140px);
+  line-height: 1.1;
+}
+
+/* かげ（シルエット）に する */
+.quiz__silhouette.is-shadow {
+  filter: brightness(0) saturate(0) drop-shadow(0 0 1px rgba(0,0,0,.4));
+}
+
+.quiz__question {
+  margin: 8px 0 14px;
+  text-align: center;
+  font-size: var(--fs-quiz);
+  white-space: pre-line;   /* もんだい文の かいぎょうを そのまま いかす */
+}
+
+.quiz__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.choice {
+  min-height: 92px;
+  padding: 10px 14px;
+  background: var(--c-choice);
+  color: var(--c-text);
+  border: 5px solid var(--c-choice-line);
+  border-radius: 20px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: clamp(26px, 6.2vw, 38px);
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,.2);
+  touch-action: manipulation;
+}
+
+.choice:active { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+.choice:focus-visible { outline: 6px solid var(--c-feed); outline-offset: 3px; }
+
+.choice.is-correct {
+  background: var(--c-ok);
+  color: #ffffff;
+  border-color: #0d4a22;
+}
+
+.choice.is-wrong {
+  background: #ffe4e2;
+  border-color: var(--c-ng);
+  color: var(--c-ng);
+}
+
+.quiz__result {
+  margin: 14px 0 16px;
+  text-align: center;
+  font-size: clamp(24px, 5.6vw, 34px);
+  min-height: 1.6em;
+}
+
+.quiz__result.is-ok { color: var(--c-ok); }
+.quiz__result.is-ng { color: var(--c-ng); }
+
+/* ========== おおきな おしらせ（大正解！ など） ========== */
+.bignews {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.bignews[hidden] { display: none; }
+
+.bignews__text {
+  margin: 0;
+  padding: 18px 28px;
+  text-align: center;
+  font-size: clamp(44px, 12vw, 96px);
+  color: #ffffff;
+  background: var(--c-ok);
+  border: 8px solid #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 10px 0 rgba(0,0,0,.3);
+  animation: bignews-in .5s ease both;
+}
+
+/* ========== アニメーション ========== */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+@keyframes hop {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30%      { transform: translateY(-22px) rotate(-5deg); }
+  60%      { transform: translateY(0) rotate(5deg); }
+}
+
+@keyframes munch {
+  0%, 100% { transform: scale(1, 1); }
+  50%      { transform: scale(1.06, .94); }
+}
+
+@keyframes float-up {
+  0%   { transform: translate(-50%, 0) scale(.6); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(-50%, -190px) scale(1.25); opacity: 0; }
+}
+
+@keyframes pop-in {
+  0%   { transform: scale(.7); opacity: 0; }
+  100% { transform: scale(1);  opacity: 1; }
+}
+
+@keyframes bignews-in {
+  0%   { transform: scale(.4) rotate(-6deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* よこむき／おおきい画面では ボタンを ならべたまま ゆとりを もたせる */
+@media (min-width: 700px) {
+  .actions { padding: 18px 24px; gap: 20px; }
+  .btn { min-height: 128px; }
+}
+
+/* アニメーションが にがてな ひとの ために */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
+}

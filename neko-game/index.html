@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ねこの ともだち</title>
+<meta name="description" content="タップだけであそべる、ねこのおせわと あたまの たいそう">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー：なかよし度とメッセージ ===== -->
+  <header class="header">
+    <div class="status">
+      <span class="status__label">なかよし度</span>
+      <span class="status__value" id="friendship">0</span>
+      <span class="status__level" id="level">レベル 1</span>
+    </div>
+    <div class="gauge" aria-hidden="true">
+      <div class="gauge__bar" id="gaugeBar"></div>
+    </div>
+    <p class="message" id="message" role="status" aria-live="polite">よろしくニャ！</p>
+  </header>
+
+  <!-- ===== メインビュー：へやと ねこ ===== -->
+  <main class="room" id="room">
+
+    <!-- へやの かざり（なかよし度で ふえる） -->
+    <div class="room-items" id="roomItems">
+      <div class="room-item room-item--cushion" id="itemCushion" hidden>
+        <span class="room-item__emoji">🛋️</span>
+        <span class="room-item__name">クッション</span>
+      </div>
+      <div class="room-item room-item--toy" id="itemToy" hidden>
+        <span class="room-item__emoji">🧶</span>
+        <span class="room-item__name">けいと</span>
+      </div>
+      <div class="room-item room-item--flower" id="itemFlower" hidden>
+        <span class="room-item__emoji">🌷</span>
+        <span class="room-item__name">おはな</span>
+      </div>
+      <div class="room-item room-item--fish" id="itemFish" hidden>
+        <span class="room-item__emoji">🐟</span>
+        <span class="room-item__name">おさかな</span>
+      </div>
+    </div>
+
+    <!-- ねこ本体（あとで 画像に さしかえられるように クラスを わけてあります） -->
+    <div class="cat-stage" id="catStage">
+      <div class="effects" id="effects" aria-hidden="true"></div>
+      <div class="cat" id="cat" role="img" aria-label="ねこ">
+        <span class="cat__emoji" id="catEmoji">🐈</span>
+      </div>
+      <div class="cat__shadow" aria-hidden="true"></div>
+    </div>
+
+  </main>
+
+  <!-- ===== アクションエリア：おおきな ボタン2つ ===== -->
+  <footer class="actions">
+    <button type="button" class="btn btn--pet" id="btnPet">
+      <span class="btn__icon" aria-hidden="true">🤲</span>
+      <span class="btn__text">なでる</span>
+    </button>
+    <button type="button" class="btn btn--feed" id="btnFeed">
+      <span class="btn__icon" aria-hidden="true">🍚</span>
+      <span class="btn__text">ごはんを あげる</span>
+      <span class="btn__sub">（クイズ）</span>
+    </button>
+  </footer>
+
+  <!-- ===== クイズの がめん ===== -->
+  <div class="modal" id="quizModal" hidden>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+
+      <h2 class="modal__title" id="quizTitle">ごはんの クイズ</h2>
+
+      <div class="quiz">
+        <div class="quiz__silhouette" id="quizSilhouette" hidden aria-hidden="true"></div>
+        <p class="quiz__question" id="quizQuestion"></p>
+        <div class="quiz__choices" id="quizChoices"></div>
+        <p class="quiz__result" id="quizResult" role="status" aria-live="assertive"></p>
+      </div>
+
+      <button type="button" class="btn btn--close" id="btnCloseQuiz">
+        <span class="btn__text">とじる</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ===== 「大正解！」などの おおきな おしらせ ===== -->
+  <div class="bignews" id="bignews" hidden aria-hidden="true">
+    <p class="bignews__text" id="bignewsText"></p>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
