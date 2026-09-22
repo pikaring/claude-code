@@ -1,17 +1,19 @@
-# 商人・預言者・指導者・ゴリラ — バランス確認用の簡易シミュレーション（v0.3）
-# 得点になった札はゲームから抜ける。配れる枚数が5枚を切ったら終了。
+# 商人・預言者・指導者・ゴリラ — バランス確認用の簡易シミュレーション（v0.4）
+# 得点になった札はゲームから抜ける。5局固定。5枚配れない局は配れた枚数だけトリックをする。
 # 能力: 商人=仲買 / 預言者=預言（自分も指名可）/ 指導者=動員 / 王=徴税 / ゴリラ=なし
 # 使い方: python3 tools/sim_balance.py
 import random, statistics as st, sys
 M,P,L,K,G=0,1,2,3,4   # 商人 預言者 指導者 王 ゴリラ ; suits 0-3 = roles 0-3
 def role(p,t,off): return (p-t+off)%5
 PN=1
-def game(rng,N,RANKS,HMAX=8,HMIN=5,TR=5,abil=True):
+def game(rng,N,RANKS,HMAX=8,ROUNDS=5,abil=True):
     deck=[(s,r) for s in range(4) for r in range(1,RANKS+1)]
-    score=[0]*N; byrole=[0]*5; rounds=0
+    score=[0]*N; byrole=[0]*5; rounds=0; short=False
     while True:
         H=min(HMAX,len(deck)//N)
-        if H<HMIN: break
+        if rounds>=ROUNDS or H==0: break
+        TR=min(5,H)   # 5枚配れないときは、配れた枚数だけトリックをする
+        short=short or H<5
         rng.shuffle(deck); hands=[deck[i*H:(i+1)*H] for i in range(N)]
         lead=rounds%N; removed=[]
         for t in range(TR):
@@ -66,13 +68,14 @@ def game(rng,N,RANKS,HMAX=8,HMIN=5,TR=5,abil=True):
                     c=max(left,key=lambda c:c[1]);left.remove(c);removed.append(c);score[holder[P]]+=c[1];byrole[P]+=c[1]
             lead=w
         deck=[c for c in deck if c not in removed];rounds+=1
-    return rounds,score,byrole
+    return short,score,byrole
 
+
+RANGE={2:12,3:17,4:22,5:26}
 if __name__=="__main__":
-    import sys
-    PN=int(sys.argv[1]) if len(sys.argv)>1 else 1
-    for N,R in [(2,10),(3,13),(4,16),(5,18)]:
-        rng=random.Random(5);RR=[];BR=[0]*5
-        for i in range(2000):
-            r,s,b=game(rng,N,R);RR.append(r);BR=[x+y for x,y in zip(BR,b)]
-        T=sum(BR);print(f"N={N} {R*4}枚(1-{R}): 局数 平均{st.mean(RR):.1f} ({min(RR)}-{max(RR)}) 点の内訳 "+" ".join(f"{n}{x/T:.0%}" for n,x in zip("商預指王ゴ",BR)))
+    for N,R in RANGE.items():
+        rng=random.Random(5);SH=0;BR=[0]*5;TOT=[]
+        for i in range(5000):
+            sh,sc,b=game(rng,N,R);SH+=sh;BR=[x+y for x,y in zip(BR,b)];TOT+=sc
+        T=sum(BR)
+        print(f"N={N} 1-{R}({4*R}枚): 5局のうち5枚配れない局がある {SH/50:.2f}%  1人合計 平均{st.mean(TOT):.0f}  点の内訳 "+" ".join(f"{n}{x/T:.0%}" for n,x in zip("商預指王ゴ",BR)))
