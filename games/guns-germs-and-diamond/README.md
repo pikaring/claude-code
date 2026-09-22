@@ -5,7 +5,7 @@
 ブラウザだけで遊べるHTML/JavaScriptゲームとして復刻したものです。
 
 - 紹介ページ: [`index.html`](./index.html)（原作の紹介・ルール概要・あそぶボタン）
-- ゲーム本体: [`app/index.html`](./app/index.html)（CPU対戦）
+- ゲーム本体: [`app/index.html`](./app/index.html)（CPU対戦。開くとすぐ始まります）
 
 どちらもビルド不要・外部ライブラリ不要で、ブラウザで直接開くだけで動作します。
 `cat-on-escape` などと同じく、紹介ページ（`/`）とゲーム本体（`/app/`）を分ける構成です。
@@ -40,7 +40,8 @@
 - **毎ラウンド、5つの鉱山すべてに1枚ずつ配置**します（鉱山は盤から消えません）。
   手札のカードをクリックすると、自分のカードがまだ乗っていない一番左の鉱山へ自動的に置かれます。
   置きなおしたいときは、その鉱山をクリックすると手札に戻ります。
-- 自分が置いたカードは伏せずに数字が見えたまま **手前側** に表示され、CPU側だけが「？」で隠れます。
+- 自分が置いたカードは伏せずに絵と数字が見えたまま **手前側（下段）** に表示され、
+  CPU側（上段）だけが「？」で隠れます。
 - 配置が終わったら鉱山を左から順にオープンし、強いカードを出した方がその鉱山のダイヤモンドを獲得します。
 - **鉱山は毎ラウンド復活します。** 取られた鉱山には、次のラウンドに同じ産出量の鉱山カードが
   1枚 配り直されます（💎5の鉱山を取っても、次のラウンドはそこが💎5の1枚に戻る）。
@@ -49,29 +50,49 @@
 - ゲームは全3ラウンド。3ラウンド目でも引き分けだった鉱山のダイヤモンドは、
   どちらの手にも渡らず失われます。獲得ダイヤモンド合計が多い方の勝ちです。
 
-## カードの絵の差し替え
+## カードの絵
 
-`app/index.html` 冒頭の `CARD_TYPES` に画像パスを書くだけで、文字表示から絵に差し替わります。
-画像は **読みこめたときだけ** 使われ、無い場合は文字（菌・偵・2・3・4）のままで遊べます。
+カードの絵は画像生成AI（Gemini）で作った5枚を `app/images/` に置いています。
+
+| ファイル | カード |
+| --- | --- |
+| `app/images/card-germ.png` | 0 病原菌 |
+| `app/images/card-scout.png` | 1 偵察兵 |
+| `app/images/card-soldier2.png` | 2 兵士（新兵） |
+| `app/images/card-soldier3.png` | 3 兵士（軍曹） |
+| `app/images/card-soldier4.png` | 4 兵士（将校） |
+
+差し替え口は `app/index.html` 冒頭の `CARD_TYPES` です。画像は **読みこめたときだけ** 使われ、
+パスを間違えても数字表示のままで遊べます。
 
 ```js
 var CARD_TYPES = {
-  0: { label:'菌', name:'病原菌', image:'images/card-germ.png' },
-  1: { label:'偵', name:'偵察兵', image:'images/card-scout.png' },
-  2: { label:'2', name:'兵士',   image:'images/card-soldier2.png' },
-  3: { label:'3', name:'兵士',   image:'images/card-soldier3.png' },
-  4: { label:'4', name:'兵士',   image:'images/card-soldier4.png' }
+  0: { label:'0', name:'病原菌', cls:'germ',  image:'images/card-germ.png' },
+  1: { label:'1', name:'偵察兵', cls:'scout', image:'images/card-scout.png' },
+  2: { label:'2', name:'兵士',   cls:'',      image:'images/card-soldier2.png' },
+  3: { label:'3', name:'兵士',   cls:'',      image:'images/card-soldier3.png' },
+  4: { label:'4', name:'兵士',   cls:'',      image:'images/card-soldier4.png' }
 };
 ```
 
-画像生成AI（Gemini）用のプロンプトは [`docs/asset-prompts.md`](./docs/asset-prompts.md) にあります。
-5種類を1枚のグリッド画像で出させて、`cat-on-escape` の `tools/make_face.py` と同じ手順で
-切り分ける前提です。切り出したPNGは `app/images/` に置いてください。
+描き直すときの手順は [`docs/asset-prompts.md`](./docs/asset-prompts.md) にあります
+（Gemini用プロンプト＋グリッド画像の切り分け）。切り分けは
+[`tools/make_cards.py`](./tools/make_cards.py) が、区切り線の検出・背景の透過・
+正方形512pxへの統一までまとめて行います。
+
+```
+pip install pillow numpy
+python3 tools/make_cards.py app/images grid.webp \
+    card-germ card-scout card-soldier2 - card-soldier3 - card-soldier4 -
+```
 
 ## 実装メモ
 
-- `app/index.html` に HTML / CSS / JavaScript をすべて内包しており、外部依存はありません。
-- 対戦相手はCPUのみです（2人対戦モードはありません）。
+- `app/index.html` に HTML / CSS / JavaScript をすべて内包しており、外部依存はありません
+  （絵は `app/images/` のPNGのみ）。
+- 対戦相手はCPUのみです（2人対戦モードはありません）。タイトル画面はなく、開くとすぐ始まります。
+- 鉱山ごとの結果は文章では書かず、枠の色と勝ち札／負け札の明暗で示しています
+  （経過は画面下のログに1行ずつ出ます）。
 - CPUのAIは、積み増しされた鉱山を優先しつつ病原菌・偵察兵を配分する簡易ヒューリスティックです
   （最適戦略ではなく、カジュアルに遊べる強さを狙っています）。
 
