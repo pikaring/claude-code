@@ -108,6 +108,12 @@
     border-radius:2px; padding:0 3px}
   .card .to{position:absolute; left:0; right:0; bottom:0; font-size:8.5px; text-align:center; font-weight:700;
     background:rgba(22,18,13,.82); color:var(--bone); padding:1px 0}
+  .card.sel{transform:translateY(-12px); box-shadow:0 0 0 2px var(--accent), 0 10px 18px rgba(0,0,0,.45)}
+  .card.pick.sel:hover{transform:translateY(-14px)}
+  .stack{display:flex; height:74px; align-items:flex-start}
+  .stack .card.sm + .card.sm{margin-left:-16px}
+  .stack .card.sm:nth-child(2){margin-top:8px} .stack .card.sm:nth-child(3){margin-top:16px}
+  .bigbtn[disabled]{opacity:.45; cursor:default; filter:none}
   .card.sm{width:34px;height:48px}
   .card.sm .num{font-size:16px; padding:3px 0 0 4px}
   .card.sm .band{height:4px}
@@ -166,6 +172,11 @@
     .slot{width:58px}
     .slot .lbl{max-width:58px}
     .empty{width:40px;height:58px}
+    .stack{height:58px}
+    .card.sm{width:28px;height:40px}
+    .card.sm .num{font-size:14px; padding:2px 0 0 3px}
+    .stack .card.sm + .card.sm{margin-left:-12px}
+    .stack .card.sm:nth-child(2){margin-top:6px} .stack .card.sm:nth-child(3){margin-top:12px}
     .trick{gap:4px}
     .sched{font-size:11px}
     .sched .tag{display:none}
@@ -241,8 +252,10 @@ var ROLES = [
 ];
 var GOR = 4, MER = 0, PRO = 1, LEA = 2, KIN = 3;
 var SUITS = ["貨幣","聖典","旗","冠"];
-var RANGE = {2:12, 3:17, 4:22, 5:26};   // 人数ごとの数字の範囲
-var HAND_MAX = 8, TRICKS = 5, ROUNDS = 5;
+var RANGE = {2:7, 3:9, 4:11, 5:13};   // 人数ごとの数字の範囲（各スート、同じ数字が2枚ずつ）
+var COPIES = 2;
+var HAND_MAX = 8, TRICKS = 5, ROUNDS = 5, MAX_COMBO = 3;
+var FORM_NAME = {single:"1枚", run:"連番", set:"同数"};
 /* 対戦相手は all-in-texas の PERSONAS と同じ5人 */
 var PERSONAS = [
   { name:'ビエホ',     tag:'堅実',     tight:0.9,  aggr:0.35, bluff:0.05 },
@@ -268,25 +281,102 @@ function roleOf(p, t, k){ return ((p - t + k) % 5 + 5) % 5; }
 function roleNow(p){ return roleOf(p, G.trick, G.round); }
 function holder(role){ for (var p=0;p<G.N;p++) if (roleNow(p) === role) return p; return -1; }
 function nm(p){ return p === 0 ? "あなた" : G.names[p]; }
-function sortHand(h){ h.sort(function(a,b){ return a.s - b.s || a.r - b.r; }); }
+function sortHand(h){ h.sort(function(a,b){ return a.s - b.s || a.r - b.r || a.id - b.id; }); }
 function sum(cards){ var v=0; for (var i=0;i<cards.length;i++) v+=cards[i].r; return v; }
 function scoreOf(p){ return sum(G.piles[p]); }
 function removeCard(arr, id){ for (var i=0;i<arr.length;i++) if (arr[i].id===id) return arr.splice(i,1)[0]; return null; }
 function cardName(c){ return SUITS[c.s] + c.r; }
+function cardsName(cs){
+  if (cs.length === 1) return cardName(cs[0]);
+  var f = formOf(cs);
+  if (f && f.t === "run") return SUITS[f.s] + cs.map(function(c){ return c.r; }).sort(function(a,b){return a-b;}).join("・");
+  return cs.map(cardName).join("・");
+}
+function maxCard(a){ return a.reduce(function(x,y){ return x.r >= y.r ? x : y; }); }
+function flat(played){ var o=[]; played.forEach(function(x){ o = o.concat(x.cards); }); return o; }
+
+/* ══ 組（重ね出し） ═══════════════════════════════════ */
+/* 1枚／連番（同じスートの続き数字2〜3枚）／同数（同じ数字2〜3枚、スート不問） */
+function formOf(cs){
+  if (!cs.length || cs.length > MAX_COMBO) return null;
+  var top = Math.max.apply(null, cs.map(function(c){ return c.r; }));
+  if (cs.length === 1) return {t:"single", s:cs[0].s, n:1, top:top};
+  if (cs.every(function(c){ return c.r === cs[0].r; })) return {t:"set", s:-1, n:cs.length, top:top};
+  if (cs.every(function(c){ return c.s === cs[0].s; })){
+    var rs = cs.map(function(c){ return c.r; }).sort(function(a,b){ return a-b; });
+    for (var i=1;i<rs.length;i++) if (rs[i] !== rs[i-1] + 1) return null;
+    return {t:"run", s:cs[0].s, n:cs.length, top:top};
+  }
+  return null;
+}
+/* b が a に勝つか。同じ形・同じ枚数（1枚と連番は同じスート）で、いちばん大きい数字が上回るときだけ。
+   同じ数字なら先に出した方の勝ち */
+function beats(a, b){
+  var fa = formOf(a), fb = formOf(b);
+  if (!fa || !fb || fa.t !== fb.t || fa.n !== fb.n) return false;
+  if (fa.t !== "set" && fa.s !== fb.s) return false;
+  return fb.top > fa.top;
+}
+function leadForm(){ return G.played.length ? formOf(G.played[0].cards) : null; }
+function winIdx(){
+  var b = 0;
+  for (var i=1;i<G.played.length;i++) if (beats(G.played[b].cards, G.played[i].cards)) b = i;
+  return b;
+}
+function currentWinner(){ return G.played.length ? G.played[winIdx()] : null; }
+
+/* 手札から作れる組をすべて（maxN 枚まで） */
+function combosOf(h, maxN){
+  var out = h.map(function(c){ return [c]; });
+  var by = {};
+  h.forEach(function(c){ var k = c.s + ":" + c.r; if (!by[k]) by[k] = c; });
+  Object.keys(by).forEach(function(k){
+    var c = by[k];
+    for (var n=2;n<=Math.min(3,maxN);n++){
+      var run = [c], ok = true;
+      for (var i=1;i<n;i++){ var nx = by[c.s + ":" + (c.r + i)]; if (!nx){ ok = false; break; } run.push(nx); }
+      if (ok) out.push(run);
+    }
+  });
+  var byR = {};
+  h.forEach(function(c){ (byR[c.r] = byR[c.r] || []).push(c); });
+  Object.keys(byR).forEach(function(r){
+    var cs = byR[r];
+    if (maxN >= 2) for (var i=0;i<cs.length;i++) for (var j=i+1;j<cs.length;j++){
+      out.push([cs[i], cs[j]]);
+      if (maxN >= 3) for (var k=j+1;k<cs.length;k++) out.push([cs[i], cs[j], cs[k]]);
+    }
+  });
+  return out;
+}
+
+/* フォローの決まり：リードと同じ枚数。1枚と連番のリードには、そのスートをできるだけ多く含める */
+function mustSuitCount(p){
+  var f = leadForm(); if (!f || f.t === "set") return 0;
+  var have = G.hands[p].filter(function(c){ return c.s === f.s; }).length;
+  return Math.min(f.n, have);
+}
+function followOk(p, cs){
+  var f = leadForm();
+  if (!f) return !!formOf(cs);
+  if (cs.length !== f.n) return false;
+  if (f.t === "set") return true;
+  return cs.filter(function(c){ return c.s === f.s; }).length === mustSuitCount(p);
+}
 
 /* ══ 進行 ════════════════════════════════════════════ */
 function newGame(){
   var N = +$("nSel").value, diff = $("diffSel").value;
   var ps = shuffle(PERSONAS.slice()).slice(0, N-1);
   var cards = [], id = 0;
-  for (var s=0;s<4;s++) for (var r=1;r<=RANGE[N];r++) cards.push({s:s, r:r, id:id++});
-  G = { N:N, diff:diff, ranks:RANGE[N], names:["あなた"], tags:[""], per:[null],
+  for (var s=0;s<4;s++) for (var r=1;r<=RANGE[N];r++) for (var k=0;k<COPIES;k++) cards.push({s:s, r:r, id:id++});
+  G = { N:N, diff:diff, ranks:RANGE[N], all:cards.slice(), names:["あなた"], tags:[""], per:[null],
         pile:shuffle(cards), discard:[], hands:[], piles:[], round:0, trick:0, TR:TRICKS,
         lead:0, played:[], order:[], turn:0, pred:-1, phase:"idle", ex:null, result:null,
-        voids:[], log:[], over:false, fresh:{} };
+        voids:[], log:[], over:false, fresh:{}, sel:[] };
   for (var i=0;i<N-1;i++){ G.names.push(ps[i].name); G.tags.push(ps[i].tag); G.per.push(ps[i]); }
   for (var p=0;p<N;p++){ G.hands.push([]); G.piles.push([]); }
-  logMsg("新しいゲーム（" + N + "人・数字1〜" + G.ranks + "）。相手は " + G.names.slice(1).join("・") + "。", "hot");
+  logMsg("新しいゲーム（" + N + "人・各スート1〜" + G.ranks + "を2枚ずつ、" + cards.length + "枚）。相手は " + G.names.slice(1).join("・") + "。", "hot");
   startRound();
 }
 
@@ -300,12 +390,12 @@ function startRound(){
   G.trick = 0; G.lead = G.round % G.N;
   G.voids = []; for (var q=0;q<G.N;q++) G.voids.push([false,false,false,false]);
   logMsg("── 第" + (G.round+1) + "局。親は" + nm(G.lead) + "。" + (G.round ? "持ち越し" + (HAND_MAX-need) + "枚＋補充" + d + "枚。" : "8枚ずつ配った。") +
-    (G.TR < TRICKS ? "札が足りないので、この局は" + G.TR + "トリック。" : ""), "hot");
+    (G.TR < TRICKS ? "札が足りないので、この局は最大" + G.TR + "トリック。" : ""), "hot");
   startTrick();
 }
 
 function startTrick(){
-  G.played = []; G.pred = -1; G.result = null; G.fresh = {};
+  G.played = []; G.pred = -1; G.result = null; G.fresh = {}; G.sel = [];
   G.order = []; for (var k=0;k<G.N;k++) G.order.push((G.lead + k) % G.N);
   G.turn = 0;
   var king = holder(KIN), gor = holder(GOR);
@@ -313,7 +403,6 @@ function startTrick(){
   if (king >= 0) for (var k2=0;k2<G.N;k2++){ var p = G.order[k2]; if (p !== king && p !== gor) givers.push(p); }
   if (king >= 0 && givers.length){
     G.ex = { king:king, givers:givers, got:{}, idx:0 };
-    // CPU の献上
     givers.forEach(function(p){ if (p !== 0) giveToKing(p, cpuPickGift(p)); });
     if (givers.indexOf(0) >= 0){ G.phase = "give"; render(); return; }
     afterGifts();
@@ -325,7 +414,6 @@ function giveToKing(p, card){
   G.hands[G.ex.king].push(card);
   G.ex.got[p] = card;
   if (G.ex.king === 0) G.fresh[card.id] = true;
-  // 手札が動いたので、そのスートの「持っていない」推定は消す
   G.voids[G.ex.king][card.s] = false;
 }
 
@@ -373,37 +461,25 @@ function startPlay(){ G.phase = "play"; nextTurn(); }
 function nextTurn(){
   if (G.turn >= G.N){ resolveTrick(); return; }
   var p = G.order[G.turn];
+  G.sel = [];
   render();
-  if (p !== 0) later(function(){ playCard(p, cpuPickCard(p)); }, DIFF[G.diff].delay);
+  if (p !== 0) later(function(){ playCards(p, cpuPick(p)); }, DIFF[G.diff].delay);
 }
 
-function legal(p){
-  var h = G.hands[p];
-  if (!G.played.length) return h.slice();
-  var led = G.played[0].c.s;
-  var f = h.filter(function(c){ return c.s === led; });
-  return f.length ? f : h.slice();
-}
-
-function playCard(p, card){
-  if (G.played.length && card.s !== G.played[0].c.s) G.voids[p][G.played[0].c.s] = true;
-  removeCard(G.hands[p], card.id);
-  G.played.push({p:p, c:card});
+function playCards(p, cs){
+  var f = leadForm();
+  if (f && f.t !== "set" && cs.filter(function(c){ return c.s === f.s; }).length < f.n) G.voids[p][f.s] = true;
+  cs.forEach(function(c){ removeCard(G.hands[p], c.id); });
+  G.played.push({p:p, cards:cs});
+  if (G.played.length === 1 && cs.length > 1) logMsg(nm(p) + " が " + cardsName(cs) + " をリード（" + FORM_NAME[formOf(cs).t] + cs.length + "枚）。全員" + cs.length + "枚ずつ出す。", p === 0 ? "you" : "");
   G.turn++;
   nextTurn();
 }
 
-function currentWinner(){
-  if (!G.played.length) return null;
-  var led = G.played[0].c.s, best = null;
-  G.played.forEach(function(x){ if (x.c.s === led && (!best || x.c.r > best.c.r)) best = x; });
-  return best;
-}
-
 function resolveTrick(){
   var w = currentWinner(), wp = w.p, wr = roleNow(wp);
-  var cards = G.played.map(function(x){ return x.c; });
-  var dest = {};  // 札id → 行き先の説明
+  var cards = flat(G.played);
+  var dest = {};
   var got = wr === GOR ? cards.slice() : cards.filter(function(c){ return c.s === wr; });
   var left = cards.filter(function(c){ return got.indexOf(c) < 0; });
   got.forEach(function(c){ dest[c.id] = wp; });
@@ -434,20 +510,18 @@ function resolveTrick(){
   }
   left.forEach(function(c){ G.discard.push(c); dest[c.id] = -1; });
   var pts = sum(got);
-  G.result = { w:wp, role:wr, pts:pts, dest:dest, notes:notes };
-  var head = nm(wp) + "（" + ROLES[wr].name + "）が取った";
-  logMsg(head + "。" + (wr === GOR ? "ゴリラが全部持っていく：" : "") + pts + "点" + (notes.length ? "／" + notes.join("／") : ""),
+  G.result = { w:wp, role:wr, pts:pts, dest:dest, notes:notes, win:w };
+  logMsg(nm(wp) + "（" + ROLES[wr].name + "）が " + cardsName(w.cards) + " で取った。" + (wr === GOR ? "ゴリラが全部持っていく：" : "") + pts + "点" + (notes.length ? "／" + notes.join("／") : ""),
     wp === 0 ? "you" : (wr === GOR ? "bad" : ""));
   G.lead = wp;
   G.phase = "trickEnd";
   render();
 }
-function maxCard(a){ return a.reduce(function(x,y){ return x.r >= y.r ? x : y; }); }
 
 function advance(){
   G.trick++;
-  if (G.trick < G.TR){ startTrick(); return; }
-  // 局の終わり
+  if (G.trick < G.TR && G.hands[0].length){ startTrick(); return; }
+  if (G.trick < G.TR) logMsg("手札が尽きたので、この局は" + G.trick + "トリックで終わり。", "hot");
   var line = [];
   for (var p=0;p<G.N;p++) line.push(nm(p) + " " + scoreOf(p));
   logMsg("第" + (G.round+1) + "局おわり：" + line.join("・"), "hot");
@@ -465,7 +539,7 @@ function endGame(){
   var youWin = winners.some(function(x){ return x.p === 0; });
   var cls = youWin ? (winners.length > 1 ? "draw" : "win") : "lose";
   var word = youWin ? (winners.length > 1 ? "引き分け" : "あなたの勝ち") : nm(winners[0].p) + "の勝ち";
-  var html = '<h2>5局おわり</h2><div class="result ' + cls + '">' + esc(word) + '</div>' +
+  var html = '<h2>' + (G.round >= ROUNDS ? '5局おわり' : '札が尽きて終わり') + '</h2><div class="result ' + cls + '">' + esc(word) + '</div>' +
     '<table><tr><th>順位</th><th>名前</th>' + SUITS.map(function(s){return '<th>'+s+'</th>';}).join('') + '<th>合計</th></tr>';
   rows.forEach(function(x, i){
     var by = [0,0,0,0]; G.piles[x.p].forEach(function(c){ by[c.s] += c.r; });
@@ -490,27 +564,28 @@ function holdVal(p, c){
   if (G.round < ROUNDS-1) v += c.r * 0.12;
   return v;
 }
+function holdSum(p, cs){ var v = 0; cs.forEach(function(c){ v += holdVal(p, c); }); return v; }
 function trickVal(role, cards){
   if (role === GOR) return sum(cards);
-  var v = 0; cards.forEach(function(c){ if (c.s === role) v += c.r; }); return v + (role === LEA && cards.length ? 0 : 0);
+  var v = 0; cards.forEach(function(c){ if (c.s === role) v += c.r; }); return v;
 }
 function noise(p){ return (rnd() - 0.5) * DIFF[G.diff].noise * (0.6 + per(p).bluff * 2); }
 
-/* このあと出す人に、もっと強い札で抜かれそうな度合い（0〜1） */
-function beatRisk(p, card){
+/* このあと出す人に、もっと強い組で抜かれそうな度合い（0〜1） */
+function beatRisk(p, cs){
   var after = G.order.slice(G.turn + 1);
   if (!after.length) return 0;
-  var s = card.s;
-  var live = after.filter(function(q){ return !G.voids[q][s]; });
+  var f = formOf(cs);
+  if (f.t !== "single") return Math.min(0.5, 0.12 * after.length * (1 - f.top / G.ranks) * 2);
+  var live = after.filter(function(q){ return !G.voids[q][f.s]; });
   if (!live.length) return 0;
-  if (!DIFF[G.diff].memory) return Math.min(0.6, 0.18 * live.length * (1 - card.r / G.ranks) * 2);
+  if (!DIFF[G.diff].memory) return Math.min(0.6, 0.18 * live.length * (1 - f.top / G.ranks) * 2);
   // むずかしい：見えていない、より強い札の枚数から見積もる
   var seen = {};
   G.hands[p].forEach(function(c){ seen[c.id] = 1; });
-  G.played.forEach(function(x){ seen[x.c.id] = 1; });
+  flat(G.played).forEach(function(c){ seen[c.id] = 1; });
   G.piles.forEach(function(pl){ pl.forEach(function(c){ seen[c.id] = 1; }); });
-  var higher = 0;
-  for (var r = card.r + 1; r <= G.ranks; r++){ var id = s * G.ranks + (r - 1); if (!seen[id]) higher++; }
+  var higher = G.all.filter(function(c){ return c.s === f.s && c.r > f.top && !seen[c.id]; }).length;
   if (!higher) return 0;
   var unknown = G.pile.length + G.discard.length;
   G.order.forEach(function(q){ if (q !== p && G.played.every(function(x){ return x.p !== q; })) unknown += G.hands[q].length; });
@@ -519,38 +594,81 @@ function beatRisk(p, card){
   return 1 - Math.pow(1 - frac, higher);
 }
 
-function cpuPickCard(p){
-  var P = per(p), r = roleNow(p), h = legal(p);
-  var wDeny = 0.3 + 0.6 * P.aggr, wHold = 0.15 + 0.5 * P.tight;
+function cpuPick(p){ return G.played.length ? cpuFollow(p) : cpuLead(p); }
+
+function cpuLead(p){
+  var P = per(p), r = roleNow(p), h = G.hands[p];
+  var wHold = 0.15 + 0.5 * P.tight;
   var best = null, bestS = -1e9;
-  h.forEach(function(c){
-    var s;
-    if (!G.played.length){
-      if (r === GOR) s = c.r;
-      else if (c.s === r) s = c.r * 1.2;
-      else s = -c.r * 0.35 + (rnd() < P.bluff ? 3 : 0);
-      s -= wHold * holdVal(p, c) * (c.s === r ? 0.3 : 1);
+  combosOf(h, MAX_COMBO).forEach(function(cs){
+    var f = formOf(cs), s;
+    if (r === GOR){
+      // ゴリラは札を多く場に出させたい。強い組ほど取りやすい
+      s = cs.length * G.N * (f.top / G.ranks) * G.ranks * 0.5 - wHold * 0.3 * holdSum(p, cs);
     } else {
-      var led = G.played[0].c.s, w = currentWinner(), wr = roleNow(w.p);
-      var trickCards = G.played.map(function(x){ return x.c; });
-      var wins = c.s === led && c.r > w.c.r;
-      if (wins){
-        var gain = trickVal(r, trickCards.concat([c]));
-        if (r === LEA) gain += 6;              // 徴税の1枚ぶんの見込み
-        var deny = wr !== r ? trickVal(wr, trickCards) : 0;
-        var risk = beatRisk(p, c);
-        s = (gain + wDeny * deny) * (1 - risk) - wHold * holdVal(p, c) * (c.s === r ? 0.3 : 1);
-      } else {
-        var feed = (wr === GOR || c.s === wr) ? c.r : 0;
-        var mer = holder(MER);
-        if (c.s === 0 && mer >= 0 && mer !== p && mer !== w.p) feed += c.r * 0.3;
-        s = -0.8 * feed - wHold * holdVal(p, c);
-      }
+      var own = trickVal(r, cs);
+      if (own) s = own * (f.top / G.ranks) * 1.3 - wHold * 0.3 * holdSum(p, cs.filter(function(c){ return c.s !== r; }));
+      else s = -sum(cs) * 0.4 - wHold * holdSum(p, cs) - (cs.length - 1) * 5 + (rnd() < P.bluff ? 3 : 0);
     }
     s += noise(p);
-    if (s > bestS){ bestS = s; best = c; }
+    if (s > bestS){ bestS = s; best = cs; }
   });
   return best;
+}
+
+function cpuFollow(p){
+  var P = per(p), r = roleNow(p), h = G.hands[p], f = leadForm();
+  var wDeny = 0.3 + 0.6 * P.aggr, wHold = 0.15 + 0.5 * P.tight;
+  var w = currentWinner(), wr = roleNow(w.p);
+  var trickCards = flat(G.played);
+  var mer = holder(MER);
+  function feedOf(cs){
+    var v = 0;
+    cs.forEach(function(c){
+      if (wr === GOR || c.s === wr) v += c.r;
+      if (c.s === 0 && mer >= 0 && mer !== p && mer !== w.p) v += c.r * 0.3;
+    });
+    return v;
+  }
+  var opts = [];
+  // 勝てる組
+  combosOf(h, f.n).forEach(function(cs){
+    if (cs.length !== f.n || !followOk(p, cs) || !beats(w.cards, cs)) return;
+    var gain = trickVal(r, trickCards.concat(cs)) + (r === LEA ? 6 : 0);
+    var deny = wr !== r ? trickVal(wr, trickCards) : 0;
+    opts.push({cs:cs, s:(gain + wDeny * deny) * (1 - beatRisk(p, cs)) - wHold * holdSum(p, cs.filter(function(c){ return c.s !== r; })) * 1 - wHold * 0.3 * holdSum(p, cs.filter(function(c){ return c.s === r; }))});
+  });
+  // 勝たずに出す：決まりを守りつつ、相手に渡る点と手元に残したい価値が小さい札から
+  function cost(c){ return feedOf([c]) * 0.8 + wHold * holdVal(p, c); }
+  var need = mustSuitCount(p), dis = [];
+  if (f.t !== "set"){
+    var fol = h.filter(function(c){ return c.s === f.s; }).sort(function(a,b){ return cost(a) - cost(b); });
+    dis = fol.slice(0, need);
+  }
+  var rest = h.filter(function(c){ return dis.indexOf(c) < 0 && (f.t === "set" || c.s !== f.s); }).sort(function(a,b){ return cost(a) - cost(b); });
+  dis = dis.concat(rest.slice(0, f.n - dis.length));
+  if (dis.length === f.n && followOk(p, dis)){
+    // 勝ってしまう出し方になっていないか（1枚リードで大きい札しかない場合など）
+    var s = beats(w.cards, dis) ? -1e6 : -0.8 * feedOf(dis) - wHold * holdSum(p, dis);
+    if (s > -1e6) opts.push({cs:dis, s:s});
+  }
+  if (!opts.length){
+    // どう出しても勝つ（または組み合わせが尽きた）ときは、決まりを満たす安い出し方を探す
+    var all = combosAny(h, f.n).filter(function(cs){ return followOk(p, cs); });
+    all.forEach(function(cs){ opts.push({cs:cs, s:-holdSum(p, cs)}); });
+  }
+  var best = null, bestS = -1e9;
+  opts.forEach(function(o){ var v = o.s + noise(p); if (v > bestS){ bestS = v; best = o.cs; } });
+  return best;
+}
+/* n 枚の選び方すべて（手札は最大8枚程度なので全探索で足りる） */
+function combosAny(h, n){
+  var out = [];
+  (function rec(start, acc){
+    if (acc.length === n){ out.push(acc.slice()); return; }
+    for (var i=start;i<h.length;i++){ acc.push(h[i]); rec(i+1, acc); acc.pop(); }
+  })(0, []);
+  return out;
 }
 
 function cpuPickGift(p){
@@ -569,7 +687,7 @@ function cpuPickGrant(k, p){
 }
 function cpuPredict(pr){
   var h = G.hands[pr], top = h.length ? maxCard(h).r : 0;
-  if (top >= G.ranks - 3 && rnd() < 0.5 + per(pr).aggr * 0.5) return pr;
+  if (top >= G.ranks - 2 && rnd() < 0.5 + per(pr).aggr * 0.5) return pr;
   var gor = holder(GOR);
   for (var k=0;k<G.N;k++){ var q = G.order[k]; if (q !== gor) return q; }
   return pr;
@@ -612,32 +730,36 @@ function renderSched(){
 
 function renderTrick(){
   var html = '', w = currentWinner(), res = G.result;
-  var byP = {}; G.played.forEach(function(x){ byP[x.p] = x.c; });
+  var byP = {}; G.played.forEach(function(x){ byP[x.p] = x.cards; });
   var turnP = (G.phase === "play" && G.turn < G.N) ? G.order[G.turn] : -1;
+  var multi = G.played.length && G.played[0].cards.length > 1;
   for (var k=0;k<G.N;k++){
-    var p = G.order.length ? G.order[k] : k, c = byP[p];
+    var p = G.order.length ? G.order[k] : k, cs = byP[p];
     var marks = '';
     if (k === 0 && G.order.length) marks += '<span class="mk lead">リード</span>';
     if (G.pred === p) marks += '<span class="mk pred">預言</span>';
     if (p === turnP) marks += '<span class="mk turn">手番</span>';
-    var extra = '', inner = '';
-    if (c){
-      if (res){
-        if (c.id === (currentWinner()||{}).c.id) extra = 'win';
-        var d = res.dest[c.id];
-        inner = '<span class="to">' + (d === -1 ? '捨て札' : '→' + esc(d === 0 ? 'あなた' : G.names[d])) + '</span>';
-        if (d === -1) extra += ' gone';
-      } else if (w && w.c.id === c.id) extra = 'win';
+    var body = '<div class="empty"></div>';
+    if (cs){
+      var isWin = w && w.p === p;
+      body = '<div class="stack">' + cs.map(function(c){
+        var extra = (multi ? 'sm' : '') + (isWin ? ' win' : ''), inner = '';
+        if (res){
+          var d = res.dest[c.id];
+          if (!multi) inner = '<span class="to">' + (d === -1 ? '捨て札' : '→' + esc(d === 0 ? 'あなた' : G.names[d])) + '</span>';
+          if (d === -1) extra += ' gone';
+        }
+        return cardHTML(c, extra, '', inner);
+      }).join('') + '</div>';
     }
-    html += '<div class="slot"><div class="lbl">' + roleBadge(roleNow(p)) + '<b>' + esc(nm(p)) + '</b></div>' +
-      (c ? cardHTML(c, extra, '', inner) : '<div class="empty"></div>') + '<div class="marks">' + marks + '</div></div>';
+    html += '<div class="slot"><div class="lbl">' + roleBadge(roleNow(p)) + '<b>' + esc(nm(p)) + '</b></div>' + body + '<div class="marks">' + marks + '</div></div>';
   }
   $("trick").innerHTML = html;
   $("status").innerHTML = statusText();
 }
 
 function statusText(){
-  if (G.over) return '5局おわり';
+  if (G.over) return 'ゲームおわり';
   if (G.phase === "trickEnd" && G.result){
     var r = G.result;
     return '<em>' + esc(nm(r.w)) + '</em>（' + ROLES[r.role].name + '）が取った ' + r.pts + '点' + (r.notes.length ? '　' + esc(r.notes.join('／')) : '');
@@ -647,8 +769,9 @@ function statusText(){
   if (G.phase === "prophecy") return 'あなたは預言者。このトリックを取る人を指名する';
   var w = currentWinner();
   if (!w) return 'リードを待っている';
-  var wr = roleNow(w.p);
-  return 'リードは<em>' + SUITS[G.played[0].c.s] + '</em>。いま勝っているのは ' + esc(nm(w.p)) + '（' + ROLES[wr].name + '）' +
+  var f = leadForm(), wr = roleNow(w.p);
+  var what = f.t === "single" ? SUITS[f.s] : (f.t === "run" ? SUITS[f.s] + 'の連番' + f.n + '枚' : '同数' + f.n + '枚');
+  return 'リードは<em>' + what + '</em>。いま勝っているのは ' + esc(nm(w.p)) + '（' + ROLES[wr].name + '）' +
     (wr === GOR ? '　<span class="warn">このままだと全部ゴリラのもの</span>' : '');
 }
 
@@ -665,19 +788,27 @@ function renderMe(){
   $("meRow").innerHTML = '<span class="who">あなた</span>' + (G.over ? '' : roleBadge(r, true)) + '<span class="say">' + esc(say) + '</span>';
 }
 
+function myTurn(){ return G.phase === "play" && G.order[G.turn] === 0; }
+/* 1枚リードに応じるときだけ、札をタップしてすぐ出す。それ以外は選んでから「出す」 */
+function quickPlay(){ var f = leadForm(); return myTurn() && f && f.n === 1; }
+function selCards(){ return G.hands[0].filter(function(c){ return G.sel.indexOf(c.id) >= 0; }); }
+
 function renderHand(){
   var h = G.hands[0], phase = G.phase, pickable = {};
-  var myTurn = phase === "play" && G.order[G.turn] === 0;
-  if (myTurn) legal(0).forEach(function(c){ pickable[c.id] = 1; });
+  if (myTurn()){
+    if (quickPlay()) G.hands[0].filter(function(c){ return followOk(0, [c]); }).forEach(function(c){ pickable[c.id] = 1; });
+    else h.forEach(function(c){ pickable[c.id] = 1; });
+  }
   if (phase === "give" || phase === "grant") h.forEach(function(c){ pickable[c.id] = 1; });
   var w = currentWinner();
   var html = '';
   h.forEach(function(c){
     var can = !!pickable[c.id];
-    var extra = can ? 'pick' : ((myTurn || phase==="give" || phase==="grant") ? 'idle' : '');
+    var extra = can ? 'pick' : ((myTurn() || phase==="give" || phase==="grant") ? 'idle' : '');
     if (G.fresh[c.id]) extra += ' fresh';
+    if (G.sel.indexOf(c.id) >= 0) extra += ' sel';
     var inner = '';
-    if (myTurn && can && DIFF[G.diff].hint && w && c.s === w.c.s && c.r > w.c.r) inner = '<span class="badge">勝</span>';
+    if (quickPlay() && can && DIFF[G.diff].hint && w && beats(w.cards, [c])) inner = '<span class="badge">勝</span>';
     html += cardHTML(c, extra, can ? 'tabindex="0" role="button" data-id="' + c.id + '"' : '', inner);
   });
   $("hand").innerHTML = html || '<span class="hintline">手札なし</span>';
@@ -699,16 +830,34 @@ function renderActions(){
       a += '<button class="bigbtn ghost" data-pred="' + q + '">' + roleBadge(roleNow(q)) + esc(nm(q)) + '</button>';
     }
     hint = 'リードは ' + esc(nm(G.order[0])) + '。ゴリラが取ると札は残らないので、預言が当たっても得はありません。自分を指名してもかまいません。';
-  } else if (G.phase === "play" && G.order[G.turn] === 0){
-    hint = G.played.length ? '出す札を選んでください。リードされたスート（' + SUITS[G.played[0].c.s] + '）があれば、それを出す決まりです。' : 'あなたのリードです。好きな札を出してください。';
+  } else if (myTurn()){
+    var f = leadForm();
+    if (!f){
+      var cs = selCards(), ff = formOf(cs);
+      a = '<button class="bigbtn" id="playBtn"' + (ff ? '' : ' disabled') + '>' + (ff ? '出す（' + FORM_NAME[ff.t] + (ff.n > 1 ? ff.n + '枚' : '') + '）' : '出す') + '</button>';
+      if (cs.length) a += '<button class="bigbtn ghost" id="clearBtn">選び直す</button>';
+      hint = 'あなたのリードです。1枚か、<em>連番</em>（同じスートの続き数字2〜3枚）か、<em>同数</em>（同じ数字2〜3枚）を選んで出します。重ねて出すと、全員が同じ枚数を出します。' +
+        (cs.length && !ff ? ' <span class="warn">この組み合わせは出せません。</span>' : '');
+    } else if (f.n === 1){
+      hint = '出す札を選んでください。リードされたスート（' + SUITS[f.s] + '）があれば、それを出す決まりです。';
+    } else {
+      var cs2 = selCards(), ok = followOk(0, cs2), wins = ok && beats(currentWinner().cards, cs2);
+      a = '<button class="bigbtn" id="playBtn"' + (ok ? '' : ' disabled') + '>' + (ok ? (wins ? '出す（勝てる組）' : '出す') : cs2.length + '/' + f.n + '枚') + '</button>';
+      if (cs2.length) a += '<button class="bigbtn ghost" id="clearBtn">選び直す</button>';
+      var must = mustSuitCount(0);
+      hint = f.n + '枚選んでください。勝てるのは、' + (f.t === "run" ? '<em>' + SUITS[f.s] + 'の連番' + f.n + '枚</em>でいちばん大きい数字が上回るとき' : '<em>同数' + f.n + '枚</em>で数字が上回るとき') + 'だけです。' +
+        (must ? ' ' + SUITS[f.s] + 'の札を' + must + '枚含める決まりです。' : '');
+    }
   } else if (G.phase === "trickEnd"){
-    var last = G.trick + 1 >= G.TR;
+    var last = G.trick + 1 >= G.TR || !G.hands[0].length;
     a = '<button class="bigbtn" id="nextBtn">' + (last ? (G.round + 1 >= ROUNDS ? '結果を見る' : '次の局へ') : '次のトリックへ') + '</button>';
   }
   $("actions").innerHTML = a;
   $("hint").innerHTML = hint;
   var nb = $("nextBtn"); if (nb){ nb.addEventListener("click", advance); nb.focus({preventScroll:true}); }
   var ab = $("againBtn2"); if (ab) ab.addEventListener("click", newGame);
+  var pb = $("playBtn"); if (pb) pb.addEventListener("click", submitSel);
+  var cb = $("clearBtn"); if (cb) cb.addEventListener("click", function(){ G.sel = []; render(); });
   Array.prototype.forEach.call(document.querySelectorAll("[data-pred]"), function(b){
     b.addEventListener("click", function(){
       G.pred = +b.getAttribute("data-pred");
@@ -716,6 +865,13 @@ function renderActions(){
       startPlay();
     });
   });
+}
+
+function submitSel(){
+  var cs = selCards();
+  if (!myTurn() || !followOk(0, cs)) return;
+  G.fresh = {}; G.sel = [];
+  playCards(0, cs);
 }
 
 function onHandPick(id){
@@ -729,14 +885,27 @@ function onHandPick(id){
     if (G.ex.idx >= G.ex.givers.length){ finishExchange(); return; }
     render(); return;
   }
-  if (G.phase === "play" && G.order[G.turn] === 0){
-    if (!legal(0).some(function(x){ return x.id === id; })) return;
+  if (!myTurn()) return;
+  if (quickPlay()){
+    if (!followOk(0, [c])) return;
     G.fresh = {};
-    playCard(0, c);
+    playCards(0, [c]);
+    return;
   }
+  // 選択の切り替え（リードは最大3枚、フォローはリードと同じ枚数まで）
+  var lim = leadForm() ? leadForm().n : MAX_COMBO;
+  var i = G.sel.indexOf(id);
+  if (i >= 0) G.sel.splice(i, 1);
+  else if (G.sel.length < lim) G.sel.push(id);
+  render();
 }
 $("hand").addEventListener("click", function(e){
   var el = e.target.closest("[data-id]"); if (el) onHandPick(+el.getAttribute("data-id"));
+});
+$("hand").addEventListener("dblclick", function(e){
+  // リードで1枚だけ出すときは、ダブルクリックでもすぐ出せる
+  var el = e.target.closest("[data-id]");
+  if (el && myTurn() && !leadForm()){ G.sel = [+el.getAttribute("data-id")]; submitSel(); }
 });
 $("hand").addEventListener("keydown", function(e){
   if (e.key !== "Enter" && e.key !== " ") return;
@@ -762,14 +931,16 @@ function showRules(){
   $("sheet").innerHTML =
     '<h2>あそびかた</h2><p class="sub">2〜5人のトリックテイキング。5局で得点札の数字の合計を競います。</p>' +
     '<h3>札と役割</h3>' +
-    '<p>札は4スート（<b>貨幣・聖典・旗・冠</b>）。数字がそのまま強さと点です。人数で数字の範囲が変わります（2人1〜12／3人1〜17／4人1〜22／5人1〜26）。</p>' +
+    '<p>札は4スート（<b>貨幣・聖典・旗・冠</b>）で、<b>同じ数字が2枚ずつ</b>あります。数字がそのまま強さと点。人数で数字の範囲が変わります（2人1〜7／3人1〜9／4人1〜11／5人1〜13）。</p>' +
     '<p>役割は5つ。<b>商人＝貨幣、預言者＝聖典、指導者＝旗、王＝冠</b>がそれぞれ自分のスートの札を点にし、<b>ゴリラはスートに関係なく全部</b>を点にします。</p>' +
     '<p><b>役割は1トリックごとに時計回りに隣へ移ります</b>。1局は5トリックで、全員が各役割を1回ずつ（空席のぶんは担わない）、ゴリラになるのは1局に1回だけ。予定は上の表にすべて出ています。</p>' +
     '<h3>トリック</h3><ul>' +
     '<li>王がいれば、まず<b>献上と下賜</b>。ゴリラ以外の全員が1枚を王に渡し、王は1枚ずつ返す</li>' +
     '<li>預言者がいれば、<b>このトリックを取る人を指名</b>（自分でもよい）</li>' +
-    '<li>親（2トリック目からは前の勝者）がリード。<b>リードされたスートがあれば必ず出す</b></li>' +
-    '<li>リードされたスートでいちばん大きい数字が勝ち。切り札はない</li></ul>' +
+    '<li>親（2トリック目からは前の勝者）がリード。<b>1枚</b>のほか、<b>連番</b>（同じスートの続き数字2〜3枚）や<b>同数</b>（同じ数字2〜3枚、スートは不問）を重ねて出せる</li>' +
+    '<li>ほかの人は<b>リードと同じ枚数</b>を出す。1枚や連番のリードには、そのスートの札を持っているだけ（枚数まで）含める</li>' +
+    '<li>勝てるのは<b>リードと同じ形</b>だけ。1枚と連番は同じスートで、同数は同じ枚数で、いちばん大きい数字が上回れば勝ち。同じ数字なら先に出した方の勝ち。切り札はない</li>' +
+    '<li>手札が尽きたら、5トリックに届かなくてもその局は終わり</li></ul>' +
     '<h3>札の分けかた</h3><ol style="padding-left:1.3em">' +
     '<li>勝った人が、自分の役割のスートの札を得点札にする（ゴリラなら全部）。<b>指導者は徴税で残りからもう1枚</b></li>' +
     '<li><b>商人の仲買</b>：商人が取れなかったとき、残った貨幣のうち最小の1枚を得点札に</li>' +
