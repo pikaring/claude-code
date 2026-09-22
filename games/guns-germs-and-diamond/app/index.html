@@ -6,233 +6,338 @@
 <title>銃・病原菌・ダイヤモンド</title>
 <style>
   :root{
-    --bg-0:#0f1720;
-    --bg-1:#182635;
-    --panel:#1f3245;
-    --panel-2:#284057;
-    --accent:#5fd0ff;
-    --accent-2:#ffd166;
-    --diamond:#7fe8d8;
-    --danger:#ff6b6b;
+    --card-edge:#f4efe2;
+    --card-ink:#17202a;
+    --mine-bg:#17130f;
+    --back-0:#8a4a1c;
+    --back-1:#5d2f10;
+    --gold:#ffd166;
     --ok:#8ce99a;
-    --text:#eaf2f7;
-    --muted:#93a7b8;
-    --card-back:#2c4a63;
-    --radius:14px;
+    --danger:#ff8f8f;
+    --text:#f2f7f4;
+    --muted:#a8c4b2;
   }
   *{box-sizing:border-box;}
   html,body{
     margin:0;padding:0;
-    background:radial-gradient(1200px 800px at 50% -10%, var(--bg-1), var(--bg-0));
     color:var(--text);
     font-family:"Hiragino Sans","Yu Gothic","Segoe UI",system-ui,-apple-system,sans-serif;
     -webkit-tap-highlight-color:transparent;
   }
-  #app{max-width:860px;margin:0 auto;padding:12px 12px 28px;}
-
-  .topbar{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    margin-bottom:10px;
+  body{
+    background:radial-gradient(120% 80% at 50% 0%, #0f8a43 0%, #0b6b34 45%, #064d26 100%);
+    background-color:#0b6b34;
+    min-height:100vh;
   }
-  .topbar h1{font-size:1.05rem;margin:0;letter-spacing:.02em;}
-  .topbar .links{display:flex;gap:10px;align-items:center;}
-  .topbar a{color:var(--muted);font-size:.72rem;text-decoration:none;}
-  .topbar a:hover{color:var(--accent);text-decoration:underline;}
+  #app{max-width:760px;margin:0 auto;padding:10px 10px 24px;}
 
   button{
     font-family:inherit;cursor:pointer;border:none;border-radius:10px;
-    padding:12px 20px;font-size:.95rem;font-weight:700;
-    background:linear-gradient(180deg,var(--accent),#3aa6d6);
-    color:#04202b;
-    box-shadow:0 3px 0 #1c7a9c, 0 6px 14px rgba(0,0,0,.35);
-    transition:transform .05s ease;
+    padding:11px 20px;font-size:.95rem;font-weight:700;
+    background:linear-gradient(180deg,#ffdf8a,#e8b53c);
+    color:#3a2a06;
+    box-shadow:0 3px 0 #a87c16, 0 6px 14px rgba(0,0,0,.3);
   }
-  button:active{transform:translateY(2px);box-shadow:0 1px 0 #1c7a9c;}
-  button:disabled{background:#3a4a58;color:#7c8a96;box-shadow:none;cursor:not-allowed;}
-  button.secondary{
-    background:linear-gradient(180deg,#3a4a58,#2a3946);
-    color:var(--text);
-    box-shadow:0 3px 0 #16202a,0 6px 14px rgba(0,0,0,.3);
+  button:active{transform:translateY(2px);box-shadow:0 1px 0 #a87c16;}
+  button:disabled{background:#4d6b58;color:#93ae9e;box-shadow:none;cursor:not-allowed;}
+  button.ghost{
+    background:rgba(4,40,20,.5);color:var(--text);
+    border:1px solid rgba(255,255,255,.28);box-shadow:none;
   }
   button.tiny{padding:6px 12px;font-size:.74rem;border-radius:8px;}
   .btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
 
-  .hud{
-    display:flex;justify-content:space-between;align-items:center;
-    background:var(--panel);border-radius:var(--radius);
-    padding:8px 14px;font-size:.8rem;
-  }
-  .hud .score{font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums;}
-  .hud .you .score{color:var(--diamond);}
-  .hud .cpu .score{color:var(--accent-2);}
-  .hud .mid{text-align:center;color:var(--muted);font-size:.75rem;white-space:nowrap;}
-  .hud .mid b{color:var(--text);font-size:1rem;margin:0 2px;}
+  .screen[hidden]{display:none;}
 
-  .side-label{
-    display:flex;align-items:center;gap:6px;
-    font-size:.7rem;color:var(--muted);margin:10px 2px 2px;
+  /* ======== title ======== */
+  .title-wrap{max-width:640px;margin:0 auto;padding:6px 4px 20px;text-align:center;}
+  .title-wrap h1{font-size:1.6rem;margin:14px 0 2px;letter-spacing:.04em;text-shadow:0 2px 0 rgba(0,0,0,.35);}
+  .title-wrap .sub{color:var(--muted);font-size:.78rem;margin-bottom:14px;}
+  .setup-sec{
+    background:rgba(3,40,20,.45);border:1px solid rgba(255,255,255,.14);
+    border-radius:14px;padding:12px 14px;margin:12px 0;text-align:left;
   }
-  .side-label.you{color:var(--diamond);}
-  .side-label.cpu-side{color:var(--accent-2);margin-top:8px;}
+  .setup-sec > h2{font-size:.78rem;color:var(--gold);margin:0 0 8px;letter-spacing:.06em;}
+  .choices{display:flex;gap:8px;flex-wrap:wrap;}
+  .choice{
+    flex:1 1 30%;min-width:120px;
+    background:rgba(255,255,255,.07);
+    border:2px solid transparent;border-radius:10px;
+    padding:9px 10px;cursor:pointer;text-align:left;
+  }
+  .choice:hover{background:rgba(255,255,255,.13);}
+  .choice.on{border-color:var(--gold);background:rgba(255,209,102,.16);}
+  .choice b{display:block;font-size:.88rem;}
+  .choice span{display:block;font-size:.68rem;color:var(--muted);line-height:1.5;margin-top:2px;}
+  .chars{display:flex;flex-direction:column;gap:7px;}
+  .char{
+    display:flex;gap:10px;align-items:flex-start;
+    background:rgba(255,255,255,.07);
+    border:2px solid transparent;border-radius:10px;padding:9px 11px;cursor:pointer;
+  }
+  .char:hover{background:rgba(255,255,255,.13);}
+  .char.on{border-color:var(--gold);background:rgba(255,209,102,.16);}
+  .char .who{min-width:96px;}
+  .char .who b{font-size:.9rem;}
+  .char .who .tag{
+    display:inline-block;font-size:.62rem;margin-left:5px;padding:1px 6px;
+    border-radius:999px;background:rgba(0,0,0,.35);color:var(--gold);
+  }
+  .char .body{flex:1;}
+  .char .body .desc{font-size:.72rem;color:var(--muted);line-height:1.55;}
+  .char .body .nums{font-size:.62rem;color:#87ad96;margin-top:3px;}
 
-  .mines{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
-  .mine{
-    background:var(--panel);border-radius:12px;
-    padding:6px 5px 8px;text-align:center;
-    border:2px solid transparent;
+  /* ======== table ======== */
+  .table{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:stretch;}
+  .rail{
+    writing-mode:vertical-rl;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    font-weight:800;letter-spacing:.2em;font-size:.84rem;
+    padding:2px 1px;color:#eafff2;text-shadow:0 1px 0 rgba(0,0,0,.4);
   }
-  .mine.takeback{border-color:var(--accent);cursor:pointer;}
-  .mine.won-you{background:#1e3a2e;border-color:var(--ok);}
-  .mine.won-cpu{background:#3a2e1e;border-color:var(--accent-2);}
-  .mine.tied{border-color:var(--accent-2);}
-  .mine.gone{background:#2a1e1e;border-color:var(--danger);opacity:.7;}
-  .mine .no{font-size:.6rem;color:var(--muted);letter-spacing:.08em;}
-  .mine .pot{
-    font-size:1.1rem;font-weight:800;color:var(--diamond);
-    font-variant-numeric:tabular-nums;line-height:1.3;
-  }
-  .mine .pot .x{font-size:.72rem;color:var(--accent-2);margin-left:1px;}
-  .mine .slots{display:flex;flex-direction:column;gap:5px;margin-top:5px;}
+  .rail .pts{letter-spacing:.06em;font-size:1.05rem;color:var(--gold);font-variant-numeric:tabular-nums;}
+  .rail.turn{color:var(--gold);}
 
-  /* --- cards (mine slots share the look of hand cards) --- */
-  .cardface{
-    width:100%;aspect-ratio:3/4;border-radius:9px;
+  .board{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+  .row-label{
+    font-size:.66rem;color:rgba(255,255,255,.7);letter-spacing:.06em;
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;
+  }
+  .row-label .r{color:var(--gold);font-weight:700;}
+
+  /* ---- physical card ---- */
+  .cardslot{position:relative;}
+  .pcard{
+    position:relative;width:100%;aspect-ratio:5/7;
+    border-radius:6px;overflow:hidden;
+    background:var(--card-edge);border:1px solid #d8d2c2;
+    box-shadow:0 2px 5px rgba(0,0,0,.45);color:var(--card-ink);
+  }
+  .pcard .art{
+    position:absolute;left:5%;right:5%;top:8%;bottom:19%;
+    background:#eceadf;border:1px solid #cfc9b8;overflow:hidden;
+  }
+  .pcard .art img{width:100%;height:100%;object-fit:contain;object-position:center 45%;display:block;}
+  .pcard .cname{
+    position:absolute;left:0;right:0;bottom:2%;text-align:center;
+    font-size:.56rem;font-weight:800;color:#1d2630;
+  }
+  .pcard .pip{
+    position:absolute;z-index:2;width:1.2em;height:1.2em;font-size:.62rem;
     display:flex;align-items:center;justify-content:center;
-    position:relative;overflow:hidden;
-    border:2px solid #3d6a8a;
-    background:linear-gradient(180deg,#2c4a63,#20374a);
-    font-weight:800;font-size:1.5rem;color:var(--text);
+    background:#12181e;color:#fff;font-weight:800;border-radius:50%;
+    box-shadow:0 0 0 1.5px #f4efe2;
   }
-  .cardface img{
-    position:absolute;inset:0;width:100%;height:100%;
-    object-fit:contain;object-position:center 42%;
+  .pcard .pip.tl{left:3%;top:2%;}
+  .pcard .pip.br{right:3%;bottom:2%;}
+  .pcard.germ .art{background:#e3ecdd;}
+  .pcard.germ .pip{background:#2f6a36;}
+  .pcard.scout .pip{background:#2a4a78;}
+  .pcard.back{
+    background:
+      repeating-linear-gradient(45deg, rgba(0,0,0,.08) 0 4px, transparent 4px 8px),
+      linear-gradient(160deg,var(--back-0),var(--back-1));
+    border:1px solid #f0e6d2;
   }
-  .cardface .num{
-    position:absolute;left:2px;top:1px;z-index:2;
-    font-size:.78rem;font-weight:800;padding:0 5px;border-radius:6px;
-    background:rgba(4,20,28,.8);color:#fff;
+  .pcard.back::after{
+    content:"Diamond";
+    position:absolute;inset:8% 6%;
+    border:1.5px solid rgba(255,225,170,.6);border-radius:50%/40%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:.58rem;letter-spacing:.06em;color:#ffe9bd;
+    text-shadow:0 1px 1px rgba(0,0,0,.5);
   }
-  .cardface.empty{background:#12202c;border:2px dashed #3d5468;color:#3d5468;}
-  .cardface.hidden-card{background:var(--card-back);color:#7fb3d1;}
-  .cardface.germ{background:linear-gradient(180deg,#2f4a34,#213a27);border-color:#4c8a5c;}
-  .cardface.scout{background:linear-gradient(180deg,#2b3a58,#20304a);border-color:#4c6c9c;}
-  .cardface.mine-you{border-color:#4fae83;}
-  .cardface.mine-cpu{border-color:#b08a3a;}
-  .cardface.beaten{opacity:.4;filter:saturate(.5);}
-  .cardface.winner{box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;}
+  .pcard.empty{
+    background:rgba(255,255,255,.07);
+    border:1.5px dashed rgba(255,255,255,.3);box-shadow:none;
+  }
+  .row-cpu .pcard:not(.back){transform:rotate(180deg);}
+  .pcard.beaten{filter:grayscale(.55) brightness(.72);}
+  .pcard.winner{box-shadow:0 0 0 2px var(--gold), 0 3px 8px rgba(0,0,0,.5);}
 
-  .hand{display:flex;gap:6px;justify-content:center;}
-  .hand .slot{flex:1 1 0;max-width:118px;}
-  .hand .cardface{cursor:pointer;transition:transform .1s ease;}
-  .hand .cardface:hover{transform:translateY(-5px);}
-  .hand .name{
-    font-size:.62rem;color:var(--muted);text-align:center;margin-top:3px;
+  /* ---- mine card ---- */
+  .minestack{position:relative;padding-bottom:6px;}
+  .minecard{
+    position:relative;width:100%;aspect-ratio:5/7;
+    border-radius:6px;background:var(--mine-bg);
+    border:1px solid #efe7d6;box-shadow:0 2px 6px rgba(0,0,0,.5);
+    color:#f6f1e4;overflow:hidden;
   }
-  .hand .slot.used .cardface{opacity:.25;cursor:default;transform:none;}
-  .hand .slot.used .name{opacity:.4;}
-
-  .status-line{
-    text-align:center;font-size:.82rem;color:var(--muted);
-    min-height:1.4em;margin:12px 0 0;
+  .minecard.stacked{position:absolute;left:0;top:0;}
+  .minecard .mtitle{
+    position:absolute;left:0;right:0;top:52%;text-align:center;
+    font-size:.46rem;letter-spacing:.02em;color:#efe7d6;
   }
+  .minecard svg.mtn{position:absolute;left:18%;top:14%;width:64%;}
+  .minecard .pips{
+    position:absolute;left:8%;right:8%;bottom:7%;
+    display:flex;flex-wrap:wrap;gap:1px;justify-content:center;
+    font-size:.52rem;color:#bfe9ff;line-height:1;
+  }
+  .minecard .mpip{position:absolute;z-index:2;font-size:.56rem;font-weight:800;color:#fff;}
+  .minecard .mpip.tl{left:5%;top:2%;}
+  .minecard .mpip.br{right:5%;bottom:2%;transform:rotate(180deg);}
+  .mine-total{
+    text-align:center;font-size:.76rem;font-weight:800;color:var(--gold);
+    font-variant-numeric:tabular-nums;margin-top:3px;min-height:1.1em;
+  }
+  .mine-total .x{font-size:.62rem;color:#ffeab0;}
+  .minewrap.won-you .minecard{box-shadow:0 0 0 2px var(--ok), 0 3px 8px rgba(0,0,0,.5);}
+  .minewrap.won-cpu .minecard{box-shadow:0 0 0 2px #ffb4b4, 0 3px 8px rgba(0,0,0,.5);}
+  .minewrap.gone{opacity:.5;}
 
+  .predict{
+    font-size:.6rem;line-height:1.25;color:#0e2b18;
+    background:rgba(255,236,170,.92);border-radius:5px;
+    padding:2px 3px;margin-bottom:3px;text-align:center;
+    min-height:2.7em;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;overflow:hidden;
+  }
+  .predict b{color:#5a3a00;}
+
+  /* ---- hand ---- */
+  .hand-area{margin-top:10px;}
+  .hand{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-width:520px;margin:0 auto;}
+  .hand .cardslot{cursor:pointer;transition:transform .1s ease;}
+  .hand .cardslot:hover{transform:translateY(-5px);}
+  .hand .cardslot.used{opacity:.22;cursor:default;transform:none;}
+
+  .status{text-align:center;font-size:.8rem;color:#ddf3e4;min-height:1.3em;margin:8px 0 0;}
+  .reasons{
+    background:rgba(3,40,20,.5);border:1px solid rgba(255,255,255,.14);
+    border-radius:10px;padding:8px 11px;margin-top:9px;
+    font-size:.71rem;line-height:1.7;color:#e7f5ec;
+  }
+  .reasons h3{margin:0 0 3px;font-size:.68rem;color:var(--gold);letter-spacing:.06em;}
+  .reasons .line b{color:var(--gold);}
   .log{
-    background:#0e1922;border-radius:10px;padding:8px 12px;
-    font-size:.72rem;color:var(--muted);
-    max-height:88px;overflow-y:auto;margin-top:12px;line-height:1.7;
+    background:rgba(0,0,0,.28);border-radius:10px;padding:7px 11px;
+    font-size:.7rem;color:#cfe8d8;max-height:72px;overflow-y:auto;
+    margin-top:9px;line-height:1.7;
   }
-  .log div.me{color:var(--ok);}
-  .log div.cpu{color:var(--accent-2);}
-  .log div.tie{color:#ffe08a;}
+  .log .me{color:var(--ok);}
+  .log .cpu{color:#ffc9c9;}
+  .log .tie{color:var(--gold);}
 
   .overlay{
-    position:fixed;inset:0;z-index:60;
-    background:rgba(6,12,18,.9);
-    display:flex;align-items:center;justify-content:center;padding:20px;
+    position:fixed;inset:0;z-index:60;background:rgba(3,22,12,.92);
+    display:flex;align-items:center;justify-content:center;padding:18px;
   }
   .overlay[hidden]{display:none;}
   .sheet{
-    background:var(--panel);border-radius:var(--radius);
-    padding:20px 22px;max-width:520px;width:100%;
-    max-height:86vh;overflow-y:auto;
-    font-size:.86rem;line-height:1.8;
+    background:#0b5c2f;border:1px solid rgba(255,255,255,.2);
+    border-radius:14px;padding:18px 20px;max-width:520px;width:100%;
+    max-height:86vh;overflow-y:auto;font-size:.85rem;line-height:1.8;
   }
-  .sheet h2{margin:0 0 10px;font-size:1.05rem;color:var(--accent-2);}
-  .sheet table{width:100%;border-collapse:collapse;font-size:.82rem;margin:6px 0;}
-  .sheet td,.sheet th{padding:4px 6px;border-bottom:1px solid #33506a;text-align:left;}
-  .sheet .end-msg{font-size:1.5rem;font-weight:800;text-align:center;margin:4px 0 6px;}
+  .sheet h2{margin:0 0 8px;font-size:1rem;color:var(--gold);}
+  .sheet table{width:100%;border-collapse:collapse;font-size:.8rem;margin:6px 0;}
+  .sheet td,.sheet th{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.2);text-align:left;}
+  .sheet .end-msg{font-size:1.45rem;font-weight:800;text-align:center;margin:2px 0 4px;}
   .sheet .end-msg.win{color:var(--ok);}
   .sheet .end-msg.lose{color:var(--danger);}
-  .sheet .end-msg.draw{color:var(--accent-2);}
-  .sheet .end-score{text-align:center;color:var(--muted);margin-bottom:8px;}
+  .sheet .end-msg.draw{color:var(--gold);}
+  .sheet .end-score{text-align:center;color:#d7ecdf;margin-bottom:6px;}
+
+  @media (max-width:540px){
+    .rail{letter-spacing:.1em;font-size:.7rem;}
+    .pcard .cname{font-size:.44rem;}
+    .predict{font-size:.52rem;}
+    .minecard .mtitle{font-size:.38rem;}
+  }
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="topbar">
-    <h1>銃・病原菌・ダイヤモンド</h1>
-    <div class="links">
-      <button id="btn-rules" class="secondary tiny">ルール</button>
-      <a href="../">紹介ページ</a>
+
+  <!-- ================= TITLE ================= -->
+  <section id="screen-title" class="screen">
+    <div class="title-wrap">
+      <h1>銃・病原菌・ダイヤモンド</h1>
+      <div class="sub">5つの鉱山を奪い合う、読み合いのカードゲーム</div>
+
+      <div class="setup-sec">
+        <h2>むずかしさ</h2>
+        <div class="choices" id="diff-choices"></div>
+      </div>
+
+      <div class="setup-sec">
+        <h2>対戦相手（All in TEXAS と共通）</h2>
+        <div class="chars" id="char-choices"></div>
+      </div>
+
+      <div class="btn-row">
+        <button id="btn-start">はじめる</button>
+        <button id="btn-rules-title" class="ghost">ルール</button>
+      </div>
+      <div class="btn-row">
+        <a href="../" style="color:#bfe0cb;font-size:.72rem;">紹介ページへ</a>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="hud">
-    <div class="cpu">
-      <div>CPU</div>
-      <div class="score"><span id="cpu-score">0</span>💎</div>
+  <!-- ================= GAME ================= -->
+  <section id="screen-game" class="screen" hidden>
+    <div class="row-label">
+      <span>ラウンド <span class="r" id="round-no">1</span> / 3</span>
+      <span>
+        <button id="btn-rules" class="ghost tiny">ルール</button>
+        <button id="btn-quit" class="ghost tiny">やめる</button>
+      </span>
     </div>
-    <div class="mid">
-      <div>ラウンド <b id="round-no">1</b> / 3</div>
+
+    <div class="table">
+      <div class="rail cpu" id="rail-cpu"></div>
+      <div class="board">
+        <div class="row row-cpu" id="row-cpu"></div>
+        <div class="row row-mines" id="row-mines"></div>
+        <div class="row row-you" id="row-you"></div>
+      </div>
+      <div class="rail you" id="rail-you"></div>
     </div>
-    <div class="you">
-      <div>あなた</div>
-      <div class="score"><span id="you-score">0</span>💎</div>
+
+    <div class="status" id="status"></div>
+
+    <div class="hand-area" id="hand-area">
+      <div id="hand" class="hand"></div>
     </div>
-  </div>
 
-  <div class="side-label cpu-side">CPUのカード（オープンまで伏せ）</div>
-  <div id="mines" class="mines"></div>
+    <div class="btn-row">
+      <button id="btn-clear" class="ghost">置きなおす</button>
+      <button id="btn-confirm" disabled>これで決める</button>
+      <button id="btn-reveal" hidden>オープン！</button>
+      <button id="btn-next" hidden>次のラウンドへ</button>
+      <button id="btn-result" hidden>結果を見る</button>
+    </div>
 
-  <div class="status-line" id="status-line"></div>
-
-  <div class="side-label you">あなたの手札</div>
-  <div id="hand" class="hand"></div>
-
-  <div class="btn-row">
-    <button id="btn-clear" class="secondary">配置をリセット</button>
-    <button id="btn-confirm" disabled>配置を決定</button>
-    <button id="btn-reveal" hidden>オープン！</button>
-    <button id="btn-next-round" hidden>次のラウンドへ</button>
-    <button id="btn-result" hidden>結果を見る</button>
-  </div>
-
-  <div id="log" class="log"></div>
+    <div class="reasons" id="reasons" hidden></div>
+    <div class="log" id="log"></div>
+  </section>
 </div>
 
 <div id="rules-overlay" class="overlay" hidden>
   <div class="sheet">
     <h2>ルール</h2>
-    <p>お互い同じ5枚の手札（病原菌・偵察兵・兵士2・3・4）を持ちます。</p>
+    <p>お互い同じ5枚の手札を持ちます。</p>
     <table>
       <tr><th>カード</th><th>強さ</th></tr>
-      <tr><td>病原菌</td><td>偵察兵以外の全カードと引き分け。偵察兵には負ける。</td></tr>
-      <tr><td>偵察兵</td><td>病原菌には勝つが、兵士（2〜4）には負ける。</td></tr>
-      <tr><td>兵士 2・3・4</td><td>数字が大きい方が勝ち。同数は引き分け。</td></tr>
+      <tr><td>0 病原菌 <span style="color:#a8c4b2">Germs</span></td><td>偵察兵以外の全カードと引き分け。偵察兵には負ける。</td></tr>
+      <tr><td>1 偵察兵 <span style="color:#a8c4b2">Scout</span></td><td>病原菌には勝つが、2〜4の兵士には負ける。</td></tr>
+      <tr><td>2 コマンドー <span style="color:#a8c4b2">Commandos</span></td><td rowspan="3">数字が大きい方が勝ち。同数は引き分け。</td></tr>
+      <tr><td>3 騎兵隊 <span style="color:#a8c4b2">Cavalry</span></td></tr>
+      <tr><td>4 大隊 <span style="color:#a8c4b2">Battalion</span></td></tr>
     </table>
     <p>
       場には産出量の違う5つの鉱山が、左から 💎1・2・3・4・5 の順に並びます。
-      毎ラウンド、手札を配り直して5つの鉱山すべてに1枚ずつ伏せ、
-      左から順にオープン。強いカードを出した方がその鉱山のダイヤモンドを獲得します。
+      毎ラウンド、手札を配り直して5つの鉱山すべてに1枚ずつ伏せ、左から順にオープン。
+      強いカードを出した方がその鉱山のダイヤモンドを獲得します。
     </p>
     <p>
       鉱山は毎ラウンド復活します。取られた鉱山には同じ産出量のカードが1枚 配り直され、
-      引き分けだった鉱山はカードが積み重なります（💎4が引き分けなら次は💎4×2＝8点）。
+      引き分けだった鉱山はカードが積み重なります（💎4が引き分けなら次は💎4が2枚で8点）。
     </p>
-    <p>
-      全3ラウンド。最後まで引き分けだった鉱山は誰の手にも渡りません。
-      獲得したダイヤモンドの合計が多い方の勝ちです。
-    </p>
+    <p>全3ラウンド。最後まで引き分けだった鉱山は誰の手にも渡りません。合計が多い方の勝ちです。</p>
     <div class="btn-row"><button id="btn-rules-close">閉じる</button></div>
   </div>
 </div>
@@ -241,7 +346,11 @@
   <div class="sheet">
     <div class="end-msg" id="end-msg">-</div>
     <div class="end-score" id="end-score">-</div>
-    <div class="btn-row"><button id="btn-again">もう一度あそぶ</button></div>
+    <div id="end-note" style="text-align:center;color:#cde7d6;font-size:.78rem;"></div>
+    <div class="btn-row">
+      <button id="btn-again">同じ相手ともう一度</button>
+      <button id="btn-back-title" class="ghost">相手を変える</button>
+    </div>
   </div>
 </div>
 
@@ -250,25 +359,26 @@
   "use strict";
 
   var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); };
 
-  // ---------- game constants ----------
-  var MINE_VALUES = [1,2,3,4,5]; // 鉱山ごとの産出量（左から固定）
+  /* ================= カード定義 ================= */
+  // 原作のカード名（Germs / Scout / Commandos / Cavalry / Battalion）に合わせる
+  var CARDS = {
+    0:{ label:'0', jp:'病原菌',     en:'Germs',     cls:'germ',  image:'images/card-germ.png' },
+    1:{ label:'1', jp:'偵察兵',     en:'Scout',     cls:'scout', image:'images/card-scout.png' },
+    2:{ label:'2', jp:'コマンドー', en:'Commandos', cls:'',      image:'images/card-soldier2.png' },
+    3:{ label:'3', jp:'騎兵隊',     en:'Cavalry',   cls:'',      image:'images/card-soldier3.png' },
+    4:{ label:'4', jp:'大隊',       en:'Battalion', cls:'',      image:'images/card-soldier4.png' }
+  };
+  var MINE_VALUES = [1,2,3,4,5];
   var MAX_ROUNDS = 3;
 
-  // カードの絵の差し替え口。image に画像を置けばその絵が使われ、
-  // 読みこめなければ文字（label）表示のままで遊べます。
-  var CARD_TYPES = {
-    0: { label:'0', name:'病原菌', cls:'germ',  image:'images/card-germ.png' },
-    1: { label:'1', name:'偵察兵', cls:'scout', image:'images/card-scout.png' },
-    2: { label:'2', name:'兵士',   cls:'',      image:'images/card-soldier2.png' },
-    3: { label:'3', name:'兵士',   cls:'',      image:'images/card-soldier3.png' },
-    4: { label:'4', name:'兵士',   cls:'',      image:'images/card-soldier4.png' }
-  };
+  function cardName(v){ return CARDS[v].jp + '(' + v + ')'; }
 
-  function preloadCardImages(onChange){
-    Object.keys(CARD_TYPES).forEach(function(k){
-      var t = CARD_TYPES[k];
-      if (!t.image) return;
+  function preloadArt(onChange){
+    Object.keys(CARDS).forEach(function(k){
+      var t = CARDS[k];
       var img = new Image();
       img.onload = function(){ t.ready = true; onChange(); };
       img.onerror = function(){ t.ready = false; };
@@ -276,22 +386,185 @@
     });
   }
 
-  // returns 1 if a beats b, -1 if b beats a, 0 tie
+  // 1 = a の勝ち / -1 = b の勝ち / 0 = 引き分け
   function compareCards(a,b){
     if (a===b) return 0;
     if (a===0 && b===1) return -1;
     if (a===1 && b===0) return 1;
-    if (a===0 || b===0) return 0; // 病原菌は 2/3/4 と引き分け
+    if (a===0 || b===0) return 0;   // 病原菌は 2/3/4 と引き分け
     return a>b ? 1 : -1;
   }
 
-  // ---------- state ----------
+  /* ================= 対戦相手（All in TEXAS と共通） =================
+   * tight … 山の価値どおりに置く度合い（高いほどセオリー通りで読みやすい）
+   * aggr  … 大きい山を強い札で取りに来る度合い
+   * bluff … 仕掛け（意外な置き方）の頻度
+   */
+  var PERSONAS = [
+    { id:'viejo',  name:'ビエホ',     tag:'堅実',     tight:0.9,  aggr:0.35, bluff:0.05,
+      desc:'山の価値どおりに、強い札から順に置いてくる。読みやすいが隙は少ない。' },
+    { id:'diablo', name:'ディアブロ', tag:'攻撃',     tight:0.5,  aggr:0.90, bluff:0.30,
+      desc:'一番大きい山を強い札でもぎ取りに来る。病原菌での仕掛けも多い。' },
+    { id:'gordo',  name:'ゴルド',     tag:'ゆるい',   tight:0.15, aggr:0.30, bluff:0.10,
+      desc:'置き場がばらける。安い山に大隊が来ることもあり、噛み合うと痛い。' },
+    { id:'vinny',  name:'ヴィニー',   tag:'標準',     tight:0.6,  aggr:0.55, bluff:0.15,
+      desc:'教科書どおり。おいしい山を病原菌で止め、そこに偵察兵を合わせてくる。' },
+    { id:'loco',   name:'ロコ',       tag:'気まぐれ', tight:0.4,  aggr:0.60, bluff:0.25,
+      desc:'同じ場面でも置き方が変わる。読み切れないぶん、思わぬ拾いもある。' }
+  ];
+
+  var DIFFS = [
+    { id:'easy',   name:'やさしい',   sharp:0.55, hints:true,
+      desc:'鉱山ごとに、相手が何を置いてくるかの予想と理由が出ます。' },
+    { id:'normal', name:'ふつう',     sharp:1.0,  hints:false,
+      desc:'予想なし。相手はいつもの打ち筋で来ます。' },
+    { id:'hard',   name:'むずかしい', sharp:1.5,  hints:false, reads:true,
+      desc:'予想なし。相手はあなたの前ラウンドの置き方まで読んできます。' }
+  ];
+
+  /* ================= 相手の思考ルーチン =================
+   * planAssignment(persona, mines, round, opts)
+   *   -> { assign:{mineId:card}, reasons:{mineId:text} }
+   * opts.rng    乱数（予想表示のときは 0.5 固定＝ぶれなし）
+   * opts.sharp  むずかしさ。高いほどぶれが減る
+   * opts.reads  あなたの過去の置き方を読むか（むずかしいのみ）
+   */
+  function planAssignment(p, mines, round, opts){
+    opts = opts || {};
+    var rng = opts.rng || Math.random;
+    var sharp = opts.sharp || 1;
+    var history = opts.history || [];
+    var lastRound = round >= MAX_ROUNDS;
+
+    // 山を「おいしい順」に並べる（同額なら産出量の大きい方、次に左から）
+    var pool = mines.slice().sort(function(a,b){
+      return (b.pot - a.pot) || (b.base - a.base) || (a.id - b.id);
+    });
+    var assign = {}, reasons = {};
+    function take(mine, card, why){
+      if (!mine) return;
+      assign[mine.id] = card;
+      reasons[mine.id] = why;
+      pool = pool.filter(function(m){ return m.id !== mine.id; });
+    }
+    function used(card){
+      for (var k in assign){ if (assign[k] === card) return true; }
+      return false;
+    }
+    var trick = p.bluff / sharp;         // 仕掛けの起こりやすさ
+    var slop = (1 - p.tight) * 0.8 / sharp;  // 価値の順番から外れる度合い
+
+    // ---- あなたの癖の読み（むずかしいモードのみ） ----
+    var read = null;
+    if (opts.reads && history.length){
+      var counts = {};
+      history.forEach(function(v){ counts[v] = (counts[v]||0) + 1; });
+      var best = null;
+      Object.keys(counts).forEach(function(k){
+        if (best === null || counts[k] > counts[best]) best = k;
+      });
+      // 癖がはっきりしているほど読みに来る（多くても8割）
+      if (best !== null && rng() < Math.min(0.8, 0.3 + 0.25 * counts[best])) read = Number(best);
+    }
+
+    /* ---- まず「一番おいしい山を、どの札で狙うか」を決める ---- */
+    var top = pool[0];
+    if (top){
+      if (read === 4){
+        take(top, 0, 'あなたが大きい山へ大隊を置く癖を読んで、病原菌で引き分けに持ち込みにきている。');
+      } else if (read === 0){
+        take(top, 1, 'あなたが病原菌で止めに来ると読んで、偵察兵を合わせにきている。');
+      } else if (read === 1){
+        take(top, 4, 'あなたが偵察兵を張る癖を読んで、大隊で正面から踏み潰しにきている。');
+      } else if (!lastRound && rng() < trick){
+        take(top, 0, '一番おいしい山を病原菌で止める仕掛け。引き分けなら次のラウンドに積み増しされる。');
+      } else if (rng() < 0.12 + (1 - p.aggr) * 0.25 / sharp){
+        take(top, 1, '一番おいしい山に偵察兵で探り。あなたが病原菌なら総取り、兵士が来たら捨て札になる賭け。');
+      } else if (rng() < 0.35 + p.aggr * 0.6){
+        take(top, 4, '一番おいしい山を大隊で正面から取りに来ている。');
+      } else {
+        take(top, 3, '一番おいしい山へは騎兵隊。大隊は別の山に回している。');
+      }
+    }
+
+    /* ---- 病原菌(0)：引き分けを作って山を止める札 ---- */
+    if (!used(0) && pool.length){
+      if (lastRound){
+        var dump = (pool.length > 1 && rng() > 0.75) ? pool[pool.length-2] : pool[pool.length-1];
+        take(dump, 0,
+          '最終ラウンドは引き分けても山が消えるだけ。病原菌は安い山へ逃がしてくる。');
+      } else if (p.tight < 0.3 && pool.length > 1){
+        take(pool[Math.floor(rng()*pool.length)], 0,
+          '置き場がばらつく相手。病原菌の行き先も読みづらい。');
+      } else if (rng() < slop && pool.length > 1){
+        take(pool[1], 0, '病原菌は少し外して置いてきた。');
+      } else {
+        take(pool[0], 0, '残ったなかで一番おいしい山を病原菌で止めて、取りこぼしを減らしにくる。');
+      }
+    }
+
+    /* ---- 偵察兵(1)：相手の病原菌を狩る札 ---- */
+    if (!used(1) && pool.length){
+      if (rng() < 0.2 + p.aggr * 0.4 / sharp){
+        take(pool[0], 1, '残ったなかで高い山に偵察兵。病原菌で止めに来るなら総取りできる。');
+      } else if (p.tight > 0.7){
+        take(pool[pool.length-1], 1, '堅実な相手。偵察兵は負けても痛くない安い山へ置く。');
+      } else {
+        take(pool[Math.floor(rng()*pool.length)], 1, '偵察兵の置き場は気分次第。');
+      }
+    }
+
+    /* ---- 残った兵士：強い札をおいしい山へ ---- */
+    var soldiers = [4,3,2].filter(function(v){ return !used(v); });
+    var order = pool.slice();
+    if (rng() < slop && order.length > 1){
+      var i = Math.floor(rng()*order.length), j = Math.floor(rng()*order.length);
+      var t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    order.forEach(function(m, idx){
+      var card = soldiers[idx];
+      if (card === undefined) return;
+      var why;
+      if (idx === 0){
+        why = (card === 4)
+          ? '残った山のうち一番おいしいここへ大隊。'
+          : cardName(card) + 'をここへ。山の価値なりの札。';
+      } else if (idx === order.length - 1){
+        why = '安い山は軽い札で流してくる。';
+      } else {
+        why = '山の価値なりの札。噛み合えば取られる。';
+      }
+      take(m, card, why);
+    });
+
+    // 埋まらなかった山の保険
+    mines.forEach(function(m){
+      if (!(m.id in assign)){
+        for (var v=0; v<=4; v++){
+          if (!used(v)){ assign[m.id] = v; reasons[m.id] = '余った札。'; break; }
+        }
+      }
+    });
+    return { assign: assign, reasons: reasons };
+  }
+
+  /* ================= 状態 ================= */
+  var settings = { diff:'easy', persona:'vinny' };
   var state = null;
 
+  function personaById(id){
+    for (var i=0;i<PERSONAS.length;i++){ if (PERSONAS[i].id === id) return PERSONAS[i]; }
+    return PERSONAS[3];
+  }
+  function diffById(id){
+    for (var i=0;i<DIFFS.length;i++){ if (DIFFS[i].id === id) return DIFFS[i]; }
+    return DIFFS[0];
+  }
+
   function newGame(){
-    // 鉱山は常に左から 1,2,3,4,5 の順。毎ラウンド5ヶ所すべてが対象で、
-    // 取られた鉱山には翌ラウンドに同じ産出量のカードが1枚 配り直される。
     state = {
+      persona: personaById(settings.persona),
+      diff: diffById(settings.diff),
       mines: MINE_VALUES.map(function(v,i){
         return { id:i, base:v, pot:v, result:null, taken:false };
       }),
@@ -299,171 +572,193 @@
       youScore: 0,
       cpuScore: 0,
       hand: [0,1,2,3,4],
-      cpuHand: [0,1,2,3,4],
-      assign: {},    // mineId -> card value（あなた）
-      cpuAssign: {}, // mineId -> card value（CPU）
-      phase: 'assign', // assign -> ready -> reveal -> round-end
+      assign: {},
+      cpuAssign: {},
+      predict: null,
+      history: [],
+      phase: 'assign',
       revealIndex: 0
     };
     $('log').innerHTML = '';
     $('end-overlay').hidden = true;
+    makePrediction();
     renderAll();
   }
 
-  // ---------- CPU ----------
-  function cpuDecide(){
-    var pool = state.mines.slice().sort(function(a,b){ return b.pot-a.pot; });
-    var hand = state.cpuHand.slice();
-    var assign = {};
-    function take(v){
-      var i = hand.indexOf(v);
-      if (i>=0){ hand.splice(i,1); return true; }
-      return false;
-    }
-    var lastRound = state.round >= MAX_ROUNDS;
-
-    // 病原菌：ふだんは2番目においしい鉱山を止める。最終ラウンドは一番安い鉱山へ。
-    if (hand.indexOf(0) !== -1 && pool.length){
-      var t0 = (!lastRound && pool.length > 1) ? pool[1] : pool[pool.length-1];
-      assign[t0.id] = 0; take(0);
-      pool = pool.filter(function(m){ return m.id!==t0.id; });
-    }
-    // 偵察兵：相手が病原菌で止めに来そうな、一番おいしい鉱山へ
-    if (hand.indexOf(1) !== -1 && pool.length){
-      var t1 = pool[0];
-      assign[t1.id] = 1; take(1);
-      pool = pool.filter(function(m){ return m.id!==t1.id; });
-    }
-    // 兵士：強いカードをおいしい鉱山へ
-    var rest = hand.slice().sort(function(a,b){ return b-a; });
-    pool.sort(function(a,b){ return b.pot-a.pot; });
-    for (var i=0;i<pool.length && i<rest.length;i++){ assign[pool[i].id] = rest[i]; }
-
-    // 読まれすぎないように、ときどき2ヶ所を入れかえる
-    var ids = Object.keys(assign);
-    if (ids.length >= 2 && Math.random() < 0.35){
-      var a = ids[Math.floor(Math.random()*ids.length)];
-      var b = ids[Math.floor(Math.random()*ids.length)];
-      if (a !== b){ var t = assign[a]; assign[a] = assign[b]; assign[b] = t; }
-    }
-    state.cpuAssign = assign;
+  // 相手の思考ルーチンを「ぶれなし」で走らせたものを予想として見せる
+  function makePrediction(){
+    if (!state.diff.hints){ state.predict = null; return; }
+    state.predict = planAssignment(state.persona, state.mines, state.round, {
+      rng: function(){ return 0.5; },
+      sharp: state.diff.sharp,
+      reads: state.diff.reads,
+      history: state.history
+    });
   }
 
-  // ---------- rendering ----------
+  function cpuDecide(){
+    state.cpuAssign = planAssignment(state.persona, state.mines, state.round, {
+      rng: Math.random,
+      sharp: state.diff.sharp,
+      reads: state.diff.reads,
+      history: state.history
+    }).assign;
+  }
+
+  /* ================= 描画 ================= */
   function log(text, cls){
     var d = document.createElement('div');
     d.className = cls || '';
     d.textContent = text;
-    var el = $('log');
-    el.appendChild(d);
-    el.scrollTop = el.scrollHeight;
+    $('log').appendChild(d);
+    $('log').scrollTop = $('log').scrollHeight;
   }
 
-  // カード1枚ぶんの見た目をつくる。faceUp が false なら伏せ札。
-  function cardFace(value, faceUp, extraClass){
+  var MTN_SVG = '<svg class="mtn" viewBox="0 0 100 62" aria-hidden="true">' +
+    '<polygon points="50,4 88,58 12,58" fill="#f4f1e6"/>' +
+    '<polygon points="50,4 63,22 56,27 50,20 44,28 37,22" fill="#cdd6dd"/>' +
+    '<polygon points="12,58 32,30 50,58" fill="#e4e0d2"/>' +
+    '</svg>';
+
+  function cardEl(value, faceUp, extraClass){
     var el = document.createElement('div');
-    if (value === undefined){
-      el.className = 'cardface empty';
-      return el;
-    }
     if (!faceUp){
-      el.className = 'cardface hidden-card' + (extraClass ? ' '+extraClass : '');
-      el.textContent = '?';
+      // 伏せ札。中身が決まっていなくても「置いてある」ように見せる
+      el.className = 'pcard back' + (extraClass ? ' ' + extraClass : '');
       return el;
     }
-    var t = CARD_TYPES[value];
-    el.className = 'cardface ' + (t.cls ? t.cls+' ' : '') + (extraClass || '');
-    if (t.ready){
-      var img = document.createElement('img');
-      img.src = t.image;
-      img.alt = t.name;
-      el.appendChild(img);
+    if (value === undefined || value === null){
+      el.className = 'pcard empty';
+      return el;
     }
-    var num = document.createElement('span');
-    num.className = 'num';
-    num.textContent = t.label;
-    el.appendChild(num);
+    var t = CARDS[value];
+    el.className = 'pcard' + (t.cls ? ' ' + t.cls : '') + (extraClass ? ' ' + extraClass : '');
+    el.innerHTML =
+      '<span class="pip tl">' + t.label + '</span>' +
+      '<div class="art">' + (t.ready ? '<img src="' + t.image + '" alt="">' : '') + '</div>' +
+      '<div class="cname">' + esc(t.jp) + '</div>' +
+      '<span class="pip br">' + t.label + '</span>';
     return el;
   }
 
-  function renderScores(){
-    $('round-no').textContent = state.round;
-    $('you-score').textContent = state.youScore;
-    $('cpu-score').textContent = state.cpuScore;
+  function mineEl(m){
+    var count = Math.round(m.pot / m.base);
+    var wrap = document.createElement('div');
+    wrap.className = 'minewrap' +
+      (m.result === 'you' ? ' won-you' : m.result === 'cpu' ? ' won-cpu' : m.result === 'gone' ? ' gone' : '');
+
+    var pips = '';
+    for (var i=0;i<m.base;i++){ pips += '◆'; }
+    var inner = '<span class="mpip tl">💎' + m.base + '</span>' + MTN_SVG +
+      '<div class="mtitle">Diamond Mine</div>' +
+      '<div class="pips">' + pips + '</div>' +
+      '<span class="mpip br">💎' + m.base + '</span>';
+
+    var stack = document.createElement('div');
+    stack.className = 'minestack';
+    // 引き分けで積み増された枚数ぶん、少しずらして重ねる
+    for (var k = count - 1; k >= 1; k--){
+      var s = document.createElement('div');
+      s.className = 'minecard stacked';
+      s.style.transform = 'translate(' + (k*6) + 'px,' + (k*4) + 'px) rotate(' + (k*3.5) + 'deg)';
+      s.innerHTML = inner;
+      stack.appendChild(s);
+    }
+    var base = document.createElement('div');
+    base.className = 'minecard';
+    base.innerHTML = inner;
+    stack.appendChild(base);
+    wrap.appendChild(stack);
+
+    var total = document.createElement('div');
+    total.className = 'mine-total';
+    total.innerHTML = '💎' + m.pot + (count > 1 ? '<span class="x"> ×' + count + '枚</span>' : '');
+    wrap.appendChild(total);
+    return wrap;
   }
 
-  function renderMines(){
-    var wrap = $('mines');
-    wrap.innerHTML = '';
+  function renderRails(){
+    var yourTurn = state.phase === 'assign';
+    $('rail-cpu').className = 'rail cpu' + (yourTurn ? '' : ' turn');
+    $('rail-cpu').innerHTML = '▲' + esc(state.persona.name) + '<span class="pts">◆' + state.cpuScore + '</span>';
+    $('rail-you').className = 'rail you' + (yourTurn ? ' turn' : '');
+    $('rail-you').innerHTML = '△あなた<span class="pts">◆' + state.youScore + '</span>';
+  }
+
+  function renderBoard(){
+    var rowCpu = $('row-cpu'), rowMines = $('row-mines'), rowYou = $('row-you');
+    rowCpu.innerHTML = ''; rowMines.innerHTML = ''; rowYou.innerHTML = '';
     var assigning = state.phase === 'assign';
 
     state.mines.forEach(function(m){
-      var div = document.createElement('div');
-      div.className = 'mine';
-      // 勝敗の色はそのラウンドだけ（次ラウンド開始時にリセット）
-      if (m.result === 'you') div.className += ' won-you';
-      else if (m.result === 'cpu') div.className += ' won-cpu';
-      else if (m.result === 'gone') div.className += ' gone';
-      else if (m.result === 'tie') div.className += ' tied';
+      var cpuExtra = '', youExtra = '';
+      if (m.result === 'you'){ cpuExtra = 'beaten'; youExtra = 'winner'; }
+      else if (m.result === 'cpu'){ youExtra = 'beaten'; cpuExtra = 'winner'; }
 
-      var canTakeBack = assigning && (m.id in state.assign);
-      if (canTakeBack) div.className += ' takeback';
-
-      var no = document.createElement('div');
-      no.className = 'no';
-      no.textContent = (m.id+1);
-      div.appendChild(no);
-
-      var stackCount = Math.round(m.pot / m.base);
-      var pot = document.createElement('div');
-      pot.className = 'pot';
-      pot.innerHTML = '💎' + m.pot +
-        (stackCount > 1 ? '<span class="x">×' + stackCount + '</span>' : '');
-      div.appendChild(pot);
-
-      var slots = document.createElement('div');
-      slots.className = 'slots';
-      // 奥＝CPU（オープンまで伏せ札）、手前＝あなた（つねに見える）
-      var cpuExtra = 'mine-cpu';
-      var youExtra = 'mine-you';
-      if (m.result === 'you'){ cpuExtra += ' beaten'; youExtra += ' winner'; }
-      else if (m.result === 'cpu'){ youExtra += ' beaten'; cpuExtra += ' winner'; }
-      slots.appendChild(cardFace(state.cpuAssign[m.id], !!m.result, cpuExtra));
-      slots.appendChild(cardFace(state.assign[m.id], true, youExtra));
-      div.appendChild(slots);
-
-      if (canTakeBack){
-        div.addEventListener('click', function(){ takeBack(m.id); });
+      // 相手の札（オープンまで裏向き。やさしいのときは予想を上に出す）
+      var cpuCell = document.createElement('div');
+      cpuCell.className = 'cardslot';
+      if (state.predict && assigning){
+        var pv = state.predict.assign[m.id];
+        var pr = document.createElement('div');
+        pr.className = 'predict';
+        pr.innerHTML = '予想 <b>' + esc(CARDS[pv].jp) + '</b>';
+        cpuCell.appendChild(pr);
       }
-      wrap.appendChild(div);
+      cpuCell.appendChild(cardEl(state.cpuAssign[m.id], !!m.result, cpuExtra));
+
+      rowCpu.appendChild(cpuCell);
+
+      // 鉱山
+      rowMines.appendChild(mineEl(m));
+
+      // 自分の札（つねに表向き）
+      var youCell = document.createElement('div');
+      youCell.className = 'cardslot';
+      youCell.appendChild(cardEl(state.assign[m.id], true, youExtra));
+      if (assigning && (m.id in state.assign)){
+        youCell.style.cursor = 'pointer';
+        youCell.addEventListener('click', function(){ takeBack(m.id); });
+      }
+      rowYou.appendChild(youCell);
     });
   }
 
   function renderHand(){
     var wrap = $('hand');
     wrap.innerHTML = '';
+    // 配置が終わったあとは手札を下げる（札はすべて卓の上にある）
+    $('hand-area').hidden = state.phase !== 'assign';
+    if (state.phase !== 'assign') return;
     var used = Object.keys(state.assign).map(function(k){ return state.assign[k]; });
-
     state.hand.forEach(function(v){
-      var t = CARD_TYPES[v];
       var isUsed = used.indexOf(v) !== -1;
-      var slot = document.createElement('div');
-      slot.className = 'slot' + (isUsed ? ' used' : '');
-      var face = cardFace(v, true);
-      slot.appendChild(face);
-      var nm = document.createElement('div');
-      nm.className = 'name';
-      nm.textContent = t.name;
-      slot.appendChild(nm);
+      var cell = document.createElement('div');
+      cell.className = 'cardslot' + (isUsed ? ' used' : '');
+      cell.appendChild(cardEl(v, true));
       if (!isUsed && state.phase === 'assign'){
-        face.addEventListener('click', function(){ placeLeftmost(v); });
+        cell.addEventListener('click', function(){ placeLeftmost(v); });
       }
-      wrap.appendChild(slot);
+      wrap.appendChild(cell);
     });
   }
 
+  function renderReasons(){
+    var box = $('reasons');
+    if (!state.predict || state.phase !== 'assign'){ box.hidden = true; return; }
+    var pre = state.predict;
+    var lines = state.mines.map(function(m){
+      var v = pre.assign[m.id];
+      return '<div class="line">鉱山' + (m.id+1) + '（💎' + m.pot + '）→ <b>' +
+        esc(cardName(v)) + '</b>：' + esc(pre.reasons[m.id] || '') + '</div>';
+    }).join('');
+    box.innerHTML = '<h3>' + esc(state.persona.name) + 'はこう置いてきそう</h3>' + lines +
+      '<div class="line" style="color:#a8c4b2">※ あくまで予想です。仕掛けてくることもあります。</div>';
+    box.hidden = false;
+  }
+
   function renderButtons(){
-    var need = state.mines.length; // 毎ラウンド5ヶ所すべてに置く
+    var need = state.mines.length;
     var placed = Object.keys(state.assign).length;
     var assigning = state.phase === 'assign';
 
@@ -471,41 +766,41 @@
     $('btn-confirm').hidden = !assigning;
     $('btn-confirm').disabled = !(assigning && placed === need);
     $('btn-reveal').hidden = state.phase !== 'ready';
-    $('btn-next-round').hidden = !(state.phase === 'round-end' && state.round < MAX_ROUNDS);
+    $('btn-next').hidden = !(state.phase === 'round-end' && state.round < MAX_ROUNDS);
     $('btn-result').hidden = !(state.phase === 'round-end' && state.round >= MAX_ROUNDS);
 
     if (assigning){
       setStatus('手札をクリックして、5つの鉱山すべてに1枚ずつ（' + placed + '/' + need + '）');
     } else if (state.phase === 'ready'){
-      setStatus('CPUも置きました。オープンしましょう。');
+      setStatus(state.persona.name + 'も置きました。オープンしましょう。');
     }
   }
 
-  function setStatus(t){ $('status-line').textContent = t; }
+  function setStatus(t){ $('status').textContent = t; }
 
   function renderAll(){
     if (!state) return;
-    renderScores();
-    renderMines();
+    $('round-no').textContent = state.round;
+    renderRails();
+    renderBoard();
     renderHand();
+    renderReasons();
     renderButtons();
   }
 
-  // ---------- interaction ----------
-  // 手札のカードをクリック → まだ自分のカードが乗っていない一番左の鉱山へ置く
+  /* ================= 操作 ================= */
   function placeLeftmost(value){
     if (state.phase !== 'assign') return;
     var target = state.mines.filter(function(m){ return !(m.id in state.assign); })[0];
     if (!target) return;
     state.assign[target.id] = value;
-    renderMines(); renderHand(); renderButtons();
+    renderBoard(); renderHand(); renderButtons();
   }
 
-  // 置いた鉱山をクリック → そのカードを手札に戻す
   function takeBack(mineId){
     if (state.phase !== 'assign') return;
     if (mineId in state.assign) delete state.assign[mineId];
-    renderMines(); renderHand(); renderButtons();
+    renderBoard(); renderHand(); renderButtons();
   }
 
   $('btn-clear').addEventListener('click', function(){
@@ -514,6 +809,12 @@
   });
 
   $('btn-confirm').addEventListener('click', function(){
+    // むずかしいモードの読み用に、一番おいしい山へ置いた札を覚えておく
+    var top = state.mines.slice().sort(function(a,b){
+      return (b.pot - a.pot) || (b.base - a.base) || (a.id - b.id);
+    })[0];
+    if (top && (top.id in state.assign)) state.history.push(state.assign[top.id]);
+
     cpuDecide();
     state.phase = 'ready';
     renderAll();
@@ -522,80 +823,73 @@
   $('btn-reveal').addEventListener('click', function(){
     state.phase = 'reveal';
     state.revealIndex = 0;
-    renderButtons();
+    renderAll();
     revealNext();
   });
 
-  $('btn-next-round').addEventListener('click', startNextRound);
+  $('btn-next').addEventListener('click', startNextRound);
   $('btn-result').addEventListener('click', showEnd);
-  $('btn-again').addEventListener('click', newGame);
+  $('btn-again').addEventListener('click', function(){ newGame(); });
+  $('btn-back-title').addEventListener('click', function(){
+    $('end-overlay').hidden = true;
+    showTitle();
+  });
+  $('btn-quit').addEventListener('click', showTitle);
 
   $('btn-rules').addEventListener('click', function(){ $('rules-overlay').hidden = false; });
+  $('btn-rules-title').addEventListener('click', function(){ $('rules-overlay').hidden = false; });
   $('btn-rules-close').addEventListener('click', function(){ $('rules-overlay').hidden = true; });
 
-  // ---------- reveal ----------
+  /* ================= オープン ================= */
   function revealNext(){
-    if (state.revealIndex >= state.mines.length){
-      finishRound();
-      return;
-    }
+    if (state.revealIndex >= state.mines.length){ finishRound(); return; }
     var m = state.mines[state.revealIndex];
     var mine = '鉱山' + (m.id+1);
-    var cmp = compareCards(state.assign[m.id], state.cpuAssign[m.id]);
+    var you = state.assign[m.id], cpu = state.cpuAssign[m.id];
+    var cmp = compareCards(you, cpu);
 
-    // 鉱山は盤から消えない。取られた鉱山は翌ラウンドに1枚 配り直し、
-    // 引き分けた鉱山はこの場でもう1枚ぶん積み増しされる。
+    // 鉱山は盤から消えない。取られた山は翌ラウンドに1枚 配り直し、
+    // 引き分けた山はこの場でもう1枚ぶん積み増しされる。
     if (cmp > 0){
-      state.youScore += m.pot;
-      m.result = 'you';
-      m.taken = true;
-      log(mine + ' ▸ あなた +💎' + m.pot, 'me');
+      state.youScore += m.pot; m.result = 'you'; m.taken = true;
+      log(mine + ' ▸ あなた +💎' + m.pot + '（' + cardName(you) + ' > ' + cardName(cpu) + '）', 'me');
     } else if (cmp < 0){
-      state.cpuScore += m.pot;
-      m.result = 'cpu';
-      m.taken = true;
-      log(mine + ' ▸ CPU +💎' + m.pot, 'cpu');
+      state.cpuScore += m.pot; m.result = 'cpu'; m.taken = true;
+      log(mine + ' ▸ ' + state.persona.name + ' +💎' + m.pot + '（' + cardName(cpu) + ' > ' + cardName(you) + '）', 'cpu');
     } else {
-      m.pot += m.base;
-      m.result = 'tie';
+      m.pot += m.base; m.result = 'tie';
       log(mine + ' ▸ 引き分け → 💎' + m.pot, 'tie');
     }
 
     state.revealIndex++;
-    renderScores();
-    renderMines();
-    setTimeout(revealNext, 850);
+    renderRails();
+    renderBoard();
+    setTimeout(revealNext, 820);
   }
 
   function finishRound(){
-    // 最終ラウンドで引き分けのまま残った鉱山は、どちらの手にも渡らない
     if (state.round >= MAX_ROUNDS){
-      state.mines.forEach(function(m){
-        if (m.result === 'tie'){ m.result = 'gone'; }
-      });
+      state.mines.forEach(function(m){ if (m.result === 'tie') m.result = 'gone'; });
     }
     state.phase = 'round-end';
-    renderMines();
-    setStatus(state.round >= MAX_ROUNDS
-      ? '全3ラウンド終了。'
-      : 'ラウンド ' + state.round + ' 終了。');
+    renderBoard();
+    setStatus(state.round >= MAX_ROUNDS ? '全3ラウンド終了。' : 'ラウンド ' + state.round + ' 終了。');
     renderButtons();
+    renderReasons();
   }
 
   function startNextRound(){
     state.round++;
     state.hand = [0,1,2,3,4];
-    state.cpuHand = [0,1,2,3,4];
     state.assign = {};
     state.cpuAssign = {};
-    // 新しいラウンドの鉱山カードを配る：取られた鉱山は産出量1枚ぶんから復活。
-    // 引き分けだった鉱山はオープン時に積み増し済み。
     state.mines.forEach(function(m){
-      if (m.taken){ m.pot = m.base; }
+      if (m.taken){ m.pot = m.base; }   // 取られた山は産出量1枚ぶんから復活
       m.taken = false;
       m.result = null;
     });
     state.phase = 'assign';
+    makePrediction();
     renderAll();
   }
 
@@ -603,13 +897,54 @@
     var msg = $('end-msg'), you = state.youScore, cpu = state.cpuScore;
     if (you === cpu){ msg.textContent = '引き分け！'; msg.className = 'end-msg draw'; }
     else if (you > cpu){ msg.textContent = 'あなたの勝ち！ 🎉'; msg.className = 'end-msg win'; }
-    else { msg.textContent = 'CPUの勝ち…'; msg.className = 'end-msg lose'; }
-    $('end-score').textContent = 'あなた 💎' + you + '　対　CPU 💎' + cpu;
+    else { msg.textContent = state.persona.name + 'の勝ち…'; msg.className = 'end-msg lose'; }
+    $('end-score').textContent = 'あなた ◆' + you + '　対　' + state.persona.name + ' ◆' + cpu;
+    $('end-note').textContent = 'むずかしさ：' + state.diff.name + '／相手：' +
+      state.persona.name + '（' + state.persona.tag + '）';
     $('end-overlay').hidden = false;
   }
 
-  preloadCardImages(function(){ renderAll(); });
-  newGame();
+  /* ================= タイトル ================= */
+  function renderTitleChoices(){
+    $('diff-choices').innerHTML = DIFFS.map(function(d){
+      return '<div class="choice' + (settings.diff === d.id ? ' on' : '') + '" data-diff="' + d.id + '">' +
+        '<b>' + esc(d.name) + '</b><span>' + esc(d.desc) + '</span></div>';
+    }).join('');
+    $('char-choices').innerHTML = PERSONAS.map(function(c){
+      return '<div class="char' + (settings.persona === c.id ? ' on' : '') + '" data-persona="' + c.id + '">' +
+        '<div class="who"><b>' + esc(c.name) + '</b><span class="tag">' + esc(c.tag) + '</span></div>' +
+        '<div class="body"><div class="desc">' + esc(c.desc) + '</div>' +
+        '<div class="nums">堅さ ' + c.tight + '・攻め ' + c.aggr + '・仕掛け ' + c.bluff + '</div></div></div>';
+    }).join('');
+
+    Array.prototype.forEach.call($('diff-choices').children, function(el){
+      el.addEventListener('click', function(){
+        settings.diff = el.getAttribute('data-diff');
+        renderTitleChoices();
+      });
+    });
+    Array.prototype.forEach.call($('char-choices').children, function(el){
+      el.addEventListener('click', function(){
+        settings.persona = el.getAttribute('data-persona');
+        renderTitleChoices();
+      });
+    });
+  }
+
+  function showTitle(){
+    $('screen-game').hidden = true;
+    $('screen-title').hidden = false;
+    renderTitleChoices();
+  }
+
+  $('btn-start').addEventListener('click', function(){
+    $('screen-title').hidden = true;
+    $('screen-game').hidden = false;
+    newGame();
+  });
+
+  preloadArt(function(){ if (state && !$('screen-game').hidden) renderAll(); });
+  showTitle();
 
 })();
 </script>
