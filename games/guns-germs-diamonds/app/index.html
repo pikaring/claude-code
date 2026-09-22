@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>銃・病原菌・ダイヤモンド</title>
+<style>
+  :root{
+    --bg-0:#0f1720;
+    --bg-1:#182635;
+    --panel:#1f3245;
+    --panel-2:#284057;
+    --accent:#5fd0ff;
+    --accent-2:#ffd166;
+    --diamond:#7fe8d8;
+    --danger:#ff6b6b;
+    --ok:#8ce99a;
+    --text:#eaf2f7;
+    --muted:#93a7b8;
+    --card-back:#2c4a63;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:radial-gradient(1200px 800px at 50% -10%, var(--bg-1), var(--bg-0));
+    color:var(--text);
+    font-family:"Hiragino Sans","Yu Gothic","Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #app{
+    max-width:720px;
+    margin:0 auto;
+    padding:16px 16px 32px;
+    min-height:100%;
+  }
+  header{
+    text-align:center;
+    margin-bottom:12px;
+  }
+  h1{
+    font-size:1.35rem;
+    margin:4px 0 2px;
+    letter-spacing:.02em;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:.8rem;
+    margin-bottom:4px;
+  }
+  .back-link{
+    display:inline-block;
+    color:var(--muted);
+    font-size:.72rem;
+    text-decoration:none;
+  }
+  .back-link:hover{color:var(--accent);text-decoration:underline;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .rulebox{
+    background:var(--panel);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    margin:16px 0;
+    font-size:.86rem;
+    line-height:1.75;
+  }
+  .rulebox h2{margin-top:0;font-size:1rem;color:var(--accent-2);}
+  .rulebox table{width:100%;border-collapse:collapse;margin:8px 0;font-size:.82rem;}
+  .rulebox td,.rulebox th{padding:4px 6px;border-bottom:1px solid #33506a;text-align:left;}
+
+  .card-icon{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:1.6em;height:1.6em;border-radius:6px;
+    background:var(--panel-2);
+    font-weight:700;font-size:.9em;
+    vertical-align:middle;
+  }
+  .ci-0{background:#3a5a3a;color:#b6f0b6;}
+  .ci-1{background:#3a4a6a;color:#bcd4ff;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    padding:12px 20px;
+    font-size:.95rem;
+    font-weight:700;
+    background:linear-gradient(180deg,var(--accent),#3aa6d6);
+    color:#04202b;
+    box-shadow:0 3px 0 #1c7a9c, 0 6px 14px rgba(0,0,0,.35);
+    transition:transform .05s ease;
+  }
+  button:active{transform:translateY(2px);box-shadow:0 1px 0 #1c7a9c;}
+  button:disabled{
+    background:#3a4a58;color:#7c8a96;box-shadow:none;cursor:not-allowed;
+  }
+  button.secondary{
+    background:linear-gradient(180deg,#3a4a58,#2a3946);
+    color:var(--text);
+    box-shadow:0 3px 0 #16202a,0 6px 14px rgba(0,0,0,.3);
+  }
+  .btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
+
+  .mode-select{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
+  .mode-card{
+    background:var(--panel);
+    border:2px solid transparent;
+    border-radius:var(--radius);
+    padding:14px 16px;
+    text-align:left;
+    cursor:pointer;
+  }
+  .mode-card:hover{border-color:var(--accent);}
+  .mode-card h3{margin:0 0 4px;font-size:.95rem;color:var(--accent-2);}
+  .mode-card p{margin:0;font-size:.78rem;color:var(--muted);}
+
+  /* --- game HUD --- */
+  .hud{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--panel);
+    border-radius:var(--radius);
+    padding:10px 14px;
+    margin-bottom:12px;
+    font-size:.82rem;
+  }
+  .hud .score{font-weight:700;font-size:1.05rem;}
+  .hud .p1 .score{color:var(--diamond);}
+  .hud .p2 .score{color:var(--accent-2);}
+  .hud .mid{text-align:center;color:var(--muted);font-size:.75rem;}
+  .hud .mid b{color:var(--text);display:block;font-size:.95rem;}
+
+  .mines{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:8px;
+    margin:14px 0;
+  }
+  .mine{
+    background:var(--panel);
+    border-radius:12px;
+    padding:8px 4px 10px;
+    text-align:center;
+    position:relative;
+    min-height:118px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    border:2px solid transparent;
+  }
+  .mine.selectable{border-color:var(--accent);cursor:pointer;}
+  .mine.claimed-p1{background:#1e3a2e;border-color:var(--ok);}
+  .mine.claimed-p2{background:#3a2e1e;border-color:var(--accent-2);}
+  .mine.claimed-none{background:#2a1e1e;border-color:var(--danger);opacity:.7;}
+  .mine .label{font-size:.65rem;color:var(--muted);}
+  .mine .pot{
+    font-size:1.05rem;font-weight:800;color:var(--diamond);
+    display:flex;align-items:center;justify-content:center;gap:2px;
+  }
+  .mine .pot .gem{font-size:.85rem;}
+  .mine .slotwrap{display:flex;flex-direction:column;gap:4px;align-items:center;margin-top:4px;}
+  .slot{
+    width:34px;height:44px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:1rem;
+  }
+  .slot.empty{background:#12202c;border:1.5px dashed #3d5468;color:#3d5468;}
+  .slot.back{background:var(--card-back);color:#7fb3d1;border:1.5px solid #3d6a8a;}
+  .slot.p1face{background:#2f6b4d;color:#eafff2;}
+  .slot.p2face{background:#8a6a2a;color:#fff6df;}
+  .mine .result{font-size:.68rem;min-height:1.3em;color:var(--muted);}
+  .mine .result.win{color:var(--ok);font-weight:700;}
+  .mine .result.lose{color:var(--danger);font-weight:700;}
+  .mine .result.tie{color:var(--accent-2);font-weight:700;}
+
+  .hand-label{
+    font-size:.78rem;color:var(--muted);margin:14px 0 6px;text-align:center;
+  }
+  .hand{
+    display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;
+  }
+  .card{
+    width:52px;height:70px;border-radius:10px;
+    background:linear-gradient(180deg,#2c4a63,#20374a);
+    border:2px solid #3d6a8a;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-weight:800;font-size:1.3rem;color:var(--text);
+    cursor:pointer;position:relative;
+    transition:transform .1s ease, box-shadow .1s ease;
+  }
+  .card small{font-size:.55rem;font-weight:600;color:var(--muted);margin-top:2px;}
+  .card:hover:not(.used){transform:translateY(-4px);}
+  .card.used{opacity:.3;cursor:default;transform:none;box-shadow:none;}
+  .card.v0{background:linear-gradient(180deg,#2f4a34,#213a27);border-color:#4c8a5c;}
+  .card.v1{background:linear-gradient(180deg,#2b3a58,#20304a);border-color:#4c6c9c;}
+
+  .status-line{
+    text-align:center;font-size:.84rem;color:var(--muted);min-height:1.4em;margin:6px 0 2px;
+  }
+  .status-line b{color:var(--accent-2);}
+
+  .log{
+    background:#0e1922;
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:.74rem;
+    color:var(--muted);
+    max-height:110px;
+    overflow-y:auto;
+    margin-top:10px;
+    line-height:1.6;
+  }
+  .log div.me{color:var(--ok);}
+  .log div.cpu{color:var(--accent-2);}
+  .log div.tie{color:#ffe08a;}
+
+  .passcover{
+    position:fixed;inset:0;background:#050a0e;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:50;text-align:center;padding:24px;
+  }
+  .passcover h2{color:var(--accent-2);}
+  .passcover p{color:var(--muted);max-width:320px;font-size:.85rem;}
+
+  .result-screen{text-align:center;}
+  .result-screen .big{font-size:1.6rem;font-weight:800;margin:16px 0 4px;}
+  .result-screen .big.win{color:var(--ok);}
+  .result-screen .big.lose{color:var(--danger);}
+  .result-screen .big.draw{color:var(--accent-2);}
+  .final-score{font-size:1rem;color:var(--muted);margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>銃・病原菌・ダイヤモンド</h1>
+    <div class="subtitle">Guns, Germs &amp; Diamonds — ブラウザ版</div>
+    <a class="back-link" href="../">← 紹介ページへ</a>
+  </header>
+
+  <!-- ===== TITLE / MODE SELECT SCREEN ===== -->
+  <section id="screen-title" class="screen active">
+    <div class="mode-select">
+      <div class="mode-card" data-mode="cpu">
+        <h3>🧠 CPU対戦（1人プレイ）</h3>
+        <p>1人でお手軽に。相手はコンピューターが担当します。</p>
+      </div>
+      <div class="mode-card" data-mode="pvp">
+        <h3>🤝 2人対戦（同じ端末でパス&プレイ）</h3>
+        <p>1台の端末を交代しながら遊びます。相手の番の前に画面が隠れます。</p>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-show-rules" class="secondary">くわしいルールを見る</button>
+    </div>
+
+    <div id="rules-detail" class="rulebox" style="display:none;">
+      <h2>ルール詳細</h2>
+      <p>お互い同じ5枚の手札 <span class="card-icon ci-0">菌</span><span class="card-icon ci-1">偵</span>2 3 4 を持ちます。</p>
+      <table>
+        <tr><th>カード</th><th>強さ</th></tr>
+        <tr><td><span class="card-icon ci-0">0</span> 病原菌</td><td>1（偵察兵）以外の全カードと引き分け。1には負ける。</td></tr>
+        <tr><td><span class="card-icon ci-1">1</span> 偵察兵</td><td>病原菌には勝つが、2〜4の兵士には負ける。</td></tr>
+        <tr><td>2・3・4 兵士</td><td>数字が大きい方が勝ち。同数は引き分け。</td></tr>
+      </table>
+      <p>
+        場には産出量（ダイヤモンド数）の異なる5つの鉱山が並びます。各ラウンドの開始時、
+        両者は手札をリセットして 0〜4 を1枚ずつ持ちます。<b>まだ決着していない鉱山すべてに、
+        裏向きでカードを1枚ずつ配置</b>し、両者が配置し終えたら鉱山を左から順にオープン。
+        強いカードを出した方がその鉱山のダイヤモンドを獲得します。
+      </p>
+      <p>
+        <b>引き分けた鉱山は次のラウンドへ持ち越され、ダイヤモンドの山がさらに積み増しされます。</b>
+        ゲームは全3ラウンド。最終ラウンドでも決着しなかった鉱山のダイヤモンドは、
+        どちらの手にも渡らず失われます。3ラウンド終了時（または全鉱山決着時）に、
+        獲得したダイヤモンドの合計が多い方の勝ちです。
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <section id="screen-game" class="screen">
+    <div class="hud">
+      <div class="p1">
+        <div id="p1-name">あなた</div>
+        <div class="score"><span id="p1-score">0</span>💎</div>
+      </div>
+      <div class="mid">
+        <div>ラウンド <b id="round-no">1</b> / 3</div>
+      </div>
+      <div class="p2">
+        <div id="p2-name">CPU</div>
+        <div class="score"><span id="p2-score">0</span>💎</div>
+      </div>
+    </div>
+
+    <div id="mines" class="mines"></div>
+
+    <div class="status-line" id="status-line">鉱山にカードを配置してください</div>
+
+    <div class="hand-label">あなたの手札（クリックすると左から順に鉱山へ配置されます）</div>
+    <div id="hand" class="hand"></div>
+
+    <div class="btn-row">
+      <button id="btn-clear" class="secondary">配置をリセット</button>
+      <button id="btn-confirm" disabled>配置を決定</button>
+      <button id="btn-reveal" style="display:none;">オープン！</button>
+      <button id="btn-next-round" style="display:none;">次のラウンドへ</button>
+      <button id="btn-goto-result" style="display:none;">結果を見る</button>
+    </div>
+
+    <div id="log" class="log"></div>
+  </section>
+
+  <!-- ===== RESULT SCREEN ===== -->
+  <section id="screen-result" class="screen result-screen">
+    <div class="big" id="result-big">-</div>
+    <div class="final-score" id="result-score">-</div>
+    <div class="btn-row">
+      <button id="btn-restart">タイトルへ戻る</button>
+    </div>
+  </section>
+</div>
+
+<div id="passcover" class="passcover" style="display:none;">
+  <h2 id="pass-title">プレイヤー2 の番です</h2>
+  <p id="pass-desc">端末を渡してください。準備ができたらボタンを押すと配置画面が表示されます。</p>
+  <button id="btn-pass-ready">配置する</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- game constants ----------
+  var MINE_VALUES = [1,2,3,4,5]; // base diamond production per mine
+  var CARD_LABEL = {0:"菌",1:"偵",2:"2",3:"3",4:"4"};
+  var CARD_SUB   = {0:"病原菌",1:"偵察兵",2:"兵士",3:"兵士",4:"兵士"};
+
+  // returns 1 if a beats b, -1 if b beats a, 0 tie
+  function compareCards(a,b){
+    if (a===b) return 0;
+    if (a===0 && b===1) return -1;
+    if (a===1 && b===0) return 1;
+    if (a===0 || b===0) return 0; // germ ties with 2/3/4
+    return a>b ? 1 : -1;
+  }
+
+  // ---------- state ----------
+  var state = null;
+
+  function newGame(mode){
+    // mines are always laid out left-to-right in production order 1,2,3,4,5
+    var mines = MINE_VALUES.map(function(v,i){
+      return { id:i, base:v, pot:v, claimedBy:null, roundResult:null,
+               p1Card:null, p2Card:null };
+    });
+    state = {
+      mode: mode, // 'cpu' or 'pvp'
+      mines: mines,
+      round: 1,
+      maxRounds: 3,
+      p1Score: 0,
+      p2Score: 0,
+      p1Hand: [0,1,2,3,4],
+      p2Hand: [0,1,2,3,4],
+      p1Assign: {}, // mineId -> card value
+      p2Assign: {},
+      phase: 'p1-assign', // p1-assign -> (pvp: p2-assign) -> reveal -> round-end
+      revealIndex: 0,
+      revealOrder: [],
+      revealing: false
+    };
+    renderAll();
+    log('系', 'ゲーム開始！ 全' + state.maxRounds + 'ラウンド制。', 'tie');
+  }
+
+  function unclaimedMines(){
+    return state.mines.filter(function(m){return m.claimedBy===null;});
+  }
+
+  // ---------- CPU AI ----------
+  function cpuAssign(){
+    var mines = unclaimedMines().slice().sort(function(a,b){return b.pot-a.pot;});
+    var hand = state.p2Hand.slice();
+    var assign = {};
+
+    function take(v){
+      var idx = hand.indexOf(v);
+      if (idx>=0){ hand.splice(idx,1); return true; }
+      return false;
+    }
+
+    var lateRound = state.round >= state.maxRounds; // tie this round == lost forever
+    var pool = mines.slice();
+
+    // Decide germ (0) placement: as a defensive "block" on a juicy-but-not-top mine,
+    // except in the final round where a tie is worthless, so germ becomes a low-value throwaway.
+    if (hand.indexOf(0) !== -1 && pool.length > 0){
+      var target;
+      if (!lateRound && pool.length > 1){
+        target = pool[1]; // second richest: block a good mine cheaply
+      } else {
+        target = pool[pool.length-1]; // cheapest mine, or only mine left
+      }
+      assign[target.id] = 0;
+      take(0);
+      pool = pool.filter(function(m){return m.id!==target.id;});
+    }
+
+    // Decide scout (1): aim it at the richest remaining mine to punish an assumed germ there.
+    if (hand.indexOf(1) !== -1 && pool.length > 0){
+      var t2 = pool[0];
+      assign[t2.id] = 1;
+      take(1);
+      pool = pool.filter(function(m){return m.id!==t2.id;});
+    }
+
+    // Remaining soldiers (2/3/4): pair biggest card with richest remaining mine.
+    var rest = hand.slice().sort(function(a,b){return b-a;});
+    pool.sort(function(a,b){return b.pot-a.pot;});
+    for (var i=0;i<pool.length && i<rest.length;i++){
+      assign[pool[i].id] = rest[i];
+    }
+
+    // small randomization: occasionally swap two assignments for unpredictability
+    var ids = Object.keys(assign);
+    if (ids.length >= 2 && Math.random() < 0.35){
+      var i1 = ids[Math.floor(Math.random()*ids.length)];
+      var i2 = ids[Math.floor(Math.random()*ids.length)];
+      if (i1 !== i2){
+        var tmp = assign[i1]; assign[i1] = assign[i2]; assign[i2] = tmp;
+      }
+    }
+
+    state.p2Assign = assign;
+  }
+
+  // ---------- rendering ----------
+  var $ = function(id){ return document.getElementById(id); };
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+    $(id).classList.add('active');
+  }
+
+  function log(who, text, cls){
+    var d = document.createElement('div');
+    d.className = cls || '';
+    d.textContent = (who ? '['+who+'] ' : '') + text;
+    var el = $('log');
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function renderAll(){
+    $('round-no').textContent = state.round;
+    $('p1-score').textContent = state.p1Score;
+    $('p2-score').textContent = state.p2Score;
+    $('p2-name').textContent = state.mode === 'pvp' ? 'プレイヤー2' : 'CPU';
+    renderMines();
+    renderHand();
+    renderButtons();
+  }
+
+  function currentAssignFor(playerKey){
+    return playerKey === 'p1' ? state.p1Assign : state.p2Assign;
+  }
+
+  // Which player is actively choosing placements right now, if any.
+  // ('p1' during p1's turn, 'p2' only mid-pvp during p2's turn, otherwise null.)
+  function activePlacingPlayer(){
+    if (state.phase === 'p1-assign') return 'p1';
+    if (state.phase === 'p2-assign' && state.mode === 'pvp') return 'p2';
+    return null;
+  }
+
+  function renderMines(){
+    var wrap = $('mines');
+    wrap.innerHTML = '';
+    var activePlayer = activePlacingPlayer();
+    var activeCtx = activeHandAndAssign();
+
+    state.mines.forEach(function(m){
+      var div = document.createElement('div');
+      div.className = 'mine';
+      if (m.claimedBy === 'p1') div.className += ' claimed-p1';
+      else if (m.claimedBy === 'p2') div.className += ' claimed-p2';
+      else if (m.claimedBy === 'gone') div.className += ' claimed-none';
+
+      // a mine is only click-interactive while it holds the active player's
+      // own card and can be taken back (placement itself is now card-driven)
+      var canSelect = activePlayer !== null && m.claimedBy===null && (m.id in activeCtx.assign);
+      if (canSelect) div.className += ' selectable';
+
+      var label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = '鉱山 ' + (m.id+1);
+      div.appendChild(label);
+
+      var pot = document.createElement('div');
+      pot.className = 'pot';
+      pot.innerHTML = '<span class="gem">💎</span>' + m.pot;
+      div.appendChild(pot);
+
+      var slotwrap = document.createElement('div');
+      slotwrap.className = 'slotwrap';
+
+      var youVal = state.p1Assign[m.id];
+      var cpuVal = state.p2Assign[m.id];
+      // A mine's cards flip face-up once its outcome for this round has
+      // actually been resolved (progressive reveal). Before that, the
+      // currently active player's OWN card is always shown honestly (it's
+      // their own choice, no reason to hide it from them) while the other
+      // side stays a "?" until reveal.
+      var showReveal = !!m.claimedBy || m.roundResult === 'tie';
+      var p1Visible = showReveal || activePlayer === 'p1';
+      var p2Visible = showReveal || activePlayer === 'p2';
+
+      var p1Slot = document.createElement('div');
+      p1Slot.className = 'slot ' + (youVal===undefined ? 'empty' : (p1Visible ? 'p1face' : 'back'));
+      if (youVal!==undefined) p1Slot.textContent = p1Visible ? CARD_LABEL[youVal] : '?';
+
+      var p2Slot = document.createElement('div');
+      p2Slot.className = 'slot ' + (cpuVal===undefined ? 'empty' : (p2Visible ? 'p2face' : 'back'));
+      if (cpuVal!==undefined) p2Slot.textContent = p2Visible ? CARD_LABEL[cpuVal] : '?';
+
+      // near/far: whoever is actively placing sees their own card on the
+      // near (bottom) side, closest to their hand; the other side sits far
+      // (top). With nobody actively placing, p1 (="you" in CPU mode) stays near.
+      if (activePlayer === 'p2'){
+        slotwrap.appendChild(p1Slot); // far
+        slotwrap.appendChild(p2Slot); // near
+      } else {
+        slotwrap.appendChild(p2Slot); // far
+        slotwrap.appendChild(p1Slot); // near
+      }
+
+      div.appendChild(slotwrap);
+
+      var res = document.createElement('div');
+      res.className = 'result';
+      if (m.claimedBy === 'p1') { res.textContent='あなたが獲得！'; res.className+=' win'; }
+      else if (m.claimedBy === 'p2') { res.textContent = (state.mode==='pvp'?'相手が獲得':'CPUが獲得'); res.className+=' lose'; }
+      else if (m.claimedBy === 'gone') { res.textContent='未決着で消滅'; res.className+=' tie'; }
+      else if (m.roundResult === 'tie') { res.textContent='引き分け（持ち越し）'; res.className+=' tie'; }
+      div.appendChild(res);
+
+      if (canSelect){
+        div.addEventListener('click', function(){ onMineClick(m.id); });
+      }
+
+      wrap.appendChild(div);
+    });
+  }
+
+  function activeHandAndAssign(){
+    if (state.phase === 'p2-assign' && state.mode === 'pvp'){
+      return { hand: state.p2Hand, assign: state.p2Assign, key:'p2' };
+    }
+    return { hand: state.p1Hand, assign: state.p1Assign, key:'p1' };
+  }
+
+  function renderHand(){
+    var wrap = $('hand');
+    wrap.innerHTML = '';
+    var ctx = activeHandAndAssign();
+    var usedValues = Object.keys(ctx.assign).map(function(k){return ctx.assign[k];});
+
+    ctx.hand.forEach(function(v){
+      var used = usedValues.indexOf(v) !== -1;
+      var c = document.createElement('div');
+      c.className = 'card v'+ (v<=1?v:'x') + (used?' used':'');
+      c.innerHTML = CARD_LABEL[v] + '<small>' + CARD_SUB[v] + '</small>';
+      if (!used){
+        c.addEventListener('click', function(){ placeCardLeftmost(v); });
+      }
+      wrap.appendChild(c);
+    });
+  }
+
+  // Clicking a hand card places it on the leftmost mine that's still in play
+  // and doesn't already have this player's card on it this round.
+  function placeCardLeftmost(value){
+    var ctx = activeHandAndAssign();
+    var target = state.mines.filter(function(m){
+      return m.claimedBy===null && !(m.id in ctx.assign);
+    })[0];
+    if (!target) return; // no open slot left to place this round
+    ctx.assign[target.id] = value;
+    renderMines(); renderHand(); renderButtons();
+  }
+
+  function renderButtons(){
+    var need = unclaimedMines().length;
+    var ctx = activeHandAndAssign();
+    var placed = Object.keys(ctx.assign).length;
+
+    var assigning = (state.phase==='p1-assign') || (state.mode==='pvp' && state.phase==='p2-assign');
+
+    $('btn-clear').style.display = assigning ? '' : 'none';
+    $('btn-confirm').style.display = assigning ? '' : 'none';
+    $('btn-confirm').disabled = !(assigning && placed === need && need>0);
+
+    $('btn-reveal').style.display = (state.phase==='ready-reveal') ? '' : 'none';
+    $('btn-next-round').style.display = (state.phase==='round-end' && state.round < state.maxRounds && unclaimedMines().length>0) ? '' : 'none';
+    $('btn-goto-result').style.display = (state.phase==='round-end' && (state.round >= state.maxRounds || unclaimedMines().length===0)) ? '' : 'none';
+
+    if (state.phase==='p1-assign'){
+      setStatus('あなたの番：手札を選んで、まだ決着していない鉱山（'+need+'ヶ所）に1枚ずつ配置してください。（'+placed+'/'+need+'）');
+    } else if (state.phase==='p2-assign'){
+      setStatus('プレイヤー2の番：手札を選んで鉱山に配置してください。（'+placed+'/'+need+'）');
+    } else if (state.phase==='ready-reveal'){
+      setStatus('両者の配置が完了しました。「オープン！」を押して結果を確認しましょう。');
+    } else if (state.phase==='reveal' || state.phase==='round-end'){
+      // status set elsewhere during reveal sequence
+    }
+  }
+
+  function setStatus(t){ $('status-line').innerHTML = t; }
+
+  // ---------- interaction ----------
+  // Clicking a mine that already holds the active player's own (still-hidden)
+  // card takes it back to hand, so a misclick can be corrected.
+  function onMineClick(mineId){
+    var ctx = activeHandAndAssign();
+    var mine = state.mines.filter(function(m){return m.id===mineId;})[0];
+    if (!mine || mine.claimedBy) return;
+    if (mineId in ctx.assign) delete ctx.assign[mineId];
+    renderMines(); renderHand(); renderButtons();
+  }
+
+  $('btn-clear').addEventListener('click', function(){
+    var ctx = activeHandAndAssign();
+    if (ctx.key==='p1') state.p1Assign = {}; else state.p2Assign = {};
+    renderAll();
+  });
+
+  $('btn-confirm').addEventListener('click', function(){
+    if (state.phase === 'p1-assign'){
+      if (state.mode === 'cpu'){
+        cpuAssign();
+        state.phase = 'ready-reveal';
+      } else {
+        state.phase = 'p2-assign';
+        showPassCover('プレイヤー2 の番です', 'あなたの番の配置内容は隠されます。準備ができたらボタンを押してください。');
+        return;
+      }
+    } else if (state.phase === 'p2-assign'){
+      state.phase = 'ready-reveal';
+    }
+    renderAll();
+  });
+
+  $('btn-reveal').addEventListener('click', function(){
+    state.phase = 'reveal';
+    state.revealIndex = 0;
+    // Freeze the list of mines to resolve *before* any of them get claimed this
+    // round. Recomputing unclaimedMines() during the loop below would shrink as
+    // mines are won, desyncing it from revealIndex and silently skipping mines.
+    state.revealOrder = unclaimedMines().map(function(m){ return m.id; });
+    renderButtons();
+    revealNext();
+  });
+
+  $('btn-next-round').addEventListener('click', function(){
+    startNextRound();
+  });
+
+  $('btn-goto-result').addEventListener('click', function(){
+    showResult();
+  });
+
+  $('btn-restart').addEventListener('click', function(){
+    showScreen('screen-title');
+  });
+
+  $('btn-show-rules').addEventListener('click', function(){
+    var el = $('rules-detail');
+    el.style.display = (el.style.display==='none') ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('.mode-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      var mode = card.getAttribute('data-mode');
+      showScreen('screen-game');
+      newGame(mode);
+    });
+  });
+
+  function showPassCover(title, desc){
+    $('pass-title').textContent = title;
+    $('pass-desc').textContent = desc;
+    $('passcover').style.display = 'flex';
+  }
+  $('btn-pass-ready').addEventListener('click', function(){
+    $('passcover').style.display = 'none';
+    renderAll();
+  });
+
+  // ---------- reveal sequence ----------
+  function revealNext(){
+    if (state.revealIndex >= state.revealOrder.length){
+      finishRound();
+      return;
+    }
+    var mineId = state.revealOrder[state.revealIndex];
+    var m = state.mines.filter(function(mm){ return mm.id === mineId; })[0];
+    var a = state.p1Assign[m.id];
+    var b = state.p2Assign[m.id];
+    var cmp = compareCards(a,b);
+
+    setStatus('鉱山 ' + (m.id+1) + ' をオープン中…　あなた:「' + CARD_SUB[a] + '('+CARD_LABEL[a]+')」 vs 相手:「' + CARD_SUB[b] + '('+CARD_LABEL[b]+')」');
+
+    if (cmp > 0){
+      state.p1Score += m.pot;
+      m.claimedBy = 'p1';
+      log('結果', '鉱山'+(m.id+1)+': あなたの勝ち！ 💎'+m.pot+' 獲得', 'me');
+    } else if (cmp < 0){
+      state.p2Score += m.pot;
+      m.claimedBy = 'p2';
+      log('結果', '鉱山'+(m.id+1)+': ' + (state.mode==='pvp'?'相手':'CPU') + 'の勝ち。💎'+m.pot+' 失う', 'cpu');
+    } else {
+      m.pot += m.base;
+      m.roundResult = 'tie';
+      log('結果', '鉱山'+(m.id+1)+': 引き分け！ 次ラウンドに持ち越し（💎'+m.pot+'に）', 'tie');
+    }
+
+    state.revealIndex++;
+    renderMines();
+    renderHand();
+
+    // pace the reveals a bit so the player can follow along
+    setTimeout(revealNext, 900);
+  }
+
+  function finishRound(){
+    // If this was the final round, any still-unclaimed (tied) mines are lost forever.
+    if (state.round >= state.maxRounds){
+      unclaimedMines().forEach(function(m){
+        if (m.claimedBy===null){ m.claimedBy = 'gone'; }
+      });
+    }
+    state.phase = 'round-end';
+    renderMines();
+    var remaining = unclaimedMines().length;
+    if (state.round >= state.maxRounds || remaining === 0){
+      setStatus('全ラウンド終了。「結果を見る」を押してください。');
+    } else {
+      setStatus('ラウンド ' + state.round + ' 終了。「次のラウンドへ」を押してください。');
+    }
+    renderButtons();
+  }
+
+  function startNextRound(){
+    state.round++;
+    state.p1Hand = [0,1,2,3,4];
+    state.p2Hand = [0,1,2,3,4];
+    state.p1Assign = {};
+    state.p2Assign = {};
+    state.mines.forEach(function(m){ m.roundResult = null; });
+    state.phase = 'p1-assign';
+    log('系', 'ラウンド ' + state.round + ' 開始。手札がリセットされました。', 'tie');
+    renderAll();
+  }
+
+  function showResult(){
+    showScreen('screen-result');
+    var big = $('result-big');
+    var p1 = state.p1Score, p2 = state.p2Score;
+    if (p1 === p2){
+      big.textContent = '引き分け！';
+      big.className = 'big draw';
+    } else if (p1 > p2){
+      big.textContent = state.mode==='pvp' ? 'プレイヤー1の勝ち！' : 'あなたの勝ち！ 🎉';
+      big.className = 'big win';
+    } else {
+      big.textContent = (state.mode==='pvp' ? 'プレイヤー2の勝ち！' : 'CPUの勝ち…') ;
+      big.className = 'big lose';
+    }
+    $('result-score').textContent = 'あなた 💎' + p1 + '　対　' + (state.mode==='pvp'?'プレイヤー2':'CPU') + ' 💎' + p2;
+  }
+
+})();
+</script>
+</body>
+</html>
