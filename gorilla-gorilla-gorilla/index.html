@@ -1,4 +1,4 @@
-<title>ゴリラ・ドンジャラ</title>
+<title>若い類人猿のための第三のゴリラ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Antique&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
@@ -24,7 +24,8 @@
   .topbar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
     border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:14px}
   .brand{display:flex; align-items:center; gap:11px; min-width:0}
-  .brand h1{font-family:var(--disp); font-size:24px; margin:0; letter-spacing:.06em; line-height:1.1; color:var(--bone)}
+  .brand h1{font-family:var(--disp); font-size:24px; margin:0; letter-spacing:.06em; line-height:1.15; color:var(--bone)}
+  .brand .eyebrow{margin:0 0 1px; font-family:var(--disp); font-size:11.5px; letter-spacing:.16em; color:var(--muted); line-height:1.2}
   .brand p{margin:2px 0 0; font-size:11.5px; color:var(--muted); letter-spacing:.14em}
   .brandmark{width:38px;height:38px;flex:none;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center}
   .meta{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
@@ -147,7 +148,8 @@
   .sheetfoot{display:flex; gap:9px; margin-top:20px; flex-wrap:wrap}
 
   @media (max-width:520px){
-    .brand h1{font-size:20px}
+    .brand h1{font-size:19px}
+    .brand .eyebrow{font-size:10.5px}
     .card{width:58px;height:84px}
     .card .num{font-size:25px;padding:6px 0 0 6px}
     .card .stage{font-size:8px;padding:0 5px}
@@ -173,7 +175,11 @@
   <header class="topbar">
     <div class="brand">
       <span class="brandmark"><svg width="25" height="25" fill="#E9E2D2"><use href="#ape"/></svg></span>
-      <div><h1>ゴリラ・ドンジャラ</h1><p>2人用 CPU対戦</p></div>
+      <div>
+        <p class="eyebrow">若い類人猿のための</p>
+        <h1>第三のゴリラ</h1>
+        <p>2人用 CPU対戦 ／ ドンジャラ式</p>
+      </div>
     </div>
     <div class="meta">
       <span class="chip">第 <b id="handNum">1</b> 局</span>
@@ -875,8 +881,8 @@ function showRules(){
     ladder += '<div' + (n===APE_RANK ? ' class="ape"' : '') + '><b>' + n + '</b>' + STAGE[n] + '</div>';
   }
   $("sheet").innerHTML =
-    '<h2>ゴリラ・ドンジャラ</h2>' +
-    '<p class="sub">進歩の段をなぞって3組を揃える、2人用の集め役ゲーム。</p>' +
+    '<h2>若い類人猿のための第三のゴリラ</h2>' +
+    '<p class="sub">進歩の段をなぞって3組を揃える、2人用の集め役ゲーム。ジャレド・ダイアモンド『若い読者のための第三のチンパンジー』に由来する。</p>' +
 
     '<h3>札</h3>' +
     '<p>4つの大陸 × 9つの段階＝36枚。加えて<strong>レインボーゴリラ2枚</strong>で計38枚。</p>' +
