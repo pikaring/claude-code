@@ -1,0 +1,17 @@
+{
+  "name": "銃・病原菌・ダイヤモンド",
+  "short_name": "銃病ダイヤ",
+  "description": "病原菌・偵察兵・兵士の三すくみで、5つの鉱山からダイヤモンドを奪い合う読み合いカードゲーム",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b6b34",
+  "theme_color": "#0b6b34",
+  "icons": [
+    { "src": "images/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

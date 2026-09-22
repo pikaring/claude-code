@@ -1,14 +1,30 @@
 # 銃・病原菌・ダイヤモンド（guns-germs-and-diamond）
 
-以前サークル「鷹巣堂」で制作・頒布していたアナログカードゲーム
-**「銃・病原菌・ダイヤモンド」**（ゲームマーケット2020春 出展）を、
-ブラウザだけで遊べるHTML/JavaScriptゲームとして復刻したものです。
+サークル「鷹巣堂」のアナログカードゲーム **「銃・病原菌・ダイヤモンド」**
+（ゲームマーケット2020春 出展）を、ブラウザだけで遊べるHTML/JavaScriptゲームとして
+ファンメイドで復刻したものです。
 
-- 紹介ページ: [`index.html`](./index.html)（原作の紹介・ルール概要・あそぶボタン）
-- ゲーム本体: [`app/index.html`](./app/index.html)（CPU対戦。開くとすぐ始まります）
+**紹介ページ → https://pikaring.github.io/guns-germs-and-diamond/**
+**あそぶ → https://pikaring.github.io/guns-germs-and-diamond/app/**
 
-どちらもビルド不要・外部ライブラリ不要で、ブラウザで直接開くだけで動作します。
-`cat-on-escape` などと同じく、紹介ページ（`/`）とゲーム本体（`/app/`）を分ける構成です。
+バックエンドなし（HTML / CSS / Vanilla JavaScript のみ）。保存も通信もしません。
+`cat-on-escape` などと同じく、紹介ページ（`/`）とゲーム本体（`/app/`）に分かれています。
+
+## ファイル
+
+| ファイル | 役割 |
+| --- | --- |
+| `index.html` | 紹介ページ。ほかのツールと同じデザイン（`assets/site.css`） |
+| `assets/site.css` | 紹介ページの見た目。アクセント色は鉱山の真鍮色 `#b07d2b` |
+| `assets/icon.png` / `assets/favicon.png` | 紹介ページ・OG画像用（`tools/make_icons.py` が生成） |
+| `app/index.html` | ゲーム本体（卓・カード・相手の思考ルーチンまで1ファイル） |
+| `app/images/card-*.png` | カードの絵5種（病原菌・偵察兵・コマンドー・騎兵隊・大隊） |
+| `app/images/icon-*.png` / `app/manifest.json` | ホーム画面に追加したときの設定（PWA） |
+| `tools/make_cards.py` | 画像生成AIのグリッド画像を、カードの絵に切り分ける |
+| `tools/make_icons.py` | 鉱山カードの絵柄からアイコン一式をつくる |
+| `tools/fetch_goods.py` | 紹介ページの本の画像と価格を Amazon Creators API で取り直す |
+| `.github/workflows/goods.yml` | 上を毎日3時（JST）に実行して `assets/goods.json` を更新する |
+| `docs/asset-prompts.md` | カードの絵を画像生成AIで作るときのプロンプト |
 
 ## 参考にした原作記事
 

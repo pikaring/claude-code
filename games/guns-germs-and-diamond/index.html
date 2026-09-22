@@ -3,221 +3,408 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>銃・病原菌・ダイヤモンド｜鉱山を奪い合う読み合いカードゲーム</title>
-<meta name="description" content="病原菌と偵察兵の三すくみを使い、5つの鉱山からダイヤモンドを奪い合うカードゲーム。鷹巣堂のアナログゲームをブラウザで復刻。CPU対戦・インストール不要・通信なし。">
-<meta name="theme-color" content="#182635">
-<style>
-  :root{
-    --bg-0:#0f1720;
-    --bg-1:#182635;
-    --panel:#1f3245;
-    --panel-2:#284057;
-    --accent:#5fd0ff;
-    --accent-2:#ffd166;
-    --diamond:#7fe8d8;
-    --text:#eaf2f7;
-    --muted:#93a7b8;
-    --radius:14px;
-  }
-  *{box-sizing:border-box;}
-  html,body{
-    margin:0;padding:0;
-    background:radial-gradient(1200px 800px at 50% -10%, var(--bg-1), var(--bg-0));
-    color:var(--text);
-    font-family:"Hiragino Sans","Yu Gothic","Segoe UI",system-ui,-apple-system,sans-serif;
-    line-height:1.7;
-  }
-  a{color:var(--accent);}
-  .wrap{max-width:720px;margin:0 auto;padding:0 16px;}
+<title>銃・病原菌・ダイヤモンド｜5つの鉱山を奪い合う、読み合いのカードゲーム</title>
+<meta name="description" content="インストール不要・通信なし・ブラウザだけで動く2人用の読み合いカードゲーム。病原菌・偵察兵・兵士の三すくみで、産出量の違う5つの鉱山からダイヤモンドを奪い合います。鷹巣堂のアナログゲームのファンメイド ブラウザ版。">
+<meta name="theme-color" content="#0b6b34">
 
-  header.site{padding:16px 0;}
-  .site-inner{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
-  .brand{font-weight:800;text-decoration:none;color:var(--text);font-size:1rem;}
-  .btn{
-    display:inline-block;
-    text-decoration:none;
-    border-radius:10px;
-    padding:12px 22px;
-    font-weight:700;
-    font-size:.95rem;
-  }
-  .btn-main{
-    background:linear-gradient(180deg,var(--accent),#3aa6d6);
-    color:#04202b;
-    box-shadow:0 3px 0 #1c7a9c;
-  }
-  .btn-sub{
-    background:var(--panel-2);
-    color:var(--text);
-  }
+<link rel="canonical" href="https://pikaring.github.io/guns-germs-and-diamond/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="銃・病原菌・ダイヤモンド｜5つの鉱山を奪い合う、読み合いのカードゲーム">
+<meta property="og:description" content="病原菌・偵察兵・兵士の三すくみで、5つの鉱山からダイヤモンドを奪い合う2人用カードゲーム。インストール不要・通信なし。">
+<meta property="og:url" content="https://pikaring.github.io/guns-germs-and-diamond/">
+<meta property="og:image" content="https://pikaring.github.io/guns-germs-and-diamond/assets/icon.png">
 
-  .hero{padding:28px 0 20px;text-align:center;}
-  .pill{
-    display:inline-block;background:var(--panel);color:var(--muted);
-    font-size:.72rem;padding:5px 12px;border-radius:999px;margin-bottom:14px;
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+  /* ホーム画面に くわえた アイコンから 開いた ときは、紹介ページを とばして
+     そのまま ゲームへ（すでに 入れて ある 方の 使い勝手を かえない ため） */
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    location.replace('app/');
   }
-  .hero h1{font-size:1.6rem;margin:0 0 10px;line-height:1.5;}
-  .hero p.lead{color:var(--muted);font-size:.92rem;max-width:520px;margin:0 auto 20px;}
-  .hero-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
-
-  section{padding:24px 0;border-top:1px solid #24384a;}
-  .eyebrow{color:var(--accent-2);font-size:.72rem;font-weight:700;letter-spacing:.06em;margin:0 0 4px;}
-  h2{font-size:1.15rem;margin:0 0 12px;}
-
-  .cardbox{
-    background:var(--panel);border-radius:var(--radius);padding:16px 18px;
-    font-size:.88rem;
-  }
-  .cardbox table{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:4px;}
-  .cardbox td,.cardbox th{padding:5px 6px;border-bottom:1px solid #33506a;text-align:left;}
-  .cardbox + .cardbox{margin-top:10px;}
-
-  .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
-  .steps li{
-    background:var(--panel);border-radius:10px;padding:10px 14px;
-    font-size:.88rem;display:flex;gap:10px;align-items:baseline;
-  }
-  .steps em{
-    font-style:normal;color:var(--accent-2);font-weight:800;min-width:1.4em;
-  }
-
-  .credit{
-    background:var(--panel);border-radius:var(--radius);padding:16px 18px;
-    font-size:.82rem;color:var(--muted);
-  }
-  .credit b{color:var(--text);}
-  .credit ul{margin:8px 0 0;padding-left:1.2em;}
-  .credit li{margin:2px 0;}
-
-  footer.site{
-    padding:20px 0 32px;text-align:center;color:var(--muted);font-size:.72rem;
-  }
-  footer.site a{color:var(--accent);margin:0 6px;}
-</style>
+</script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3FCFQY4W85"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-3FCFQY4W85');
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["WebApplication", "GameApplication"],
+  "name": "銃・病原菌・ダイヤモンド",
+  "url": "https://pikaring.github.io/guns-germs-and-diamond/",
+  "description": "インストール不要・通信なし・ブラウザだけで動く2人用の読み合いカードゲーム。病原菌・偵察兵・兵士の三すくみで、産出量の違う5つの鉱山からダイヤモンドを奪い合います。",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "すべて（ウェブブラウザ）",
+  "inLanguage": "ja",
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "JPY"
+  },
+  "license": "https://opensource.org/licenses/MIT",
+  "author": {
+    "@type": "Person",
+    "name": "pikaring",
+    "url": "https://pikaring.github.io/"
+  },
+  "browserRequirements": "JavaScript が 動く ブラウザ"
+}
+</script>
 </head>
 <body>
 
-<header class="site">
-  <div class="wrap site-inner">
+<header class="header">
+  <div class="wrap header-inner">
     <a class="brand" href="./">銃・病原菌・ダイヤモンド</a>
-    <a class="btn btn-main" href="app/">あそぶ</a>
+    <nav class="nav">
+      <a href="#goods">関連の本</a>
+      <a href="#about">どんなゲーム</a>
+      <a href="#howto">あそびかた</a>
+      <a href="#rivals">対戦相手</a>
+      <a href="#make">つくり</a>
+      <a href="#faq">よくある質問</a>
+      <a href="#family">ほかのツール</a>
+      <a class="btn btn-main" href="app/">あそぶ</a>
+    </nav>
   </div>
 </header>
 
-<section class="hero" style="border-top:none;padding-top:8px;">
-  <div class="wrap">
-    <span class="pill">無料・インストール不要・通信なし・CPU対戦</span>
-    <h1>銃を持った兵士たちが、<br>病原菌をかいくぐり<br>ダイヤモンドを奪い合う。</h1>
-    <p class="lead">
-      5つの鉱山をめぐって繰り広げられる、読み合いのカードゲーム。
-      同じ手札を持つCPUと、裏向きに置いたカードで駆け引きします。
-    </p>
-    <div class="hero-actions">
-      <a class="btn btn-main" href="app/">いますぐ あそぶ</a>
-      <a class="btn btn-sub" href="https://github.com/pikaring/claude-code/tree/main/games/guns-germs-and-diamond">GitHubで見る</a>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pill"><b>無料</b> · インストール不要 · 通信なし · MIT License</span>
+      <h1>伏せた1枚で、<br>鉱山ごと奪う。</h1>
+      <p class="lead">産出量の違う5つの鉱山に、同じ5枚の手札から1枚ずつ伏せて置く。
+        大隊は兵士に勝ち、病原菌はほとんどの札と引き分け、その病原菌に偵察兵だけが勝つ。
+        引き分けた鉱山は次のラウンドへ積み増され、終盤ほど1枚の重みが増していきます。</p>
+      <div class="hero-actions">
+        <a class="btn btn-main" href="app/">いますぐ あそぶ</a>
+        <a class="btn btn-sub" href="https://github.com/pikaring/guns-germs-and-diamond">GitHubで見る</a>
+      </div>
+      <p class="hero-note">ホーム画面に追加すると、アプリのように全画面で開けます。</p>
+    </div>
+
+    <div class="phone" aria-hidden="true">
+      <div class="screen screen-table">
+        <div class="thud">
+          <span>▲ ディアブロ<span class="pts">◆5</span></span>
+          <span class="rnd">ラウンド 1 / 3</span>
+          <span>あなた <span class="pts">◆9</span> △</span>
+        </div>
+        <div class="tboard">
+          <div class="trow">
+            <span class="tcard c3 lose"></span><span class="tcard c2 lose"></span>
+            <span class="tcard g"></span><span class="tcard back"></span><span class="tcard c4 win"></span>
+          </div>
+          <div class="tverdict">
+            <span class="w">WIN</span><span class="w">WIN</span><span class="d">DRAW</span><span></span><span class="l">LOSE</span>
+          </div>
+          <div class="trow">
+            <span class="tmine win"><i>◆</i></span><span class="tmine win"><i>◆◆</i></span>
+            <span class="tmine draw"><i>◆◆◆</i></span><span class="tmine"><i>◆◆◆◆</i></span>
+            <span class="tmine lose"><i>◆◆◆◆◆</i></span>
+          </div>
+          <div class="trow">
+            <span class="tcard c4 win"></span><span class="tcard c3 win"></span>
+            <span class="tcard g"></span><span class="tcard s"></span><span class="tcard c2 lose"></span>
+          </div>
+        </div>
+        <div class="tfoot"><b>これで決める</b></div>
+      </div>
     </div>
   </div>
 </section>
 
-<section id="about">
+<div class="specs">
+  <div class="wrap specs-grid">
+    <div class="spec"><b>インストール不要</b><span>ブラウザで開くだけ</span></div>
+    <div class="spec"><b>通信なし</b><span>読みこんだ あとは オフラインでも</span></div>
+    <div class="spec"><b>1回 5分</b><span>全3ラウンドで決着</span></div>
+    <div class="spec"><b>相手は5人</b><span>打ち筋の違うCPUを選べる</span></div>
+  </div>
+</div>
+
+<section class="goods" id="goods">
   <div class="wrap">
-    <p class="eyebrow">どんなゲーム</p>
-    <h2>0〜4のカードで、三すくみの読み合い。</h2>
-    <div class="cardbox">
-      <p style="margin-top:0;">お互い同じ手札 <b>0〜4</b> を1枚ずつ持ちます。緑の卓に、相手の札は奥、自分の札は手前に並びます。</p>
-      <table>
-        <tr><th>カード</th><th>強さ</th></tr>
-        <tr><td>0　病原菌 <small>Germs</small></td><td>1（偵察兵）以外の全カードと引き分け。1には負ける。</td></tr>
-        <tr><td>1　偵察兵 <small>Scout</small></td><td>病原菌には勝つが、兵士（2〜4）には負ける。</td></tr>
-        <tr><td>2　コマンドー <small>Commandos</small></td><td rowspan="3">数字が大きい方が勝ち。同数は引き分け。</td></tr>
-        <tr><td>3　騎兵隊 <small>Cavalry</small></td></tr>
-        <tr><td>4　大隊 <small>Battalion</small></td></tr>
-      </table>
+    <div class="sec-head">
+      <p class="eyebrow">BOARD GAME SHELF</p>
+      <h2>このゲームの、うしろにある本。</h2>
+      <p>タイトルの元ネタと、作ろうと思ったきっかけと、作るときに読んだ本です。</p>
+    </div>
+    <div class="goods-grid">
+
+      <div class="good" data-asin="4794218788">
+        <p class="gcat">元ネタ</p>
+        <h3>銃・病原菌・鉄（上）</h3>
+        <p>ジャレド・ダイアモンド／草思社文庫。なぜ大陸ごとに歴史の進み方が違ったのかを、
+          銃・病原菌・鉄という3つの言葉で解く一冊。原作のタイトルは、この本をもじったものです。</p>
+        <a class="glink" href="https://www.amazon.co.jp/dp/4794218788?tag=redcomet-22" target="_blank" rel="sponsored noopener">Amazonで見る ↗</a>
+      </div>
+
+      <div class="good" data-asin="4091244076">
+        <p class="gcat">マンガ</p>
+        <h3>放課後さいころ倶楽部（1）</h3>
+        <p>中道裕大／ゲッサン少年サンデーコミックス。京都の女子高生がボードゲームに出会っていく話。
+          原作者がこの作品を読んで「自分もゲームを作りたい」と思ったのが、そもそもの始まりでした。</p>
+        <a class="glink" href="https://www.amazon.co.jp/dp/4091244076?tag=redcomet-22" target="_blank" rel="sponsored noopener">Amazonで見る ↗</a>
+      </div>
+
+      <div class="good" data-asin="4905158656">
+        <p class="gcat">ゲーム集</p>
+        <h3>ライナー・クニツィアのダイス・トランプゲーム集</h3>
+        <p>ライナー・クニツィア／スモール出版。トランプとサイコロだけで遊べるゲームを集めた本。
+          少ない道具で読み合いを作る設計のお手本が、たくさん詰まっています。</p>
+        <a class="glink" href="https://www.amazon.co.jp/dp/4905158656?tag=redcomet-22" target="_blank" rel="sponsored noopener">Amazonで見る ↗</a>
+      </div>
+
+      <div class="good" data-asin="4883753824">
+        <p class="gcat">デザイン論</p>
+        <h3>コボルドのボードゲームデザイン</h3>
+        <p>マイク・セリンカー 編／新紀元社。発想・デザイン・開発・売り込みの4段階を、
+          現役のデザイナーたちが書いたエッセイ集。ルールを削る話が、とくに効きます。</p>
+        <a class="glink" href="https://www.amazon.co.jp/dp/4883753824?tag=redcomet-22" target="_blank" rel="sponsored noopener">Amazonで見る ↗</a>
+      </div>
+
+    </div>
+    <p class="goods-note">リンクは Amazonアソシエイトです。価格と 画像は 毎日 とりなおしています。</p>
+  </div>
+</section>
+
+<section id="about" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">どんなゲーム</p>
+      <h2>三すくみの5枚を、5つの鉱山へ。</h2>
+      <p>手札は毎ラウンド 0〜4 の5枚に戻ります。強い札をどの鉱山に置くか、
+        それだけを決める10分のゲームです。</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>大隊 &gt; 偵察兵 &gt; 病原菌 &gt; …</h3>
+        <p>数字が大きい方が勝つ、ふつうの強弱。ただし <b>病原菌（0）</b> は兵士の誰とも引き分け、
+          その病原菌に <b>偵察兵（1）</b> だけが勝ちます。</p>
+        <ul>
+          <li>0 病原菌 Germs：1以外の全カードと引き分け</li>
+          <li>1 偵察兵 Scout：病原菌に勝ち、兵士に負ける</li>
+          <li>2 コマンドー／3 騎兵隊／4 大隊：大きい方が勝ち</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>鉱山は毎ラウンド 復活する</h3>
+        <p>取られた鉱山には、次のラウンドに同じ産出量の鉱山カードが1枚 配り直されます。
+          💎5の鉱山を取っても、そこは次もまた💎5です。</p>
+        <ul>
+          <li>5つの鉱山は左から 💎1・2・3・4・5</li>
+          <li>盤から鉱山が消えることはない</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>引き分けは 積み増される</h3>
+        <p>引き分けた鉱山はカードが積み重なり、次のラウンドにもう1枚 配られます。
+          💎4の鉱山が引き分けなら、次は💎4が2枚で <b>8点</b>。</p>
+        <ul>
+          <li>病原菌で止めた山が、そのまま自分の狙い目にもなる</li>
+          <li>3ラウンド目まで引き分けた山は、誰の手にも渡らない</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">04</span>
+        <h3>同じ手札、同じ盤面</h3>
+        <p>お互いの手札はまったく同じ。運の差はなく、<b>相手がどの山に何を置くか</b> の読み合いだけが残ります。</p>
+        <ul>
+          <li>自分の札は表向き、相手の札だけ伏せて進む</li>
+          <li>決めた瞬間に左から順にオープン</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
 
 <section id="howto">
   <div class="wrap">
-    <p class="eyebrow">あそびかた</p>
-    <h2>鉱山にカードを置いて、いっせいにオープン。</h2>
-    <ul class="steps">
-      <li><em>1</em><span>場には産出量の違う5つの鉱山が、左から💎1・2・3・4・5の順に並んでいます。</span></li>
-      <li><em>2</em><span>各ラウンドの開始時、両者は手札を0〜4にリセットします。</span></li>
-      <li><em>3</em><span>5つの鉱山すべてに、両者が裏向きでカードを1枚ずつ配置します。</span></li>
-      <li><em>4</em><span>「これで決める」を押すと鉱山を左から順にオープン。強いカードを出した方がダイヤモンドを獲得し、鉱山の下に WIN / LOSE / DRAW が出ます。</span></li>
-      <li><em>5</em><span><b>鉱山は毎ラウンド復活。</b>取られた鉱山には、次のラウンドに同じ産出量の鉱山カードが1枚 配り直されます（💎5を取っても、次のラウンドもそこは💎5が1枚）。</span></li>
-      <li><em>6</em><span><b>引き分けた鉱山はカードが積み重なります。</b>💎4の鉱山が引き分けなら、次のラウンドは💎4が2枚＝合計8点に。</span></li>
-      <li><em>7</em><span>全3ラウンド終了時、獲得ダイヤモンドの合計が多い方の勝ちです。</span></li>
-    </ul>
+    <div class="sec-head">
+      <p class="eyebrow">あそびかた</p>
+      <h2>手札をクリックするだけ。</h2>
+    </div>
+    <div class="steps-box" style="background:#fff;border:1px solid var(--line)">
+      <div class="flow-step"><em>1</em><span>手札のカードをクリックすると、左の鉱山から順に置かれる</span></div>
+      <div class="flow-step"><em>2</em><span>置きなおしたいときは、その鉱山をクリックすると手札に戻る</span></div>
+      <div class="flow-step"><em>3</em><span>5つ置いたら「これで決める」。そのまま左から順にオープン</span></div>
+      <div class="flow-step"><em>4</em><span>強い札を出した方がダイヤモンドを獲得。鉱山の上に WIN / LOSE / DRAW が出る</span></div>
+      <div class="flow-step"><em>5</em><span>引き分けた鉱山は積み増されて次のラウンドへ。全3ラウンドで決着</span></div>
+    </div>
+    <p class="note">パソコンではクリック、スマホ・タブレットではタップで遊べます。</p>
   </div>
 </section>
 
-<section id="opponents">
+<section id="rivals" class="alt">
   <div class="wrap">
-    <p class="eyebrow">対戦相手</p>
-    <h2>All in TEXAS と同じ5人が相手。</h2>
-    <div class="cardbox">
-      <p style="margin-top:0;">
-        同じ作者のテキサスホールデム
-        <a href="https://pikaring.github.io/all-in-texas/" target="_blank" rel="noopener">All in TEXAS</a>
-        と共通の5人が、それぞれの打ち筋で鉱山を取りに来ます。
-      </p>
-      <table>
-        <tr><th>相手</th><th>打ち筋</th></tr>
-        <tr><td>ビエホ<br><small>堅実</small></td><td>山の価値どおりに強い札から置く。読みやすいが隙は少ない。</td></tr>
-        <tr><td>ディアブロ<br><small>攻撃</small></td><td>一番大きい山を強い札でもぎ取りに来る。病原菌の仕掛けも多い。</td></tr>
-        <tr><td>ゴルド<br><small>ゆるい</small></td><td>置き場がばらける。安い山に大隊が来ることもある。</td></tr>
-        <tr><td>ヴィニー<br><small>標準</small></td><td>教科書どおり。おいしい山を病原菌で止め、偵察兵を合わせてくる。</td></tr>
-        <tr><td>ロコ<br><small>気まぐれ</small></td><td>同じ場面でも置き方が変わる。読み切れない。</td></tr>
-      </table>
-      <p>
-        むずかしさは3段階。<b>やさしい</b>では鉱山ごとに「相手が何を置いてきそうか」の予想と
-        その理由が表示されます。<b>むずかしい</b>では相手があなたの前ラウンドの置き方まで読んできます。
-      </p>
+    <div class="sec-head">
+      <p class="eyebrow">対戦相手</p>
+      <h2>All in TEXAS と同じ5人が、卓の向こうに座る。</h2>
+      <p>同じ作者のテキサスホールデム <a href="https://pikaring.github.io/all-in-texas/">All in TEXAS</a>
+        と共通の5人です。「堅さ・攻め・仕掛け」の3つの値をこのゲーム用に読み替えているので、
+        同じ盤面でも相手によって置き方が変わります。</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <span class="num">堅実</span>
+        <h3>ビエホ</h3>
+        <p>山の価値どおりに、強い札から順に置いてくる。仕掛けはほとんどしないぶん、取りこぼしも少ない。</p>
+      </div>
+      <div class="card">
+        <span class="num">攻撃</span>
+        <h3>ディアブロ</h3>
+        <p>一番大きい山を大隊でもぎ取りに来る。病原菌で止める仕掛けも多く、大きい山ほど荒れる。</p>
+      </div>
+      <div class="card">
+        <span class="num">ゆるい</span>
+        <h3>ゴルド</h3>
+        <p>置き場がばらける。安い山に大隊が来ることもあり、噛み合うと思わぬ失点になる。</p>
+      </div>
+      <div class="card">
+        <span class="num">標準</span>
+        <h3>ヴィニー</h3>
+        <p>教科書どおり。おいしい山を病原菌で止め、そこへ偵察兵を合わせてくる。</p>
+      </div>
+      <div class="card">
+        <span class="num">気まぐれ</span>
+        <h3>ロコ</h3>
+        <p>同じ場面でも置き方が変わる。読み切れないぶん、こちらの仕掛けも通りやすい。</p>
+      </div>
+      <div class="card">
+        <span class="num">むずかしさ</span>
+        <h3>やさしい／ふつう／むずかしい</h3>
+        <p><b>やさしい</b> は鉱山ごとに「相手が何を置いてきそうか」の予想と理由が出ます。
+          <b>むずかしい</b> は相手があなたの前ラウンドの置き方まで読んできます。</p>
+      </div>
     </div>
   </div>
 </section>
 
-<section id="credit">
-  <div class="wrap">
-    <p class="eyebrow">原作について</p>
-    <h2>いそのたかみ（鷹巣堂）「銃・病原菌・ダイヤモンド」</h2>
-    <div class="credit">
-      <p style="margin-top:0;">
-        <b>原作:</b> いそのたかみ（鷹巣堂）「銃・病原菌・ダイヤモンド」（ゲームマーケット2020春 出展）<br>
-        本ページは、原作のブログ記事の情報をもとにファンメイドで再構成したブラウザ版です。
-        鉱山のダイヤモンド数など、記事に明記のない部分は遊べる形に再構成しているため、
-        原作の正確な仕様とは異なる可能性があります。
-      </p>
-      <p><b>参考にした記事:</b></p>
-      <ul>
-        <li><a href="https://isonotakami.hatenadiary.jp/archive/category/%E9%8A%83%E3%83%BB%E7%97%85%E5%8E%9F%E8%8F%8C%E3%83%BB%E3%83%80%E3%82%A4%E3%83%A4%E3%83%A2%E3%83%B3%E3%83%89" target="_blank" rel="noopener">銃・病原菌・ダイヤモンド カテゴリー一覧（鷹巣堂ブログ）</a></li>
-        <li><a href="https://isonotakami.hatenadiary.jp/entry/2020/02/08/190000" target="_blank" rel="noopener">〜ルール説明編〜</a></li>
-        <li><a href="https://isonotakami.hatenadiary.jp/entry/2020/02/09/190000" target="_blank" rel="noopener">〜リプレイ編〜</a></li>
-        <li><a href="https://isonotakami.hatenadiary.jp/entry/2020/02/15/190000" target="_blank" rel="noopener">製作記〜その１〜</a></li>
-        <li><a href="https://isonotakami.hatenadiary.jp/entry/2020/02/16/190000" target="_blank" rel="noopener">製作記〜その２〜</a></li>
-      </ul>
+<section id="make" class="night">
+  <div class="wrap night-grid">
+    <div>
+      <p class="eyebrow">つくり</p>
+      <h2>HTML / CSS / JavaScript だけ。</h2>
+      <p>フレームワークもビルドも使っていません。<code>app/index.html</code> を開けばそのまま動きます。
+        カードの絵は1か所にまとめてあり、読みこめたときだけ使われます。</p>
+    </div>
+    <div class="night-list">
+      <div class="night-item"><b>絵の 差しかえ口</b><span><code>app/index.html</code> の <code>CARD_TYPES</code> に画像のパスを書くだけ。読みこめないときは数字だけで遊べます。</span></div>
+      <div class="night-item"><b>相手の 思考</b><span><code>planAssignment()</code> ひとつ。やさしいモードの予想は、同じ関数を乱数なしで走らせた結果です。</span></div>
+      <div class="night-item"><b>保存</b><span>何も保存しません。サーバーにも何も送りません。</span></div>
+      <div class="night-item"><b>カードの絵</b><span>画像生成AIに1枚のグリッドで描かせ、<code>tools/make_cards.py</code> で切り分け・背景透過・512px化しています。</span></div>
     </div>
   </div>
 </section>
 
-<section class="cta" style="text-align:center;">
+<section id="faq" class="faq">
   <div class="wrap">
-    <h2>さっそく5つの鉱山へ。</h2>
+    <div class="sec-head">
+      <p class="eyebrow">よくある質問</p>
+      <h2>気になるところ</h2>
+    </div>
+    <details open><summary>お金は かかりますか？</summary><p>かかりません。無料で、広告も課金もありません。</p></details>
+    <details><summary>インストールは 必要ですか？</summary><p>不要です。ブラウザで開くだけ。ホーム画面に追加すると、アプリのように全画面で開けます。</p></details>
+    <details><summary>データは どこかに 送られますか？</summary><p>送られません。得点も設定も、その場かぎりで保存すらしていません。</p></details>
+    <details><summary>病原菌は 強いのですか？</summary><p>勝てませんが、ほとんど負けません。偵察兵にだけ負け、兵士とはすべて引き分けます。相手に取らせたくない鉱山へ置いて、積み増して仕切り直すための札です。</p></details>
+    <details><summary>引き分けた鉱山は どうなりますか？</summary><p>カードが積み重なり、次のラウンドにもう1枚配られます。💎4の鉱山が引き分けなら、次のラウンドは💎4が2枚で8点になります。3ラウンド目まで決着しなければ、どちらの手にも渡りません。</p></details>
+    <details><summary>2人で 対戦できますか？</summary><p>いまはCPU対戦のみです。相手は5人から選べ、むずかしさも3段階あります。</p></details>
+    <details><summary>原作は どこで 買えますか？</summary><p>アナログ版は、いそのたかみ氏（鷹巣堂）がゲームマーケット2020春で発表したカードゲームです。くわしくは<a href="https://isonotakami.hatenadiary.jp/archive/category/%E9%8A%83%E3%83%BB%E7%97%85%E5%8E%9F%E8%8F%8C%E3%83%BB%E3%83%80%E3%82%A4%E3%83%A4%E3%83%A2%E3%83%B3%E3%83%89" target="_blank" rel="noopener">鷹巣堂のブログ</a>をご覧ください。</p></details>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>5つの鉱山が、もう並んでいます。</h2>
     <div class="hero-actions">
       <a class="btn btn-main" href="app/">いますぐ あそぶ</a>
+      <a class="btn btn-sub" href="https://github.com/pikaring/guns-germs-and-diamond">GitHubで見る</a>
     </div>
   </div>
 </section>
 
-<footer class="site">
+<section class="family" id="family">
   <div class="wrap">
-    <a href="app/">あそぶ</a>
-    <a href="https://github.com/pikaring/claude-code/tree/main/games/guns-germs-and-diamond">GitHub</a>
-    <a href="https://github.com/pikaring/claude-code/blob/main/games/guns-germs-and-diamond/README.md">README</a>
+    <div class="sec-head">
+      <p class="eyebrow">MORE TOOLS</p>
+      <h2>同じ作者の、ほかのツール。</h2>
+      <p>ブラウザだけで動く道具とゲームを、ひとつのページにまとめています。</p>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-main" href="https://pikaring.github.io/">つくったもの一覧を見る</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span>銃・病原菌・ダイヤモンド</span>
+    <a href="https://github.com/pikaring/guns-germs-and-diamond">GitHub</a>
+    <a href="https://github.com/pikaring/guns-germs-and-diamond/blob/main/README.md">README</a>
+    <span class="counter">累計アクセス <b id="counter-value">―</b> 回</span>
+    <span class="sep">MIT License · pikaring · 依存ライブラリなし</span>
+    <span class="disclosure">原作：いそのたかみ（鷹巣堂）「銃・病原菌・ダイヤモンド」（ゲームマーケット2020春）。本ページはブログ記事の情報をもとにファンメイドで再構成したブラウザ版です。</span>
+    <span class="disclosure">当サイトはAmazonアソシエイト・プログラムに参加しており、掲載しているリンクから商品が買われると運営者に紹介料が入る場合があります。</span>
   </div>
 </footer>
+
+<script>
+// アクセスカウンター（ほかのページと同じGAS。page名でサイトごとに別カウント）
+(function () {
+  var el = document.getElementById('counter-value');
+  if (!el) return;
+  var page = location.pathname.replace(/index\.html$/, '');
+  fetch('https://script.google.com/macros/s/AKfycbxkQLZXNAFXkT7zhIO0TmMDGU3A0TQ234Lf-yhw5J7lvFAjCi3KLNLRd_LKd_xlOxPd/exec?page=' + encodeURIComponent(page))
+    .then(function (r) { return r.json(); })
+    .then(function (d) { el.textContent = Number(d.count).toLocaleString('ja-JP'); })
+    .catch(function () { el.textContent = '―'; });
+})();
+</script>
+
+<script>
+// Amazon Creators API で取った商品情報（tools/fetch_goods.py が assets/goods.json に書く）。
+// 取れていれば画像と価格を足し、無ければテキストカードのまま。
+(function () {
+  var cards = document.querySelectorAll('.good[data-asin]');
+  if (!cards.length) return;
+  fetch('assets/goods.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).then(function (d) {
+    var at = new Date(d.fetchedAt);
+    var stamp = isNaN(at) ? '' : (at.getMonth() + 1) + '/' + at.getDate() + '時点';
+    cards.forEach(function (c) {
+      var it = d.items && d.items[c.dataset.asin];
+      if (!it) return;
+      if (it.image) {
+        var img = document.createElement('img');
+        img.className = 'gimg'; img.src = it.image; img.alt = ''; img.loading = 'lazy';
+        c.insertBefore(img, c.firstChild);
+      }
+      if (it.price) {
+        var p = document.createElement('p');
+        p.className = 'gprice';
+        p.innerHTML = it.price + (stamp ? ' <small>' + stamp + '</small>' : '');
+        var link = c.querySelector('.glink');
+        c.insertBefore(p, link);
+      }
+      if (it.url) { var a = c.querySelector('.glink'); if (a) a.href = it.url; }
+    });
+  }).catch(function () { /* 取れなければ何もしない */ });
+})();
+</script>
 
 </body>
 </html>
