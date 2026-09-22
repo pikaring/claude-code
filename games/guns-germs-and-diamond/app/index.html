@@ -95,7 +95,12 @@
     font-weight:800;letter-spacing:.2em;font-size:.84rem;
     padding:2px 1px;color:#eafff2;text-shadow:0 1px 0 rgba(0,0,0,.4);
   }
-  .rail .pts{letter-spacing:.06em;font-size:1.05rem;color:var(--gold);font-variant-numeric:tabular-nums;}
+  /* 名前は縦書きのまま、得点だけは数字がまっすぐ読めるようにする */
+  .rail .pts{
+    writing-mode:horizontal-tb;
+    letter-spacing:0;font-size:1.05rem;color:var(--gold);
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
   .rail.turn{color:var(--gold);}
 
   .board{display:flex;flex-direction:column;gap:5px;min-width:0;}
@@ -190,7 +195,6 @@
     text-align:center;font-size:.76rem;font-weight:800;color:var(--gold);
     font-variant-numeric:tabular-nums;margin-top:3px;min-height:1.1em;line-height:1.25;
   }
-  .mine-total .x{display:block;font-size:.58rem;font-weight:600;color:#ffeab0;}
   .minewrap.won-you .minecard{border-color:var(--ok);box-shadow:0 0 0 3px var(--ok), 0 3px 8px rgba(0,0,0,.5);}
   .minewrap.won-cpu .minecard{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger), 0 3px 8px rgba(0,0,0,.5);}
   .minewrap.tied .minecard{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold), 0 3px 8px rgba(0,0,0,.5);}
@@ -200,7 +204,7 @@
   /* ---- 5) 鉱山の下の Win / Lose / Draw ---- */
   .verdict{
     text-align:center;font-size:.66rem;font-weight:800;letter-spacing:.1em;
-    min-height:1.2em;margin-top:1px;
+    min-height:1.2em;margin-bottom:2px;line-height:1.25;
   }
   .verdict.win{color:var(--ok);}
   .verdict.lose{color:var(--danger);}
@@ -214,7 +218,7 @@
     min-height:2.7em;display:flex;align-items:center;justify-content:center;
     flex-direction:column;overflow:hidden;
   }
-  .predict b{color:#5a3a00;}
+  .predict b{display:block;color:#5a3a00;font-size:1.05em;}
 
   /* ---- hand ---- */
   .hand-area{margin-top:10px;}
@@ -673,6 +677,14 @@
       '<div class="pips">' + pips + '</div>' +
       '<span class="mpip br">💎' + m.base + '</span>';
 
+    var verdict = document.createElement('div');
+    verdict.className = 'verdict' +
+      (m.result === 'you' ? ' win' : m.result === 'cpu' ? ' lose' :
+       m.result === 'tie' ? ' draw' : m.result === 'gone' ? ' gone' : '');
+    verdict.textContent = m.result === 'you' ? 'WIN' : m.result === 'cpu' ? 'LOSE' :
+      m.result === 'tie' ? 'DRAW' : m.result === 'gone' ? 'DRAW' : '';
+    wrap.appendChild(verdict);
+
     var stack = document.createElement('div');
     stack.className = 'minestack';
     // 引き分けで積み増された枚数ぶん、少しずらして重ねる。
@@ -693,18 +705,9 @@
 
     var total = document.createElement('div');
     total.className = 'mine-total';
-    // 積み増しは「合計」と「内訳」を分けて書く（💎10 ×2 は 20 と読めてしまうため）
-    total.innerHTML = (count > 1 ? '計💎' + m.pot : '💎' + m.pot) +
-      (count > 1 ? '<span class="x">💎' + m.base + 'の鉱山が' + count + '枚</span>' : '');
+    // 積み増しは盤面の重なりで分かるので、数字は合計だけ
+    total.textContent = '💎' + m.pot;
     wrap.appendChild(total);
-
-    var verdict = document.createElement('div');
-    verdict.className = 'verdict' +
-      (m.result === 'you' ? ' win' : m.result === 'cpu' ? ' lose' :
-       m.result === 'tie' ? ' draw' : m.result === 'gone' ? ' gone' : '');
-    verdict.textContent = m.result === 'you' ? 'WIN' : m.result === 'cpu' ? 'LOSE' :
-      m.result === 'tie' ? 'DRAW' : m.result === 'gone' ? 'DRAW' : '';
-    wrap.appendChild(verdict);
     return wrap;
   }
 
@@ -733,7 +736,7 @@
         var pv = state.predict.assign[m.id];
         var pr = document.createElement('div');
         pr.className = 'predict';
-        pr.innerHTML = '予想 <b>' + esc(CARDS[pv].jp) + '</b>';
+        pr.innerHTML = '予想<b>' + pv + '　' + esc(CARDS[pv].jp) + '</b>';
         cpuCell.appendChild(pr);
       }
       cpuCell.appendChild(cardEl(state.cpuAssign[m.id], !!m.result, cpuExtra));
