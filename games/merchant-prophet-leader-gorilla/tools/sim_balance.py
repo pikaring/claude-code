@@ -1,7 +1,7 @@
-# 商人・預言者・指導者・ゴリラ — バランス確認用の簡易シミュレーション（v0.6）
+# 商人・預言者・指導者・ゴリラ — バランス確認用の簡易シミュレーション（v0.7）
 # 得点になった札はゲームから抜ける。手に残った札は次の局へ持ち越し、8枚まで山札から補充。5局固定。
 # 能力: 商人=仲買 / 預言者=預言（自分も指名可）/ 指導者=徴税 / 王=献上と下賜 / ゴリラ=なし
-# 包囲: ゴリラが勝つとき、ゴリラ以外2人以上のリードスートの札の合計がゴリラの札の2倍を超えたらゴリラの負け
+# （siege は v0.6 で試した「包囲」。v0.7 で廃止、既定では使わない）
 # opt: ltax=指導者が徴税 / kex='selfish'|'coalition' 王の交換の配り方 / siege=包囲の倍率
 # 使い方: python3 tools/sim_balance.py
 import random, statistics as st
@@ -81,7 +81,7 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5):
         deck=[c for c in deck if c not in removed];keep=[list(h) for h in hands]
     return score,byrole,stats
 
-OPT={'ltax':1,'kex':'selfish','siege':2.0}
+OPT={'ltax':1,'kex':'selfish'}
 RANGE={2:12,3:17,4:22,5:26}
 if __name__=="__main__":
     for N,R in RANGE.items():
@@ -89,4 +89,4 @@ if __name__=="__main__":
         for i in range(n):
             sc,b,s=game(rng,N,R,OPT);BR=[x+y for x,y in zip(BR,b)];S={k:S[k]+s[k] for k in S}
         T=sum(BR)
-        print(f"N={N} 1-{R}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f"  ゴリラ勝率{S['gwin']/max(1,S['gtr']):.0%} 包囲成立{S['siege']/max(1,S['gtr']):.0%} 王への献上/局{S['ex']/n/5:.1f}枚")
+        print(f"N={N} 1-{R}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f"  ゴリラ勝率{S['gwin']/max(1,S['gtr']):.0%} 王と札をやりとりする人数 1トリック平均{S['ex']/n/25:.1f}人")
