@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>銃・病原菌・ダイヤモンド｜鉱山を奪い合う2人用心理戦カードゲーム</title>
-<meta name="description" content="病原菌と偵察兵の三すくみを使い、5つの鉱山からダイヤモンドを奪い合う2人用カードゲーム。鷹巣堂のアナログゲームをブラウザで復刻。インストール不要・通信なし。">
+<title>銃・病原菌・ダイヤモンド｜鉱山を奪い合う読み合いカードゲーム</title>
+<meta name="description" content="病原菌と偵察兵の三すくみを使い、5つの鉱山からダイヤモンドを奪い合うカードゲーム。鷹巣堂のアナログゲームをブラウザで復刻。CPU対戦・インストール不要・通信なし。">
 <meta name="theme-color" content="#182635">
 <style>
   :root{
@@ -106,15 +106,15 @@
 
 <section class="hero" style="border-top:none;padding-top:8px;">
   <div class="wrap">
-    <span class="pill">無料・インストール不要・通信なし</span>
+    <span class="pill">無料・インストール不要・通信なし・CPU対戦</span>
     <h1>銃を持った兵士たちが、<br>病原菌をかいくぐり<br>ダイヤモンドを奪い合う。</h1>
     <p class="lead">
-      5つの鉱山をめぐって繰り広げられる、2人用の読み合いカードゲーム。
-      同じ手札を持つ相手と、裏向きに置いたカードで駆け引きします。
+      5つの鉱山をめぐって繰り広げられる、読み合いのカードゲーム。
+      同じ手札を持つCPUと、裏向きに置いたカードで駆け引きします。
     </p>
     <div class="hero-actions">
       <a class="btn btn-main" href="app/">いますぐ あそぶ</a>
-      <a class="btn btn-sub" href="https://github.com/pikaring/claude-code/tree/main/games/guns-germs-diamonds">GitHubで見る</a>
+      <a class="btn btn-sub" href="https://github.com/pikaring/claude-code/tree/main/games/guns-germs-and-diamond">GitHubで見る</a>
     </div>
   </div>
 </section>
@@ -140,12 +140,13 @@
     <p class="eyebrow">あそびかた</p>
     <h2>鉱山にカードを置いて、いっせいにオープン。</h2>
     <ul class="steps">
-      <li><em>1</em><span>場には産出量の異なる5つの鉱山（1〜5💎）が左から並んでいます。</span></li>
+      <li><em>1</em><span>場には産出量の違う5つの鉱山が、左から💎1・2・3・4・5の順に並んでいます。</span></li>
       <li><em>2</em><span>各ラウンドの開始時、両者は手札を0〜4にリセットします。</span></li>
-      <li><em>3</em><span>まだ決着していない鉱山すべてに、両者が裏向きでカードを1枚ずつ配置します。</span></li>
+      <li><em>3</em><span>5つの鉱山すべてに、両者が裏向きでカードを1枚ずつ配置します。</span></li>
       <li><em>4</em><span>鉱山を左から順にオープン。強いカードを出した方がダイヤモンドを獲得します。</span></li>
-      <li><em>5</em><span>引き分けた鉱山は次ラウンドへ持ち越され、ダイヤモンドがさらに積み増しされます。</span></li>
-      <li><em>6</em><span>全3ラウンド終了時（または全鉱山決着時）に、獲得ダイヤモンドの合計が多い方の勝ちです。</span></li>
+      <li><em>5</em><span><b>鉱山は毎ラウンド復活。</b>取られた鉱山には、次のラウンドに同じ産出量の鉱山カードが1枚 配り直されます（💎5を取っても、次のラウンドもそこは💎5が1枚）。</span></li>
+      <li><em>6</em><span><b>引き分けた鉱山はカードが積み重なります。</b>💎4の鉱山が引き分けなら、次のラウンドは💎4が2枚＝合計8点に。</span></li>
+      <li><em>7</em><span>全3ラウンド終了時、獲得ダイヤモンドの合計が多い方の勝ちです。</span></li>
     </ul>
   </div>
 </section>
@@ -185,8 +186,8 @@
 <footer class="site">
   <div class="wrap">
     <a href="app/">あそぶ</a>
-    <a href="https://github.com/pikaring/claude-code/tree/main/games/guns-germs-diamonds">GitHub</a>
-    <a href="https://github.com/pikaring/claude-code/blob/main/games/guns-germs-diamonds/README.md">README</a>
+    <a href="https://github.com/pikaring/claude-code/tree/main/games/guns-germs-and-diamond">GitHub</a>
+    <a href="https://github.com/pikaring/claude-code/blob/main/games/guns-germs-and-diamond/README.md">README</a>
   </div>
 </footer>
 
