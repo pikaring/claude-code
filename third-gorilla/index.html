@@ -1,0 +1,1101 @@
+<title>第三のゴリラ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Antique&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+  /* ── 第三のゴリラ / 2人用CPU対戦 ───────────────────────────
+     単一テーマ（標本ケースの中の暗がり）に意図的に固定。
+     背景・文字色はすべて明示的に塗る。                        */
+  :root{
+    --bg:#151917;
+    --bg2:#101413;
+    --panel:#1E2422;
+    --panel2:#28302D;
+    --line:#39423E;
+    --line2:#4C5651;
+    --fg:#E6E1D4;
+    --muted:#96A09A;
+    --bone:#E9E2D2;
+    --bone2:#D3CBB8;
+    --ink:#14100C;
+    --af:#C25A3C;
+    --eu:#3F72A6;
+    --am:#5E9150;
+    --oc:#8E6DAE;
+    --banana:#F2C238;
+    --alarm:#D9534F;
+    --ok:#6FA96B;
+    --disp:"Zen Antique", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --body:"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:var(--body); font-size:15px; line-height:1.6;
+    -webkit-text-size-adjust:100%;
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, #232b28 0%, rgba(21,25,23,0) 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 2px, rgba(0,0,0,0) 2px 4px);
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding-inline:16px; padding-block:14px 32px;}
+
+  /* ── ヘッダー ── */
+  .topbar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:14px;}
+  .brand{display:flex; align-items:center; gap:11px; min-width:0}
+  .brand h1{font-family:var(--disp); font-size:25px; margin:0; letter-spacing:.06em; line-height:1.1; color:var(--bone)}
+  .brand p{margin:2px 0 0; font-size:11.5px; color:var(--muted); letter-spacing:.14em}
+  .brandmark{width:38px;height:38px;flex:none;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  .chip{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted);
+    background:var(--panel); border:1px solid var(--line); border-radius:3px; padding:5px 9px; display:flex; gap:6px; align-items:center}
+  .chip b{color:var(--fg); font-weight:600; font-variant-numeric:tabular-nums}
+  select, .btn{font-family:var(--body); font-size:12.5px; color:var(--fg); background:var(--panel2);
+    border:1px solid var(--line2); border-radius:3px; padding:5px 10px; cursor:pointer}
+  select{padding:4px 6px; background:transparent; border:none; color:var(--banana); font-weight:500}
+  .btn:hover{background:var(--line)}
+  .btn:focus-visible, select:focus-visible, .card:focus-visible{outline:2px solid var(--banana); outline-offset:2px}
+
+  /* ── 対戦者の帯 ── */
+  .seat{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:9px 12px}
+  .seat.active{border-color:var(--banana); box-shadow:inset 0 0 0 1px rgba(242,194,56,.25)}
+  .seat .who{font-family:var(--disp); font-size:16px; letter-spacing:.08em; color:var(--bone)}
+  .seat .stat{font-family:var(--mono); font-size:11.5px; color:var(--muted); display:flex; gap:5px; align-items:baseline}
+  .seat .stat b{font-size:15px; color:var(--fg); font-variant-numeric:tabular-nums}
+  .seat .stat.pen b{color:var(--alarm)}
+  .seat .spacer{flex:1 1 auto}
+  .backfan{display:flex}
+  .backfan i{display:block;width:15px;height:22px;border-radius:2px;background-color:#2B3330;
+    box-shadow:inset 0 0 0 1px #434D48; margin-left:-5px}
+  .backfan i:first-child{margin-left:0}
+
+  /* ── 場（進歩の段） ── */
+  .field{margin:14px 0; background:var(--bg2); border:1px solid var(--line);
+    border-radius:4px; padding:16px 14px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center}
+  .fieldmain{display:flex; gap:14px; align-items:center}
+  .fieldinfo{font-family:var(--mono); font-size:11.5px; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap; justify-content:center}
+  .fieldinfo b{color:var(--fg); font-variant-numeric:tabular-nums}
+  .nowlabel{font-size:11px; letter-spacing:.2em; color:var(--muted); margin-bottom:4px}
+  .stagename{font-family:var(--disp); font-size:19px; color:var(--bone); line-height:1.25}
+  .contname{font-size:11.5px; letter-spacing:.14em; margin-top:2px}
+  .emptyfield{font-family:var(--disp); font-size:17px; color:var(--muted)}
+
+  /* ── カード ── */
+  .card{position:relative; width:70px; height:99px; flex:none; border-radius:4px; border:none;
+    background:var(--bone); color:var(--ink); padding:0; cursor:default; font-family:var(--body);
+    display:flex; flex-direction:column; overflow:hidden; text-align:left;
+    box-shadow:0 2px 0 rgba(0,0,0,.45), 0 6px 14px rgba(0,0,0,.3);}
+  .card .band{height:7px; flex:none}
+  .card .num{font-family:var(--disp); font-size:31px; line-height:1; padding:7px 0 0 7px; letter-spacing:-.02em}
+  .card .stage{font-size:9px; line-height:1.3; letter-spacing:-.03em; padding:0 6px; margin-top:auto; margin-bottom:6px; color:#3A332B; font-weight:500}
+  .card .cont{font-size:8.5px; letter-spacing:.08em; padding:0 7px; margin-top:2px; font-weight:700}
+  .card.lg{width:90px;height:127px}
+  .card.lg .num{font-size:40px;padding:9px 0 0 9px}
+  .card.lg .stage{font-size:11px;letter-spacing:-.02em;padding:0 8px;margin-bottom:8px}
+  .card.lg .cont{font-size:9.5px;padding:0 9px}
+  .card.sm{width:46px;height:68px}
+  .card.sm .num{font-size:22px;padding:5px 0 0 5px}
+  .card.sm .stage{font-size:8px;padding:0 4px;margin-bottom:3px}
+  .card.sm .cont{font-size:7.5px;padding:0 5px}
+
+  .card.playable{cursor:pointer; transition:transform .12s ease, box-shadow .12s ease}
+  .card.playable:hover, .card.playable:focus-visible{transform:translateY(-9px); box-shadow:0 8px 0 rgba(0,0,0,.4), 0 14px 24px rgba(0,0,0,.45)}
+  .card.dead{filter:grayscale(.65) brightness(.55); cursor:not-allowed}
+
+  /* 切札カード（ゴリラ／偽物） */
+  .card.ape{background:#17130E; color:var(--bone); box-shadow:0 2px 0 rgba(0,0,0,.6), 0 6px 16px rgba(0,0,0,.5)}
+  .card.ape .apeart{flex:1; display:grid; place-items:center; padding-top:6px}
+  .card.ape .foot{height:15px; flex:none; display:grid; place-items:center;
+    font-size:9px; letter-spacing:.18em; font-weight:700; color:var(--ink); background:var(--bone2)}
+  .card.ape.lg .foot{height:19px; font-size:10.5px}
+  .card.ape .cap{font-family:var(--disp); font-size:10px; letter-spacing:.16em; text-align:center; color:var(--banana); padding-top:5px}
+  .card.ape.lg .cap{font-size:12px; padding-top:7px}
+
+  /* ── 手札 ── */
+  .handzone{margin-top:14px}
+  .zlabel{font-size:11px; letter-spacing:.2em; color:var(--muted); margin-bottom:7px; display:flex; align-items:center; gap:8px}
+  .zlabel::after{content:""; flex:1; height:1px; background:var(--line)}
+  .hand{display:flex; gap:7px; flex-wrap:wrap; min-height:96px; align-items:flex-start}
+  .trumps{display:flex; gap:7px; margin-top:12px; align-items:flex-start}
+  .trumphint{font-size:11.5px; color:var(--muted); max-width:30ch; align-self:center}
+
+  /* ── 操作 ── */
+  .actions{display:flex; gap:9px; flex-wrap:wrap; margin-top:12px; align-items:center}
+  .bigbtn{font-family:var(--body); font-size:13.5px; font-weight:700; letter-spacing:.06em;
+    background:var(--banana); color:var(--ink); border:none; border-radius:3px; padding:9px 18px; cursor:pointer}
+  .bigbtn:hover{filter:brightness(1.08)}
+  .bigbtn.ghost{background:transparent; color:var(--fg); border:1px solid var(--line2); font-weight:500}
+  .bigbtn.ghost:hover{background:var(--panel2); filter:none}
+  .hintline{font-size:12.5px; color:var(--muted); margin-top:10px}
+  .hintline em{color:var(--banana); font-style:normal; font-weight:500}
+
+  /* ── ログ ── */
+  .log{margin-top:18px; border-top:1px solid var(--line); padding-top:10px;
+    font-family:var(--mono); font-size:11.5px; line-height:1.85; color:var(--muted);
+    max-height:118px; overflow-y:auto}
+  .log div{display:flex; gap:9px}
+  .log .t{color:var(--line2); flex:none}
+  .log .you{color:#BFD8C6}
+  .log .cpu{color:#D8C6BF}
+  .log .hot{color:var(--banana)}
+  .log .bad{color:var(--alarm)}
+
+  /* ── オーバーレイ（ゴリラ勝負） ── */
+  .overlay{position:fixed; inset:0; z-index:50; background:rgba(10,13,12,.93);
+    display:grid; place-items:center; padding:20px}
+  .overlay .inner{text-align:center; max-width:460px; width:100%}
+  .flashcard{margin:0 auto 18px; perspective:900px; width:124px; height:182px}
+  .flipper{position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .34s cubic-bezier(.3,1.4,.5,1)}
+  .flipper.up{transform:rotateY(180deg)}
+  .face{position:absolute; inset:0; backface-visibility:hidden; border-radius:5px; overflow:hidden}
+  .face.back{background:linear-gradient(160deg,#333c39,#1a201e); border:1px solid var(--line2); display:grid; place-items:center}
+  .face.front{transform:rotateY(180deg)}
+  .face.front .card{width:100%; height:100%}
+  .face.front .card .num{font-size:46px; padding:11px 0 0 11px}
+  .face.front .card .stage{font-size:12px; padding:0 10px; margin-bottom:8px}
+  .face.front .card .cont{font-size:10px; padding:0 11px}
+  .face.front .card.ape .foot{height:22px; font-size:11px}
+  .face.front .card.ape .cap{font-size:13px; padding-top:9px}
+  .callbtn{font-family:var(--disp); font-size:30px; letter-spacing:.14em; background:var(--line);
+    color:var(--muted); border:2px solid var(--line2); border-radius:6px; padding:14px 34px; cursor:not-allowed; width:100%;
+    transition:background .1s, color .1s, border-color .1s}
+  .callbtn.armed{background:var(--banana); color:var(--ink); border-color:#fff0bd; cursor:pointer;
+    box-shadow:0 0 0 6px rgba(242,194,56,.14)}
+  .callbtn.armed:hover{filter:brightness(1.07)}
+  .callbtn:disabled{opacity:.55}
+  .bar{height:5px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:14px}
+  .bar i{display:block; height:100%; background:var(--alarm); width:100%; transform-origin:left}
+  .ovtext{font-size:13px; color:var(--muted); margin-bottom:14px; min-height:1.6em}
+  .ovtext strong{color:var(--bone)}
+  .rt{font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:12px; font-variant-numeric:tabular-nums}
+
+  /* ── モーダル ── */
+  .modal{position:fixed; inset:0; z-index:60; background:rgba(10,13,12,.9); display:grid; place-items:center; padding:20px; overflow-y:auto}
+  .sheet{background:var(--panel); border:1px solid var(--line2); border-radius:5px; max-width:560px; width:100%;
+    padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .sheet h2{font-family:var(--disp); font-size:22px; margin:0 0 4px; color:var(--bone); letter-spacing:.06em}
+  .sheet h3{font-family:var(--disp); font-size:15px; margin:20px 0 6px; color:var(--banana); letter-spacing:.08em}
+  .sheet p, .sheet li{font-size:13.5px; color:var(--fg); margin:6px 0}
+  .sheet ul{padding-left:1.2em; margin:6px 0}
+  .sheet .sub{color:var(--muted); font-size:12.5px; margin-top:0}
+  .ladder{display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:5px; margin:8px 0}
+  .ladder div{font-size:11.5px; background:var(--panel2); border-left:2px solid var(--line2); padding:4px 8px; color:var(--fg)}
+  .ladder div b{font-family:var(--mono); color:var(--banana); margin-right:6px}
+  .conts{display:flex; gap:7px; flex-wrap:wrap; margin:8px 0}
+  .conts span{font-size:11.5px; padding:3px 9px; border-radius:2px; color:var(--ink); font-weight:700}
+  .result{font-family:var(--disp); font-size:30px; letter-spacing:.08em; margin:6px 0 2px}
+  .result.win{color:var(--ok)} .result.lose{color:var(--alarm)} .result.draw{color:var(--muted)}
+  .tally{display:flex; gap:10px; margin:14px 0; font-family:var(--mono)}
+  .tally div{flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:3px; padding:10px; text-align:center}
+  .tally b{display:block; font-size:28px; color:var(--fg); font-variant-numeric:tabular-nums; line-height:1.2}
+  .tally span{font-size:11px; color:var(--muted); letter-spacing:.1em}
+  .sheetfoot{display:flex; gap:9px; margin-top:20px; flex-wrap:wrap}
+
+  @media (max-width:520px){
+    .brand h1{font-size:21px}
+    .card{width:60px;height:87px}
+    .card .num{font-size:26px;padding:6px 0 0 6px}
+    .card .stage{font-size:8px;padding:0 5px}
+    .card .cont{font-size:8px;padding:0 6px}
+    .card.lg{width:74px;height:106px}
+    .card.lg .num{font-size:32px}
+    .card.lg .stage{font-size:9.5px}
+    .hand{gap:5px}
+    .callbtn{font-size:24px; padding:12px 18px}
+    .flashcard{width:104px;height:152px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms !important; transition-duration:.01ms !important}
+  }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ape" viewBox="0 0 100 100">
+  <circle cx="16" cy="45" r="11.5"/><circle cx="84" cy="45" r="11.5"/>
+  <ellipse cx="50" cy="48" rx="31" ry="35"/>
+  <rect x="25" y="37" width="50" height="7" rx="3.5" fill="#17130E" opacity=".55"/>
+  <circle cx="38.5" cy="33.5" r="3.6" fill="#17130E"/><circle cx="61.5" cy="33.5" r="3.6" fill="#17130E"/>
+  <ellipse cx="50" cy="65" rx="19.5" ry="15" fill="#17130E" opacity=".3"/>
+  <ellipse cx="43.5" cy="62" rx="3.2" ry="2.4" fill="#17130E"/><ellipse cx="56.5" cy="62" rx="3.2" ry="2.4" fill="#17130E"/>
+  <path d="M40 72 Q50 78.5 60 72" fill="none" stroke="#17130E" stroke-width="2.6" stroke-linecap="round"/>
+</symbol></svg>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brandmark"><svg width="25" height="25" fill="#E9E2D2"><use href="#ape"/></svg></span>
+      <div>
+        <h1>第三のゴリラ</h1>
+        <p>2人用 CPU対戦版</p>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="chip">ラウンド <b id="roundNum">1</b>/3</span>
+      <span class="chip">CPU <select id="diffSel" aria-label="難易度">
+        <option value="easy">やさしい</option>
+        <option value="normal" selected>ふつう</option>
+        <option value="hard">ゴリラ級</option>
+      </select></span>
+      <button class="btn" id="rulesBtn">ルール</button>
+      <button class="btn" id="resetBtn">最初から</button>
+    </div>
+  </header>
+
+  <div class="seat" id="seatCpu">
+    <span class="who">CPU</span>
+    <span class="stat">手札 <b id="cpuCount">0</b></span>
+    <span class="stat pen">引き取り <b id="cpuTaken">0</b></span>
+    <span class="spacer"></span>
+    <span class="backfan" id="cpuFan" aria-hidden="true"></span>
+    <span class="stat">累計 <b id="cpuTotal">0</b></span>
+  </div>
+
+  <div class="field">
+    <div class="fieldmain" id="fieldMain"></div>
+    <div>
+      <div class="nowlabel" id="nowLabel">いまの段</div>
+      <div class="stagename" id="stageName">—</div>
+      <div class="contname" id="contName"></div>
+    </div>
+    <div class="fieldinfo">
+      <span>山札 <b id="deckCount">0</b></span>
+      <span>場の捨札 <b id="pileCount">0</b></span>
+    </div>
+  </div>
+
+  <div class="seat" id="seatYou">
+    <span class="who">あなた</span>
+    <span class="stat">手札 <b id="youCount">0</b></span>
+    <span class="stat pen">引き取り <b id="youTaken">0</b></span>
+    <span class="spacer"></span>
+    <span class="stat">累計 <b id="youTotal">0</b></span>
+  </div>
+
+  <div class="handzone">
+    <div class="zlabel">手札</div>
+    <div class="hand" id="hand"></div>
+    <div class="trumps" id="trumps"></div>
+    <div class="actions" id="actions"></div>
+    <div class="hintline" id="hint"></div>
+  </div>
+
+  <div class="log" id="log" aria-live="polite"></div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="inner">
+    <div class="flashcard"><div class="flipper" id="flipper">
+      <div class="face back"><svg width="42" height="42" fill="#4C5651"><use href="#ape"/></svg></div>
+      <div class="face front" id="flashFront"></div>
+    </div></div>
+    <div class="ovtext" id="ovText"></div>
+    <button class="callbtn" id="callBtn" disabled>ゴリラ！</button>
+    <div class="bar"><i id="ovBar"></i></div>
+    <div class="rt" id="ovRt"></div>
+  </div>
+</div>
+
+<div class="modal" id="modal" hidden><div class="sheet" id="sheet"></div></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ───────── 定数 ───────── */
+var CONT = {
+  af:{name:"アフリカ",     css:"var(--af)", hex:"#C25A3C"},
+  eu:{name:"ユーラシア",   css:"var(--eu)", hex:"#3F72A6"},
+  am:{name:"アメリカ",     css:"var(--am)", hex:"#5E9150"},
+  oc:{name:"オセアニア",   css:"var(--oc)", hex:"#8E6DAE"}
+};
+var CIDS = ["af","eu","am","oc"];
+var STAGE = ["","樹上のサル","火のボノボ","直立二足歩行","石器","狩猟採集","言語","農耕","文字と都市","現生人類"];
+
+var DIFF = {
+  easy:   {label:"やさしい", rt:[620,1280], sniff:0.46, bluff:0.16, noise:1.0},
+  normal: {label:"ふつう",   rt:[420,860],  sniff:0.70, bluff:0.34, noise:0.5},
+  hard:   {label:"ゴリラ級", rt:[250,520],  sniff:0.88, bluff:0.55, noise:0.15}
+};
+
+var CALL_WINDOW = 2200;   // 「ゴリラ！」の受付時間(ms)
+var FALSE_START = 2600;   // フライング時の反応時間扱い(ms)
+var MAX_ROUNDS  = 3;
+
+/* ───────── 状態 ───────── */
+var G = null;
+var timers = [];
+var uid = 0;
+
+function later(fn, ms){ var t = setTimeout(fn, ms); timers.push(t); return t; }
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function $(id){ return document.getElementById(id); }
+
+/* ───────── 山札づくり ───────── */
+function buildDeck(){
+  var d = [], c, n;
+  for (var i=0;i<CIDS.length;i++){
+    c = CIDS[i];
+    for (n=1;n<=9;n++) d.push({id:++uid, kind:"num", color:c, n:n});
+  }
+  for (var j=d.length-1;j>0;j--){
+    var k = Math.floor(Math.random()*(j+1)), tmp = d[j]; d[j]=d[k]; d[k]=tmp;
+  }
+  return d;
+}
+
+function newMatch(diff){
+  clearTimers();
+  G = {
+    diff: diff || (G && G.diff) || "normal",
+    round: 1,
+    total: {you:0, cpu:0},
+    wins:  {you:0, cpu:0}
+  };
+  startRound();
+}
+
+function startRound(){
+  clearTimers();
+  var deck = buildDeck();
+  // 偽物のゴリラは大陸色を1つずつ（重複なし）
+  var pool = CIDS.slice();
+  for (var s=pool.length-1;s>0;s--){ var q=Math.floor(Math.random()*(s+1)), t=pool[s]; pool[s]=pool[q]; pool[q]=t; }
+
+  G.hands = {you:[], cpu:[]};
+  for (var i=0;i<9;i++){ G.hands.you.push(deck.pop()); G.hands.cpu.push(deck.pop()); }
+  G.hands.you.push({id:++uid, kind:"gorilla", color:null, n:0});
+  G.hands.cpu.push({id:++uid, kind:"gorilla", color:null, n:0});
+  G.hands.you.push({id:++uid, kind:"fake", color:pool[0], n:6});
+  G.hands.cpu.push({id:++uid, kind:"fake", color:pool[1], n:6});
+
+  G.deck = deck;
+  G.pile = [];
+  G.top = null;
+  G.free = false;
+  G.taken = {you:0, cpu:0};
+  G.passes = 0;
+  G.phase = "turn";
+  G.justDrew = null;
+  G.over = false;
+  G.log = [];
+
+  // 火のボノボ（段階2）を持つ側が先攻
+  var youBonobo = G.hands.you.some(function(c){ return c.kind==="num" && c.n===2; });
+  var cpuBonobo = G.hands.cpu.some(function(c){ return c.kind==="num" && c.n===2; });
+  if (youBonobo && !cpuBonobo)      G.cur = "you";
+  else if (cpuBonobo && !youBonobo) G.cur = "cpu";
+  else                              G.cur = Math.random()<0.5 ? "you" : "cpu";
+
+  log("第" + G.round + "ラウンド開始。" + (G.cur==="you"?"あなた":"CPU") + "が火のボノボを携えて先攻。", "hot");
+  render();
+  if (G.cur === "cpu") later(cpuTurn, 900);
+}
+
+/* ───────── ルール判定 ───────── */
+function isLegal(card, forWho){
+  if (card.kind === "gorilla") return false;          // 切り札は専用の出し方
+  if (G.free) return card.kind === "num";             // 現生人類の直後はゴリラ系を出せない
+  if (!G.top) return card.kind === "num";             // 場が空のときもゴリラ系は出せない
+  if (card.kind === "fake") return G.top.color === card.color && G.top.n <= 5;
+  return (card.color === G.top.color && card.n > G.top.n) || (card.n === G.top.n);
+}
+function legalCards(who){
+  return G.hands[who].filter(function(c){ return isLegal(c, who); });
+}
+function hasPlayable(who){ return legalCards(who).length > 0; }
+function gorillaOf(who){
+  var h = G.hands[who];
+  for (var i=0;i<h.length;i++) if (h[i].kind==="gorilla") return h[i];
+  return null;
+}
+/* 直前の場から「偽物のゴリラがあり得たか」— 両者が使える推理材料 */
+function fakeWasPossible(prevTop, prevFree){
+  return !!prevTop && !prevFree && prevTop.n <= 5;
+}
+function isFinished(who){
+  return G.hands[who].every(function(c){ return c.kind === "gorilla"; });
+}
+
+/* ───────── ログ ───────── */
+function log(text, cls){
+  G.log.push({t:text, c:cls||""});
+  if (G.log.length > 60) G.log.shift();
+}
+
+/* ───────── カード描画 ───────── */
+function cardNode(card, size, faceUp){
+  var el = document.createElement(faceUp === "btn" ? "button" : "div");
+  el.className = "card" + (size ? " " + size : "");
+  if (faceUp === "btn") el.type = "button";
+
+  if (card.kind === "num"){
+    var band = document.createElement("div");
+    band.className = "band"; band.style.background = CONT[card.color].hex;
+    var num = document.createElement("div");
+    num.className = "num"; num.textContent = card.n;
+    var cont = document.createElement("div");
+    cont.className = "cont"; cont.style.color = CONT[card.color].hex;
+    cont.textContent = CONT[card.color].name;
+    var st = document.createElement("div");
+    st.className = "stage"; st.textContent = STAGE[card.n];
+    el.appendChild(band); el.appendChild(num); el.appendChild(cont); el.appendChild(st);
+    el.setAttribute("aria-label", CONT[card.color].name + "の" + card.n + "・" + STAGE[card.n]);
+  } else {
+    el.className += " ape";
+    var cap = document.createElement("div");
+    cap.className = "cap"; cap.textContent = "ゴリラ";
+    var art = document.createElement("div");
+    art.className = "apeart";
+    art.innerHTML = '<svg width="' + (size==="sm"?26:(size==="lg"?44:34)) + '" height="' +
+      (size==="sm"?26:(size==="lg"?44:34)) + '" fill="#E9E2D2"><use href="#ape"/></svg>';
+    var foot = document.createElement("div");
+    foot.className = "foot";
+    if (card.kind === "fake"){
+      // 見分けの手がかり: 足元の帯が大陸色になり「6」が刻まれている
+      foot.style.background = CONT[card.color].hex;
+      foot.style.color = "#17130E";
+      foot.textContent = "6 " + CONT[card.color].name;
+      el.setAttribute("aria-label", "偽物のゴリラ・" + CONT[card.color].name + "の6");
+    } else {
+      foot.textContent = "切札";
+      el.setAttribute("aria-label", "ゴリラ・切り札");
+    }
+    el.appendChild(cap); el.appendChild(art); el.appendChild(foot);
+  }
+  return el;
+}
+
+/* ───────── 画面更新 ───────── */
+function render(){
+  $("roundNum").textContent = G.round;
+  $("cpuCount").textContent = G.hands.cpu.length;
+  $("youCount").textContent = G.hands.you.length;
+  $("cpuTaken").textContent = G.taken.cpu;
+  $("youTaken").textContent = G.taken.you;
+  $("cpuTotal").textContent = G.total.cpu;
+  $("youTotal").textContent = G.total.you;
+  $("deckCount").textContent = G.deck.length;
+  $("pileCount").textContent = G.pile.length;
+  $("seatCpu").classList.toggle("active", G.cur === "cpu" && !G.over);
+  $("seatYou").classList.toggle("active", G.cur === "you" && !G.over);
+
+  var fan = $("cpuFan"); fan.innerHTML = "";
+  for (var i=0;i<Math.min(G.hands.cpu.length, 12);i++) fan.appendChild(document.createElement("i"));
+
+  // 場
+  var fm = $("fieldMain"); fm.innerHTML = "";
+  var topCard = G.pile.length ? G.pile[G.pile.length-1] : null;
+  if (topCard){
+    fm.appendChild(cardNode(topCard, "lg"));
+  } else {
+    var ph = document.createElement("div");
+    ph.className = "emptyfield"; ph.textContent = "場は空";
+    fm.appendChild(ph);
+  }
+  if (G.free){
+    $("nowLabel").textContent = "現生人類のあと";
+    $("stageName").textContent = "何を出してもよい";
+    $("contName").textContent = "（ゴリラ・偽物のゴリラを除く）";
+    $("contName").style.color = "var(--muted)";
+  } else if (G.top){
+    $("nowLabel").textContent = "いまの段";
+    $("stageName").textContent = STAGE[G.top.n];
+    $("contName").textContent = CONT[G.top.color].name + " ／ 第" + G.top.n + "段";
+    $("contName").style.color = CONT[G.top.color].hex;
+  } else {
+    $("nowLabel").textContent = "いまの段";
+    $("stageName").textContent = "—";
+    $("contName").textContent = "好きなカードで始められる";
+    $("contName").style.color = "var(--muted)";
+  }
+
+  // 手札
+  var hand = $("hand"); hand.innerHTML = "";
+  var trumps = $("trumps"); trumps.innerHTML = "";
+  var myTurn = (G.cur === "you" && G.phase === "turn" && !G.over);
+
+  G.hands.you.slice()
+    .sort(function(a,b){
+      if (a.kind !== "num") return 1;
+      if (b.kind !== "num") return -1;
+      if (a.color !== b.color) return CIDS.indexOf(a.color) - CIDS.indexOf(b.color);
+      return a.n - b.n;
+    })
+    .forEach(function(c){
+      var ok = myTurn && isLegal(c, "you");
+      var node = cardNode(c, null, ok ? "btn" : null);
+      if (ok) node.classList.add("playable");
+      else if (myTurn) node.classList.add("dead");
+      if (ok) node.addEventListener("click", function(){ playCard("you", c); });
+      if (c.kind === "num") hand.appendChild(node); else trumps.appendChild(node);
+    });
+
+  if (trumps.children.length){
+    var hintEl = document.createElement("div");
+    hintEl.className = "trumphint";
+    hintEl.textContent = "切り札。ゴリラは「出せるカードが1枚もない」ときだけ。偽物は場が同じ大陸の5以下のときだけ。";
+    trumps.appendChild(hintEl);
+  }
+
+  // 操作ボタン
+  var act = $("actions"); act.innerHTML = "";
+  var hint = $("hint"); hint.innerHTML = "";
+
+  if (G.over || G.phase !== "turn"){ renderLog(); return; }
+
+  if (G.cur === "cpu"){
+    hint.textContent = "CPUの手番…";
+    renderLog(); return;
+  }
+
+  if (hasPlayable("you")){
+    if (G.justDrew){
+      hint.innerHTML = "山札から引いた <em>" + cardName(G.justDrew) + "</em> は出せます。出さない場合は手番を終えます。";
+      act.appendChild(mkBtn("手番を終える", "ghost", function(){ G.justDrew=null; endTurn(); }));
+    } else {
+      hint.textContent = "光っているカードから1枚を選んでください。";
+    }
+  } else {
+    hint.innerHTML = "出せるカードがありません。";
+    if (G.deck.length && !G.justDrew){
+      act.appendChild(mkBtn("山札から1枚引く", "", function(){ drawOne("you"); }));
+    }
+    var gor = gorillaOf("you");
+    if (gor) act.appendChild(mkBtn("ゴリラを出す", "ghost", function(){ playGorilla("you"); }));
+    if (!G.deck.length || G.justDrew){
+      act.appendChild(mkBtn("パス", "ghost", function(){ G.justDrew=null; passTurn("you"); }));
+    }
+  }
+  renderLog();
+}
+
+function mkBtn(label, cls, fn){
+  var b = document.createElement("button");
+  b.className = "bigbtn" + (cls ? " " + cls : "");
+  b.type = "button"; b.textContent = label;
+  b.addEventListener("click", fn);
+  return b;
+}
+function cardName(c){
+  if (c.kind === "gorilla") return "ゴリラ";
+  if (c.kind === "fake") return "偽物のゴリラ（" + CONT[c.color].name + "の6）";
+  return CONT[c.color].name + "の" + c.n + "・" + STAGE[c.n];
+}
+function renderLog(){
+  var el = $("log"); el.innerHTML = "";
+  G.log.slice(-40).forEach(function(l, i){
+    var d = document.createElement("div");
+    var t = document.createElement("span"); t.className = "t"; t.textContent = String(i+1).padStart(2,"0");
+    var s = document.createElement("span"); s.className = l.c; s.textContent = l.t;
+    d.appendChild(t); d.appendChild(s); el.appendChild(d);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ───────── 手番の進行 ───────── */
+function removeFromHand(who, card){
+  var h = G.hands[who], i = h.indexOf(card);
+  if (i >= 0) h.splice(i,1);
+}
+function other(who){ return who === "you" ? "cpu" : "you"; }
+function nameOf(who){ return who === "you" ? "あなた" : "CPU"; }
+function clsOf(who){ return who === "you" ? "you" : "cpu"; }
+
+function playCard(who, card){
+  if (G.phase !== "turn" || G.over) return;
+  var prevTop = G.top, prevFree = G.free;
+  removeFromHand(who, card);
+  G.justDrew = null;
+  G.passes = 0;
+
+  if (card.kind === "fake"){
+    G.pile.push(card);
+    G.top = {color:card.color, n:6};
+    G.free = false;
+    log(nameOf(who) + "が " + CONT[card.color].name + "の6 を出し、「ゴリラ！」と叫んだ。", "hot");
+    render();
+    startCall(who, card, true, prevTop, prevFree);
+    return;
+  }
+
+  G.pile.push(card);
+  G.top = {color:card.color, n:card.n};
+  G.free = (card.n === 9);
+  log(nameOf(who) + "：" + cardName(card), clsOf(who));
+  if (card.n === 9) log("現生人類。次は何を出してもよい。", "hot");
+  render();
+
+  if (isFinished(who)) { finishRound(who); return; }
+  endTurn();
+}
+
+function drawOne(who){
+  if (!G.deck.length) return;
+  var c = G.deck.pop();
+  G.hands[who].push(c);
+  G.passes = 0;
+  if (who === "you"){
+    log("あなたは山札から1枚引いた。", "you");
+    if (isLegal(c, "you")){ G.justDrew = c; render(); return; }
+    G.justDrew = null; G.phase = "wait"; render();
+    later(endTurn, 450);
+  } else {
+    log("CPUは山札から1枚引いた。", "cpu");
+    if (isLegal(c, "cpu")){ render(); later(function(){ playCard("cpu", c); }, 650); return; }
+    render();
+    later(endTurn, 650);
+  }
+}
+
+function passTurn(who){
+  G.passes++;
+  log(nameOf(who) + "はパスした。", clsOf(who));
+  if (G.passes >= 2 && !G.deck.length){ finishRound(null); return; }
+  endTurn();
+}
+
+function endTurn(){
+  if (G.over) return;
+  if (isFinished(G.cur)) { finishRound(G.cur); return; }
+  G.cur = other(G.cur);
+  G.phase = "turn";
+  G.justDrew = null;
+  render();
+  if (G.cur === "cpu") later(cpuTurn, 850);
+}
+
+/* ───────── ゴリラ勝負 ───────── */
+function playGorilla(who){
+  var gor = gorillaOf(who);
+  if (!gor) return;
+  var prevTop = G.top, prevFree = G.free;
+  removeFromHand(who, gor);
+  G.pile.push(gor);
+  G.passes = 0;
+  log(nameOf(who) + "がゴリラを叩きつけた！", "hot");
+  render();
+  startCall(who, gor, false, prevTop, prevFree);
+}
+
+var call = null;
+function startCall(byWho, card, isFake, prevTop, prevFree){
+  G.phase = "call";
+  clearTimers();
+  var armDelay = rnd(650, 1450);
+  call = {
+    byWho: byWho, card: card, isFake: isFake,
+    prevTop: prevTop, prevFree: prevFree,
+    armed: false, armAt: 0, resolved: false,
+    mute: (isFake && byWho === "you"),
+    you: null, cpu: null
+  };
+
+  var ov = $("overlay"), flip = $("flipper"), btn = $("callBtn");
+  $("flashFront").innerHTML = "";
+  $("flashFront").appendChild(cardNode(card, "lg"));
+  flip.classList.remove("up");
+  btn.classList.remove("armed");
+  btn.disabled = call.mute;
+  $("ovRt").textContent = "";
+  $("ovBar").style.transition = "none";
+  $("ovBar").style.transform = "scaleX(1)";
+  $("ovText").innerHTML = call.mute
+    ? "偽物を場に出した。<strong>CPUが釣られるか——</strong>"
+    : (byWho === "you"
+        ? "あなたが切り札を場に出した。<strong>自分でも叫ばなければ間に合わない。</strong>"
+        : "CPUが切り札を場に出した…");
+  ov.hidden = false;
+  if (!call.mute) btn.focus();
+
+  later(function(){
+    if (!call || call.resolved) return;
+    call.armed = true;
+    call.armAt = performance.now();
+    flip.classList.add("up");
+    if (call.mute){
+      $("ovText").innerHTML = "CPUが見極めている…";
+    } else {
+      btn.classList.add("armed");
+      $("ovText").innerHTML = "本物なら急いで叫ぶ。偽物に釣られたら、相手の引き取り札を丸ごと背負う。";
+    }
+    $("ovBar").style.transition = "transform " + CALL_WINDOW + "ms linear";
+    requestAnimationFrame(function(){ $("ovBar").style.transform = "scaleX(0)"; });
+
+    // CPUの反応
+    var d = DIFF[G.diff];
+    var cpuWill = cpuWillCall(isFake, prevTop, prevFree);
+    if (cpuWill){
+      var t = rnd(d.rt[0], d.rt[1]);
+      later(function(){ recordPress("cpu", t); }, t);
+    }
+    later(function(){ resolveCall(); }, CALL_WINDOW + 60);
+  }, armDelay);
+}
+
+function cpuWillCall(isFake, prevTop, prevFree){
+  var d = DIFF[G.diff];
+  // 偽物があり得ない盤面なら、確実に本物 → 必ず叫ぶ
+  if (!fakeWasPossible(prevTop, prevFree)) return true;
+  // 見極めに成功すれば正解を選ぶ
+  if (Math.random() < d.sniff) return !isFake;
+  // 失敗したら盤面から推理する
+  var suspicion = 0.30;
+  suspicion += clamp(G.taken.you, 0, 8) / 8 * 0.25;   // 相手の引き取りが多い＝騙す旨味が大きい
+  suspicion -= clamp(G.pile.length, 0, 12) / 12 * 0.20; // 場が厚い＝ブラフの失敗が痛い
+  suspicion += (Math.random() - 0.5) * 0.4 * d.noise;
+  suspicion = clamp(suspicion, 0.05, 0.92);
+  return Math.random() > suspicion;                     // 本物だと思えば叫ぶ
+}
+
+function recordPress(who, ms){
+  if (!call || call.resolved) return;
+  if (call[who] !== null) return;
+  call[who] = ms;
+  if (who === "you"){
+    $("callBtn").disabled = true;
+    $("callBtn").classList.remove("armed");
+    $("ovText").innerHTML = "<strong>ゴリラ！</strong>";
+  }
+  if (call.you !== null && call.cpu !== null) later(resolveCall, 180);
+}
+
+function onCallPress(){
+  if (!call || call.resolved || call.mute || call.you !== null) return;
+  if (!call.armed){
+    call.you = FALSE_START;
+    call.falseStart = true;
+    $("callBtn").disabled = true;
+    $("ovText").innerHTML = "<strong>フライング。</strong>叫ぶのが早すぎた。";
+    return;
+  }
+  recordPress("you", performance.now() - call.armAt);
+}
+
+function resolveCall(){
+  if (!call || call.resolved) return;
+  call.resolved = true;
+  clearTimers();
+  $("callBtn").disabled = true;
+  $("callBtn").classList.remove("armed");
+
+  var youMs = call.you === null ? Infinity : call.you;
+  var cpuMs = call.cpu === null ? Infinity : call.cpu;
+  var fmt = function(v){ return v === Infinity ? "叫ばず" : Math.round(v) + "ms"; };
+
+  if (call.isFake){
+    resolveFake(youMs, cpuMs, fmt);
+  } else {
+    resolveReal(youMs, cpuMs, fmt);
+  }
+}
+
+function resolveReal(youMs, cpuMs, fmt){
+  $("ovRt").textContent = "あなた " + fmt(youMs) + " ／ CPU " + fmt(cpuMs);
+  var loser, winner;
+  if (youMs === cpuMs){ loser = call.byWho; winner = other(call.byWho); }
+  else if (youMs > cpuMs){ loser = "you"; winner = "cpu"; }
+  else { loser = "cpu"; winner = "you"; }
+
+  var n = G.pile.length;
+  G.taken[loser] += n;
+  G.pile = [];
+  G.top = null;
+  G.free = false;
+
+  $("ovText").innerHTML = "<strong>" + nameOf(loser) + "の負け。</strong>捨札 " + n + "枚を引き取る。";
+  log("ゴリラ勝負：" + nameOf(winner) + "が先に叫んだ。" + nameOf(loser) + "が捨札" + n + "枚を引き取り。",
+      loser === "you" ? "bad" : "hot");
+
+  finishCall(function(){
+    if (isFinished(winner)) { finishRound(winner); return; }
+    if (isFinished(loser))  { finishRound(loser);  return; }
+    G.cur = winner;
+    G.phase = "turn";
+    render();
+    if (G.cur === "cpu") later(cpuTurn, 850);
+  });
+}
+
+function resolveFake(youMs, cpuMs, fmt){
+  var victim = other(call.byWho);
+  var bit = (victim === "you" ? youMs : cpuMs) !== Infinity;
+  $("ovRt").textContent = victim === "you"
+    ? "あなた " + fmt(youMs)
+    : "CPU " + fmt(cpuMs);
+
+  if (bit){
+    // 釣られた：本物のゴリラを場に捨て、相手の引き取り札をすべて背負う
+    var gor = gorillaOf(victim);
+    if (gor){ removeFromHand(victim, gor); G.pile.push(gor); }
+    var moved = G.taken[call.byWho];
+    G.taken[victim] += moved;
+    G.taken[call.byWho] = 0;
+    $("ovText").innerHTML = "<strong>偽物だった。</strong>" + nameOf(victim) + "は" +
+      (gor ? "ゴリラを失い、" : "") + nameOf(call.byWho) + "の引き取り札 " + moved + "枚を背負う。";
+    log("偽物のゴリラ！ " + nameOf(victim) + "が釣られ、" + moved + "枚を肩代わり。",
+        victim === "you" ? "bad" : "hot");
+
+    finishCall(function(){
+      if (isFinished(call.byWho)) { finishRound(call.byWho); return; }
+      if (isFinished(victim))     { finishRound(victim); return; }
+      G.cur = victim;             // 場は偽物の6のまま、手番は釣られた側へ
+      G.phase = "turn";
+      render();
+      if (G.cur === "cpu") later(cpuTurn, 850);
+    });
+  } else {
+    // 見破られた：嘘をついた側が場の捨札を引き取る（2人用の追加ルール）
+    var n = G.pile.length;
+    G.taken[call.byWho] += n;
+    G.pile = [];
+    G.top = null;
+    G.free = false;
+    $("ovText").innerHTML = "<strong>見破られた。</strong>" + nameOf(call.byWho) +
+      "が捨札 " + n + "枚を引き取る。";
+    log("偽物のゴリラを" + nameOf(victim) + "が見送った。" + nameOf(call.byWho) + "が捨札" + n + "枚を引き取り。",
+        call.byWho === "you" ? "bad" : "hot");
+
+    finishCall(function(){
+      if (isFinished(victim))     { finishRound(victim); return; }
+      if (isFinished(call.byWho)) { finishRound(call.byWho); return; }
+      G.cur = victim;
+      G.phase = "turn";
+      render();
+      if (G.cur === "cpu") later(cpuTurn, 850);
+    });
+  }
+}
+
+function finishCall(next){
+  render();
+  later(function(){
+    $("overlay").hidden = true;
+    call = null;
+    next();
+  }, 2000);
+}
+
+/* ───────── CPUの手番 ───────── */
+function cpuTurn(){
+  if (G.over || G.phase !== "turn" || G.cur !== "cpu") return;
+  var d = DIFF[G.diff];
+  var hand = G.hands.cpu;
+  var playable = legalCards("cpu");
+  var fake = null, nums = [];
+  playable.forEach(function(c){ if (c.kind === "fake") fake = c; else nums.push(c); });
+
+  // ブラフ判断：自分の引き取りが多く、場が薄いほど旨味がある
+  if (fake){
+    var payoff = G.taken.cpu;
+    var risk = G.pile.length;
+    var worth = payoff - risk * 0.85;
+    var must = nums.length === 0;
+    if ((worth >= 2 && Math.random() < d.bluff + payoff * 0.03) || (must && worth >= 0)){
+      playCard("cpu", fake);
+      return;
+    }
+  }
+
+  if (nums.length){
+    playCard("cpu", cpuChoose(nums, hand));
+    return;
+  }
+
+  if (fake){ playCard("cpu", fake); return; }
+
+  // 出せない：ゴリラを切るか、山札を引くか
+  var gor = gorillaOf("cpu");
+  if (gor){
+    var pile = G.pile.length;
+    var eager = (pile <= 4) || (!G.deck.length) || (G.taken.cpu > G.taken.you + 4);
+    var chance = eager ? 0.75 : 0.22;
+    if (G.diff === "hard" && pile <= 6) chance += 0.15;
+    if (!G.deck.length || Math.random() < chance){ playGorilla("cpu"); return; }
+  }
+  if (G.deck.length){ drawOne("cpu"); return; }
+  passTurn("cpu");
+}
+
+function cpuChoose(cards, hand){
+  var d = DIFF[G.diff], best = null, bestScore = -Infinity;
+  for (var i=0;i<cards.length;i++){
+    var c = cards[i], s = 0;
+    var same = hand.filter(function(x){ return x.kind==="num" && x.color===c.color && x!==c; }).length;
+    if (c.n === 9) s -= 26;                 // 現生人類は相手に自由を与える
+    s += c.n * 2.2;                          // 高い段ほど相手が続けにくい
+    s += same * 3.0;                         // 得意な大陸に居座る
+    if (G.top && c.color !== G.top.color) s += (same - 1) * 3.5;  // 伝播するなら強い大陸へ
+    if (same === 0) s += 5.5;                // 孤立札は早めに処理
+    s += (Math.random() - 0.5) * 14 * d.noise;
+    if (s > bestScore){ bestScore = s; best = c; }
+  }
+  return best;
+}
+
+/* ───────── ラウンド終了・勝敗 ───────── */
+function finishRound(who){
+  if (G.over) return;
+  G.over = true;
+  G.phase = "end";
+  clearTimers();
+  $("overlay").hidden = true;
+
+  G.total.you += G.taken.you;
+  G.total.cpu += G.taken.cpu;
+
+  var rWin;
+  if (G.taken.you < G.taken.cpu) rWin = "you";
+  else if (G.taken.cpu < G.taken.you) rWin = "cpu";
+  else rWin = who || null;
+  if (rWin) G.wins[rWin]++;
+
+  render();
+  var last = (G.round >= MAX_ROUNDS);
+  showRoundSheet(who, rWin, last);
+}
+
+function showRoundSheet(finisher, rWin, last){
+  var s = $("sheet");
+  var h = "";
+  var title = last ? "最終結果" : "第" + G.round + "ラウンド終了";
+  h += '<h2>' + title + '</h2>';
+  h += '<p class="sub">' + (finisher
+      ? nameOf(finisher) + "の手札がゴリラだけになり、ラウンド終了。"
+      : "山札が尽き、双方が出せなくなった。") + '</p>';
+
+  if (last){
+    var verdict, cls;
+    if (G.total.you < G.total.cpu){ verdict = "あなたの勝ち"; cls = "win"; }
+    else if (G.total.cpu < G.total.you){ verdict = "あなたの負け"; cls = "lose"; }
+    else { verdict = "引き分け"; cls = "draw"; }
+    h += '<div class="result ' + cls + '">' + verdict + '</div>';
+    if (G.total.you > G.total.cpu)
+      h += '<p class="sub">今日一日、あなたのあだ名は「ゴリラさん」。</p>';
+    else if (G.total.you < G.total.cpu)
+      h += '<p class="sub">CPUのあだ名が「ゴリラさん」になった。</p>';
+  } else {
+    h += '<p>このラウンドの勝者：<strong>' + (rWin ? nameOf(rWin) : "引き分け") + '</strong></p>';
+  }
+
+  h += '<div class="tally">' +
+       '<div><span>あなた 累計引き取り</span><b>' + G.total.you + '</b></div>' +
+       '<div><span>CPU 累計引き取り</span><b>' + G.total.cpu + '</b></div>' +
+       '</div>';
+  h += '<p class="sub">このラウンドの引き取り — あなた ' + G.taken.you + '枚 ／ CPU ' + G.taken.cpu + '枚</p>';
+
+  h += '<div class="sheetfoot">';
+  h += last
+    ? '<button class="bigbtn" id="againBtn">もう一度、最初から</button>'
+    : '<button class="bigbtn" id="nextBtn">第' + (G.round+1) + 'ラウンドへ</button>';
+  h += '<button class="bigbtn ghost" id="closeBtn">盤面を見る</button>';
+  h += '</div>';
+
+  s.innerHTML = h;
+  $("modal").hidden = false;
+
+  if (last){
+    $("againBtn").addEventListener("click", function(){ $("modal").hidden = true; newMatch(); });
+  } else {
+    $("nextBtn").addEventListener("click", function(){
+      $("modal").hidden = true; G.round++; G.over = false; startRound();
+    });
+  }
+  $("closeBtn").addEventListener("click", function(){ $("modal").hidden = true; });
+}
+
+/* ───────── ルール表示 ───────── */
+function showRules(){
+  var ladder = "";
+  for (var n=1;n<=9;n++) ladder += '<div><b>' + n + '</b>' + STAGE[n] + '</div>';
+  var conts = "";
+  CIDS.forEach(function(c){
+    conts += '<span style="background:' + CONT[c].hex + '">' + CONT[c].name + '</span>';
+  });
+
+  $("sheet").innerHTML =
+    '<h2>第三のゴリラ</h2>' +
+    '<p class="sub">磯野貴巨 作のカードゲームを、2人用CPU対戦に仕立て直したもの。</p>' +
+
+    '<h3>カード</h3>' +
+    '<p>4つの大陸 × 9つの段階＝36枚。数字は、ゴリラから人類へ至る進歩の段を表す。</p>' +
+    '<div class="conts">' + conts + '</div>' +
+    '<div class="ladder">' + ladder + '</div>' +
+    '<p>これに加えて、両者が <strong>ゴリラ</strong> 1枚と <strong>偽物のゴリラ</strong> 1枚を握って始める。手札は各9枚。火のボノボ（第2段）を持つ側が先攻。</p>' +
+
+    '<h3>出し方</h3>' +
+    '<ul>' +
+    '<li><strong>同じ大陸で、より上の段</strong>へ進む</li>' +
+    '<li>または<strong>大陸を問わず同じ段</strong>へ——他大陸への伝播</li>' +
+    '<li>出せるカードが1枚もなければ、山札から1枚引く（引いた札が出せればそのまま出してよい）</li>' +
+    '</ul>' +
+
+    '<h3>現生人類（9）</h3>' +
+    '<p>9より上の段はない。これが出たら次の手番は何を出してもよい——ただしゴリラと偽物のゴリラは出せない。</p>' +
+
+    '<h3>ゴリラ（切り札）</h3>' +
+    '<p>出せるカードが1枚もないときにだけ、どんな場にでも叩きつけられる。出した瞬間、<strong>双方が「ゴリラ！」と叫ぶ競争</strong>が始まる。出した本人も叫ばなければならない。遅かった方が場の捨札をすべて引き取り、速かった方が次のリード権を得る。</p>' +
+
+    '<h3>偽物のゴリラ</h3>' +
+    '<p>見た目はゴリラにそっくりだが、正体は<strong>その大陸の6（言語）</strong>。場が<strong>同じ大陸の5以下</strong>のときにしか出せない。出すとやはり「ゴリラ！」の声が上がるが、これは罠。</p>' +
+    '<ul>' +
+    '<li>相手が<strong>釣られて叫んだ</strong>ら——相手は本物のゴリラを失い、さらに<strong>出した側がそれまでに引き取った札をすべて背負う</strong></li>' +
+    '<li>相手が<strong>見送った</strong>ら——嘘をついた側が場の捨札をすべて引き取る（2人用の追加ルール）</li>' +
+    '</ul>' +
+    '<p class="sub">見分けの手がかりは足元の帯。本物は「切札」、偽物は大陸の色と「6」が刻まれている。そして場が同じ大陸の5以下でなければ、偽物はそもそも出せない。</p>' +
+
+    '<h3>決着</h3>' +
+    '<p>どちらかの手札が<strong>ゴリラだけ</strong>になったらラウンド終了。3ラウンドの<strong>引き取り合計が少ない方の勝ち</strong>。多かった方は、今日一日あだ名が「ゴリラさん」になる。</p>' +
+
+    '<div class="sheetfoot"><button class="bigbtn" id="closeBtn">盤面に戻る</button></div>';
+  $("modal").hidden = false;
+  $("closeBtn").addEventListener("click", function(){ $("modal").hidden = true; });
+}
+
+/* ───────── 入力 ───────── */
+$("callBtn").addEventListener("click", onCallPress);
+$("rulesBtn").addEventListener("click", showRules);
+$("resetBtn").addEventListener("click", function(){
+  $("modal").hidden = true; $("overlay").hidden = true; newMatch();
+});
+$("diffSel").addEventListener("change", function(){
+  var v = this.value;
+  $("modal").hidden = true; $("overlay").hidden = true;
+  newMatch(v);
+});
+document.addEventListener("keydown", function(e){
+  if (e.code === "Space" && !$("overlay").hidden){ e.preventDefault(); onCallPress(); }
+  if (e.key === "Escape" && !$("modal").hidden) $("modal").hidden = true;
+});
+
+/* ───────── 起動 ───────── */
+function boot(saved){
+  if (saved && saved.g && saved.g.phase === "turn" && !saved.g.over){
+    G = saved.g;
+    $("diffSel").value = G.diff;
+    render();
+    if (G.cur === "cpu") later(cpuTurn, 900);
+    return;
+  }
+  newMatch();
+}
+try{
+  if (window.claude && window.claude.hot && window.claude.hot.snapshot){
+    window.claude.hot.snapshot(function(){
+      return (G && G.phase === "turn" && !G.over) ? {g:G} : null;
+    });
+  }
+}catch(e){}
+try{
+  if (window.claude && window.claude.hot && window.claude.hot.ready){
+    window.claude.hot.ready(function(data){ boot(data); });
+  } else {
+    boot(window.claude && window.claude.hot ? window.claude.hot.data : null);
+  }
+}catch(e){ boot(null); }
+
+})();
+</script>
