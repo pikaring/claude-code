@@ -131,9 +131,15 @@
   }
   .pcard .pip.tl{left:3%;top:2%;}
   .pcard .pip.br{right:3%;bottom:2%;}
+  /* 病原菌と偵察兵は、外枠の色でひと目で見分けられるようにする */
+  .pcard.germ{border:3px solid #35913f;}
   .pcard.germ .art{background:#e3ecdd;}
   .pcard.germ .pip{background:#2f6a36;}
+  .pcard.germ .cname{color:#1d5426;}
+  .pcard.scout{border:3px solid #2f74d0;}
+  .pcard.scout .art{background:#e2eaf5;}
   .pcard.scout .pip{background:#2a4a78;}
+  .pcard.scout .cname{color:#1b3f72;}
   .pcard.back{
     background:
       repeating-linear-gradient(45deg, rgba(0,0,0,.08) 0 4px, transparent 4px 8px),
@@ -155,7 +161,8 @@
   }
   .row-cpu .pcard:not(.back){transform:rotate(180deg);}
   .pcard.beaten{filter:grayscale(.55) brightness(.72);}
-  .pcard.winner{box-shadow:0 0 0 2px var(--gold), 0 3px 8px rgba(0,0,0,.5);}
+  .pcard.winner-you{box-shadow:0 0 0 3px var(--ok), 0 3px 8px rgba(0,0,0,.5);}
+  .pcard.winner-cpu{box-shadow:0 0 0 3px var(--danger), 0 3px 8px rgba(0,0,0,.5);}
 
   /* ---- mine card ---- */
   .minestack{position:relative;padding-bottom:6px;}
@@ -181,12 +188,24 @@
   .minecard .mpip.br{right:5%;bottom:2%;transform:rotate(180deg);}
   .mine-total{
     text-align:center;font-size:.76rem;font-weight:800;color:var(--gold);
-    font-variant-numeric:tabular-nums;margin-top:3px;min-height:1.1em;
+    font-variant-numeric:tabular-nums;margin-top:3px;min-height:1.1em;line-height:1.25;
   }
-  .mine-total .x{font-size:.62rem;color:#ffeab0;}
-  .minewrap.won-you .minecard{box-shadow:0 0 0 2px var(--ok), 0 3px 8px rgba(0,0,0,.5);}
-  .minewrap.won-cpu .minecard{box-shadow:0 0 0 2px #ffb4b4, 0 3px 8px rgba(0,0,0,.5);}
-  .minewrap.gone{opacity:.5;}
+  .mine-total .x{display:block;font-size:.58rem;font-weight:600;color:#ffeab0;}
+  .minewrap.won-you .minecard{border-color:var(--ok);box-shadow:0 0 0 3px var(--ok), 0 3px 8px rgba(0,0,0,.5);}
+  .minewrap.won-cpu .minecard{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger), 0 3px 8px rgba(0,0,0,.5);}
+  .minewrap.tied .minecard{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold), 0 3px 8px rgba(0,0,0,.5);}
+  .minewrap.gone .minecard{border-color:#9aa7a0;box-shadow:0 2px 6px rgba(0,0,0,.5);}
+  .minewrap.gone{opacity:.55;}
+
+  /* ---- 5) 鉱山の下の Win / Lose / Draw ---- */
+  .verdict{
+    text-align:center;font-size:.66rem;font-weight:800;letter-spacing:.1em;
+    min-height:1.2em;margin-top:1px;
+  }
+  .verdict.win{color:var(--ok);}
+  .verdict.lose{color:var(--danger);}
+  .verdict.draw{color:var(--gold);}
+  .verdict.gone{color:#9aa7a0;}
 
   .predict{
     font-size:.6rem;line-height:1.25;color:#0e2b18;
@@ -306,7 +325,6 @@
     <div class="btn-row">
       <button id="btn-clear" class="ghost">置きなおす</button>
       <button id="btn-confirm" disabled>これで決める</button>
-      <button id="btn-reveal" hidden>オープン！</button>
       <button id="btn-next" hidden>次のラウンドへ</button>
       <button id="btn-result" hidden>結果を見る</button>
     </div>
@@ -645,7 +663,8 @@
     var count = Math.round(m.pot / m.base);
     var wrap = document.createElement('div');
     wrap.className = 'minewrap' +
-      (m.result === 'you' ? ' won-you' : m.result === 'cpu' ? ' won-cpu' : m.result === 'gone' ? ' gone' : '');
+      (m.result === 'you' ? ' won-you' : m.result === 'cpu' ? ' won-cpu' :
+       m.result === 'tie' ? ' tied' : m.result === 'gone' ? ' gone' : '');
 
     var pips = '';
     for (var i=0;i<m.base;i++){ pips += '◆'; }
@@ -656,11 +675,13 @@
 
     var stack = document.createElement('div');
     stack.className = 'minestack';
-    // 引き分けで積み増された枚数ぶん、少しずらして重ねる
+    // 引き分けで積み増された枚数ぶん、少しずらして重ねる。
+    // 右端の鉱山だけは内側（左）へずらして、脇の名前欄に重ならないようにする。
+    var dir = (m.id === MINE_VALUES.length - 1) ? -1 : 1;
     for (var k = count - 1; k >= 1; k--){
       var s = document.createElement('div');
       s.className = 'minecard stacked';
-      s.style.transform = 'translate(' + (k*6) + 'px,' + (k*4) + 'px) rotate(' + (k*3.5) + 'deg)';
+      s.style.transform = 'translate(' + (dir*k*6) + 'px,' + (k*4) + 'px) rotate(' + (dir*k*3.5) + 'deg)';
       s.innerHTML = inner;
       stack.appendChild(s);
     }
@@ -672,8 +693,18 @@
 
     var total = document.createElement('div');
     total.className = 'mine-total';
-    total.innerHTML = '💎' + m.pot + (count > 1 ? '<span class="x"> ×' + count + '枚</span>' : '');
+    // 積み増しは「合計」と「内訳」を分けて書く（💎10 ×2 は 20 と読めてしまうため）
+    total.innerHTML = (count > 1 ? '計💎' + m.pot : '💎' + m.pot) +
+      (count > 1 ? '<span class="x">💎' + m.base + 'の鉱山が' + count + '枚</span>' : '');
     wrap.appendChild(total);
+
+    var verdict = document.createElement('div');
+    verdict.className = 'verdict' +
+      (m.result === 'you' ? ' win' : m.result === 'cpu' ? ' lose' :
+       m.result === 'tie' ? ' draw' : m.result === 'gone' ? ' gone' : '');
+    verdict.textContent = m.result === 'you' ? 'WIN' : m.result === 'cpu' ? 'LOSE' :
+      m.result === 'tie' ? 'DRAW' : m.result === 'gone' ? 'DRAW' : '';
+    wrap.appendChild(verdict);
     return wrap;
   }
 
@@ -692,8 +723,8 @@
 
     state.mines.forEach(function(m){
       var cpuExtra = '', youExtra = '';
-      if (m.result === 'you'){ cpuExtra = 'beaten'; youExtra = 'winner'; }
-      else if (m.result === 'cpu'){ youExtra = 'beaten'; cpuExtra = 'winner'; }
+      if (m.result === 'you'){ cpuExtra = 'beaten'; youExtra = 'winner-you'; }
+      else if (m.result === 'cpu'){ youExtra = 'beaten'; cpuExtra = 'winner-cpu'; }
 
       // 相手の札（オープンまで裏向き。やさしいのときは予想を上に出す）
       var cpuCell = document.createElement('div');
@@ -765,14 +796,11 @@
     $('btn-clear').hidden = !assigning;
     $('btn-confirm').hidden = !assigning;
     $('btn-confirm').disabled = !(assigning && placed === need);
-    $('btn-reveal').hidden = state.phase !== 'ready';
     $('btn-next').hidden = !(state.phase === 'round-end' && state.round < MAX_ROUNDS);
     $('btn-result').hidden = !(state.phase === 'round-end' && state.round >= MAX_ROUNDS);
 
     if (assigning){
       setStatus('手札をクリックして、5つの鉱山すべてに1枚ずつ（' + placed + '/' + need + '）');
-    } else if (state.phase === 'ready'){
-      setStatus(state.persona.name + 'も置きました。オープンしましょう。');
     }
   }
 
@@ -815,14 +843,11 @@
     })[0];
     if (top && (top.id in state.assign)) state.history.push(state.assign[top.id]);
 
+    // 決めたらそのまま左から順にめくる
     cpuDecide();
-    state.phase = 'ready';
-    renderAll();
-  });
-
-  $('btn-reveal').addEventListener('click', function(){
     state.phase = 'reveal';
     state.revealIndex = 0;
+    setStatus(state.persona.name + 'の札をめくります…');
     renderAll();
     revealNext();
   });
