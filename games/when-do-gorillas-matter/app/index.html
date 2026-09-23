@@ -405,6 +405,7 @@ function followOk(p, cs){
   }
   var n = G.played[0].cards.length;
   if (cs.length !== n) return false;
+  if (roleNow(p) === GOR) return true;       // ゴリラはリードの色にかかわらず出せる
   var s = ledSuit(); if (s < 0) return true;
   var g = cs.filter(isGC).length;
   if (roleNow(p) === MER && s !== 0) g += cs.filter(function(c){ return c.s === 0; }).length;
@@ -857,7 +858,7 @@ function renderMe(){
     1:'預言者：聖典の札が点。指名した人と札を1枚ずつやりとり。ゴリラ札を持っていれば奪える。指名した人が取れば残りから1枚（預言）',
     2:'指導者：旗の札が点。取ったら、残りからもう1枚（徴税）',
     3:'王：冠の札が点。このトリックは王がリードする（先導）',
-    4:'ゴリラ：取ったトリックの札が全部、点になる。ゴリラ札を出せば必ず勝つ'
+    4:'ゴリラ：取ったトリックの札が全部、点になる。どの色の札でも出せる。ゴリラ札を出せば必ず勝つ'
   }[r];
   if (G.over) say = '';
   $("meRow").innerHTML = '<span class="who">あなた</span>' + (G.over ? '' : roleBadge(r, true)) + '<span class="say">' + esc(say) + '</span>';
@@ -926,7 +927,7 @@ function renderActions(){
         (cs.length && !ok ? ' <span class="warn">この組み合わせは出せません。</span>' : '');
     } else if (quickPlay()){
       var s = ledSuit();
-      hint = '出す札を選んでください。' + (s >= 0 ? 'リードされたスート（' + SUITS[s] + '）があれば、それを出す決まりです。' : '') + 'ゴリラ札はいつでも出せます。' + (roleNow(0) === MER && s !== 0 ? '商人なので貨幣もいつでも出せます（負けても仲買で拾い戻せるかも）。' : '');
+      hint = '出す札を選んでください。' + (s >= 0 ? 'リードされたスート（' + SUITS[s] + '）があれば、それを出す決まりです。' : '') + (roleNow(0) === GOR ? 'ゴリラなので、リードの色にかかわらずどの札でも出せます（勝てるのはリードの色かゴリラ札だけ）。' : 'ゴリラ札はいつでも出せます。') + (roleNow(0) === MER && s !== 0 ? '商人なので貨幣もいつでも出せます（負けても仲買で拾い戻せるかも）。' : '');
     } else {
       var n = G.played[0].cards.length, cs2 = selCards(), ok2 = followOk(0, cs2), wins = false;
       if (ok2){ G.played.push({p:0, cards:cs2, f:followForm(cs2), role:roleNow(0)}); wins = currentWinner().p === 0; G.played.pop(); }
@@ -1025,6 +1026,7 @@ function showRules(){
     '<li>ほかの人は<b>リードと同じ枚数</b>を出す。1枚や連番のリードには、そのスートの札を持っているだけ含める</li>' +
     '<li>勝てるのは<b>リードと同じ形</b>だけ。いちばん大きい数字が上回れば勝ち。同じ数字なら先に出した方。切り札はない</li>' +
     '<li><b>ゴリラ札</b>はいつでも出せる。ゴリラ役が出せば<b>必ず勝つ</b>。ほかの役が出すと負け</li>' +
+    '<li><b>ゴリラ</b>はリードの色にかかわらず、どの札でも出せる（勝てるのはリードと同じ形の札かゴリラ札だけ）。<b>商人</b>は貨幣をいつでも出せる</li>' +
     '<li>手札が尽きたら、5トリックに届かなくてもその局は終わり</li></ul>' +
     '<h3>預言</h3>' +
     '<p>預言者は1人を指名し、<b>伏せて1枚ずつ札をやりとり</b>します。相手がゴリラ札を持っていれば、<b>必ずそれを渡す</b>決まり。指名した人がトリックを取れば、残りから1枚を得点札にします。自分を指名したらやりとりはありません。</p>' +

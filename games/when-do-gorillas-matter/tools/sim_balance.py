@@ -172,6 +172,10 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
                     dis=sorted(h,key=lambda c:(pts(c,wr) if (wr==G or c[0]==wr) else 0)+hold(p,c))[:n]
                 feed=sum(pts(c,wr) for c in dis if wr==G or c[0]==wr)
                 opts.append((-0.8*feed-0.4*sum(hold(p,c) for c in dis),dis))
+                # ゴリラはフォローの決まりに関係なく出せる：勝てないなら要らない札を捨てる
+                if opt.get('gorfree') and r==G:
+                    dis2=sorted(h,key=lambda c:(c[1] if c[0]>=0 else 0)*0.3+hold(p,c))[:n]
+                    opts.append((-0.4*sum(hold(p,c) for c in dis2),dis2))
                 # 商人は貨幣をいつでも出せる（負けても仲買で拾い戻せる見込み）
                 if opt.get('mercoin') and r==M and lf[0] in ('single','run') and lf[1]!=M:
                     coins=sorted([c for c in h if c[0]==M],key=lambda c:c[1])
@@ -215,9 +219,10 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
 
 
 
+
 if __name__=="__main__":
-    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead','roleorder':1,'refill_trick':1}
-    for name,opt in [("v0.11",base),("v0.12案（商人は貨幣をいつでも出せる）",dict(base,mercoin=1))]:
+    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead','roleorder':1,'refill_trick':1,'mercoin':1}
+    for name,opt in [("v0.12",base),("v0.13案（ゴリラは色にかかわらず出せる）",dict(base,gorfree=1))]:
         print("==",name)
         for N,R in {2:7,3:9,4:11,5:13}.items():
             rng=random.Random(4);BR=[0]*5;SS={};n=800;five=0
