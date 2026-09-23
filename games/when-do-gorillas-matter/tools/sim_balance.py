@@ -194,15 +194,20 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
             if pred is not None and pred==w and left:
                 c=max(left,key=lambda c:c[1]);left.remove(c);removed.append(c);score[holder[P]]+=max(c[1],0);byrole[P]+=max(c[1],0);S['pro_pts']+=max(c[1],0)
             lead=w;t+=1
+            if opt.get('refill_trick'):   # 1トリックごとに8枚まで補充（捨て札は山札に戻っている扱い）
+                pool=[c for c in deck if c not in removed and not any(c in h for h in hands)];rng.shuffle(pool)
+                need=HMAX-len(hands[0]); d2=min(need,len(pool)//N)
+                if d2<need: S['short_refill']=S.get('short_refill',0)+1
+                for i in range(N): hands[i]+=pool[i*d2:(i+1)*d2]
         if t<5: S['short']+=1
         deck=[c for c in deck if c not in removed];keep=[list(h) for h in hands]
     return score,byrole,S
 
 
+
 if __name__=="__main__":
-    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead'}
-    for name,opt in [("v0.9（王から時計回り、王が空席なら前の勝者から）",base),
-                     ("v0.10案（王→指導者→預言者→商人→ゴリラ）",dict(base,roleorder=1))]:
+    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead','roleorder':1}
+    for name,opt in [("v0.10（局ごとに8枚まで補充）",base),("v0.11案（トリックごとに8枚まで補充）",dict(base,refill_trick=1))]:
         print("==",name)
         for N,R in {2:7,3:9,4:11,5:13}.items():
             rng=random.Random(4);BR=[0]*5;SS={};n=800;five=0
@@ -210,4 +215,4 @@ if __name__=="__main__":
                 sc,b,s_=game(rng,N,R,opt);BR=[x+y for x,y in zip(BR,b)];five+=s_['rounds']==5
                 for k,v in s_.items(): SS[k]=SS.get(k,0)+v
             T=sum(BR)
-            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f" | 5局{five/n:.0%} 早終{SS['short']/SS['rounds']:.0%}")
+            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f" | 5局{five/n:.0%} 早終{SS['short']/SS['rounds']:.0%} 補充不足{SS.get('short_refill',0)/n:.2f}回/ゲーム 1人{T/n/N:.0f}点")

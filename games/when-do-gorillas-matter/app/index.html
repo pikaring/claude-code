@@ -441,7 +441,7 @@ function startRound(){
   var need = HAND_MAX - G.hands[0].length;
   var d = Math.min(need, Math.floor(G.pile.length / G.N));
   for (var p=0;p<G.N;p++){ for (var i=0;i<d;i++) G.hands[p].push(G.pile.pop()); sortHand(G.hands[p]); }
-  G.TR = Math.min(TRICKS, G.hands[0].length);
+  G.TR = TRICKS;
   G.trick = 0;
   G.voids = []; for (var q=0;q<G.N;q++) G.voids.push([false,false,false,false]);
   logMsg("── 第" + (G.round+1) + "局。" + (G.round ? "持ち越し" + (HAND_MAX-need) + "枚＋補充" + d + "枚。" : "8枚ずつ配った。"), "hot");
@@ -449,7 +449,7 @@ function startRound(){
 }
 
 function startTrick(){
-  G.played = []; G.pred = -1; G.result = null; G.fresh = {}; G.sel = []; G.pex = null;
+  G.played = []; G.pred = -1; G.result = null; G.sel = []; G.pex = null;
   // 出す順は役割で決まる：王が最初（先導）、ゴリラが最後。空席の役割は飛ばす
   G.order = [];
   for (var k=0;k<G.N;k++) G.order.push(k);
@@ -568,8 +568,24 @@ function resolveTrick(){
   render();
 }
 
+/* 1トリックごとに、手札が8枚になるまで補充する。
+   山札が足りなければ捨て札をシャッフルして山札に加え、それでも足りなければ等分する */
+function refillHands(){
+  var need = HAND_MAX - G.hands[0].length;
+  if (need <= 0) return;
+  if (G.pile.length < need * G.N){ G.pile = shuffle(G.pile.concat(G.discard)); G.discard = []; }
+  var d = Math.min(need, Math.floor(G.pile.length / G.N));
+  for (var p=0;p<G.N;p++){
+    for (var i=0;i<d;i++){ var c = G.pile.pop(); G.hands[p].push(c); if (p === 0) G.fresh[c.id] = true; }
+    sortHand(G.hands[p]);
+  }
+  if (d < need) logMsg("山札が足りず、補充は" + d + "枚ずつ（手札" + G.hands[0].length + "枚）。", "hot");
+}
+
 function advance(){
   G.trick++;
+  G.fresh = {};
+  if (G.trick < G.TR) refillHands();
   if (G.trick < G.TR && G.hands[0].length){ startTrick(); return; }
   if (G.trick < G.TR) logMsg("手札が尽きたので、この局は" + G.trick + "トリックで終わり。", "hot");
   var line = [];
@@ -1013,7 +1029,7 @@ function showRules(){
     '<li>残りは捨て札。局の終わりに山札へ戻る</li></ol>' +
     '<p class="sub">「好きな1枚」を選ぶ場面（徴税・預言）は、このアプリではいちばん大きい札を自動で取ります。</p>' +
     '<h3>得点札と手札</h3>' +
-    '<p><b>得点札はゲームに戻りません。</b>手に残った札は次の局へ持ち越し、8枚になるまで山札から補充します。最終局で手に残った札は点になりません。</p>' +
+    '<p><b>得点札はゲームに戻りません。</b>手札は<b>トリックごとに8枚まで補充</b>します（山札が足りなければ捨て札を混ぜる）。最終局で手に残った札は点になりません。</p>' +
     '<div class="sheetfoot"><button class="bigbtn" id="closeBtn">盤面に戻る</button></div>';
   $("modal").hidden = false;
   $("closeBtn").addEventListener("click", closeModal);
