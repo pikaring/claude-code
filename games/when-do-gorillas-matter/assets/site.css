@@ -256,3 +256,8 @@ details p { margin-top: 12px; font-size: 15px; padding-left: 24px; }
 .card .por { float: right; width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin: -4px -4px 8px 12px; border: 2px solid rgba(0,0,0,.08); }
 .art-banner { background: #1C1920; }
 .art-banner img { display: block; width: 100%; max-width: 1200px; height: auto; margin: 0 auto; }
+.card .flavor { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid rgba(0,0,0,.1);
+  font-family: "Zen Antique", "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 14px; line-height: 2; color: #6d6573; }
+.card .flavor .rb { position: relative; }
+.card .flavor .rb::before { content: attr(data-rt); position: absolute; left: 50%; top: -.95em; transform: translateX(-50%);
+  font-size: .55em; line-height: 1; white-space: nowrap; letter-spacing: 0; }
