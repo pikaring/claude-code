@@ -271,7 +271,8 @@ var BAN = -1, SBK = -2;                 // バナナ・シルバーバックの�
 var RANGE = {2:9, 3:11, 4:13};          // 人数ごとの数字の範囲（各スート、同じ数字が2枚ずつ）
 var COPIES = 2, BANANAS = 4, SB_PTS = 15;
 var HAND_MAX = 8, TRICKS = 4, ROUNDS = 4, MAX_COMBO = 3;
-var PLAY_ORDER = [KIN, PRO, MER, GOR];  // 出す順：王→預言者→商人→ゴリラ（王の席から反時計回り）
+var PLAY_ORDER = [KIN, MER, PRO, GOR];  // 出す順：王→商人→預言者→ゴリラ（王の席から反時計回り）
+var ROLE_AT = [PRO, MER, KIN, GOR];     // 円卓の並び。各プレイヤーの役割は 王→商人→預言者→ゴリラ→王 と移る
 var FORM_NAME = {single:"1枚", run:"連番", set:"同数", sb:"シルバーバック"};
 /* 対戦相手は all-in-texas の PERSONAS と同じ5人 */
 var PERSONAS = [
@@ -293,8 +294,9 @@ function rnd(){ return Math.random(); }
 function shuffle(a){ for (var i=a.length-1;i>0;i--){ var j=Math.floor(rnd()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
 
-/* プレイヤー p の場 t（第k局）での役割。役割は場が終わるごとに時計回りに隣へ移る */
-function roleOf(p, t, k){ return ((p - t + k) % NR + NR) % NR; }
+/* プレイヤー p の場 t（第k局）での役割。役割は場が終わるごとに時計回りに隣へ移る
+   （預言者の次の場はゴリラなので、預言で奪ったシルバーバックをすぐ使える） */
+function roleOf(p, t, k){ return ROLE_AT[((p - t + k) % NR + NR) % NR]; }
 function roleNow(p){ return roleOf(p, G.trick, G.round); }
 function holder(role){ for (var p=0;p<G.N;p++) if (roleNow(p) === role) return p; return -1; }
 function nm(p){ return p === 0 ? "あなた" : G.names[p]; }
@@ -341,16 +343,19 @@ function ambiguous(cs){ return cs.length === 2 && cs.filter(isBan).length === 1 
 
 /* 場のいちばん上に重ねられるか。同じ形・同じ枚数で「同じスートで上げる」か「同じ数字で色かえ」。
    連番と同数は色を問わず上げられる。ゴリラは1枚でも色を問わず上げられる。商人は貨幣なら色を問わず上げられる */
+/* 数字が上か。いちばん大きい数字（4人なら13）の上には1を出せる（1周）。
+   1枚は同じスートのときだけ、同数は色を問わず。連番とゴリラ・商人の例外には使えない */
+function above(a, b){ return a > b || (b === G.ranks && a === 1); }
 function canStack(role, top, f){
   if (!f) return false;
   if (f.t === "sb") return role === GOR;
   if (!top) return true;
   if (f.t !== top.t || f.n !== top.n) return false;
-  if (f.t === "set") return f.top > top.top;
-  if (f.t === "run" && f.top > top.top) return true;       // 連番は色を問わず上げられる
-  if (f.s === top.s) return f.top > top.top;
+  if (f.t === "set") return above(f.top, top.top);
+  if (f.t === "run" && f.top > top.top) return true;       // 連番は色を問わず上げられる（1周はしない）
+  if (f.s === top.s) return above(f.top, top.top);
   if (f.top === top.top) return true;                       // 色かえ
-  if (f.top > top.top && (role === GOR || (role === MER && f.s === 0))) return true;
+  if (f.top > top.top && (role === GOR || (role === MER && f.s === 0))) return true;   // 1周はこの例外に使えない
   return false;
 }
 function topPlay(){ return G.played.length ? G.played[G.played.length-1] : null; }
@@ -434,7 +439,7 @@ function startRound(){
 function startTrick(){
   G.played = []; G.pred = -1; G.result = null; G.sel = []; G.pex = null; G.last = -1;
   G.passed = []; for (var q=0;q<G.N;q++) G.passed.push(!G.hands[q].length);
-  // 出す順は役割で決まる：王→預言者→商人→ゴリラ。空席の役割は飛ばす
+  // 出す順は役割で決まる：王→商人→預言者→ゴリラ。空席の役割は飛ばす
   G.order = [];
   for (var k=0;k<G.N;k++) G.order.push(k);
   G.order.sort(function(a,b){ return PLAY_ORDER.indexOf(roleNow(a)) - PLAY_ORDER.indexOf(roleNow(b)); });
@@ -826,7 +831,7 @@ function renderActions(){
       var q = G.order[k];
       a += '<button class="bigbtn ghost" data-pred="' + q + '">' + roleBadge(roleNow(q)) + esc(nm(q)) + '</button>';
     }
-    hint = '指名した人と<em>伏せて1枚ずつ</em>やりとりし、相手がシルバーバックを持っていれば必ずあなたに来ます。指名した人が場を取れば、先に場の聖典のいちばん大きい1枚をもらえます。自分を指名するとやりとりなし。';
+    hint = '指名した人と<em>伏せて1枚ずつ</em>やりとりし、相手がシルバーバックを持っていれば必ずあなたに来ます。指名した人が場を取れば、先に場の聖典のいちばん大きい1枚をもらえます。自分を指名するとやりとりなし。次の場であなたはゴリラなので、奪ったシルバーバックはすぐ使えます。';
   } else if (G.phase === "pgive"){
     hint = '預言者 <em>' + esc(nm(G.pex.pr)) + '</em> に渡す札を選んでください。' + (G.hands[0].some(isSB) ? '<span class="warn">シルバーバックを持っているので、それを渡す決まりです。</span>' : '1枚返ってきます。');
   } else if (G.phase === "preturn"){
@@ -922,12 +927,12 @@ function showRules(){
     '<h2>あそびかた</h2><p class="sub">2〜4人。役割が回る「場」に札を重ね、最後に出した人が場の札を総取りします。4局で得点札の点の合計を競います。</p>' +
     '<h3>札と役割</h3>' +
     '<p>数字札は4スート（<b>貨幣・聖典・冠・ゴリラ</b>）で、<b>同じ数字が2枚ずつ</b>。数字がそのまま強さと点です（2人1〜9／3人1〜11／4人1〜13）。ほかに<b>バナナ4枚</b>と<b>シルバーバック1枚</b>。</p>' +
-    '<p>役割は<b>王・預言者・商人・ゴリラ</b>の4つ。<b>場が終わるごとに時計回りに隣へ移ります</b>。1局は4つの場で、ゴリラになるのは1局に1回だけ。予定は上の表に出ています。</p>' +
+    '<p>役割は<b>王・商人・預言者・ゴリラ</b>の4つ。<b>場が終わるごとに時計回りに隣へ移り</b>、だれもが王→商人→預言者→ゴリラの順に回ります（預言者の次はゴリラ）。1局は4つの場で、ゴリラになるのは1局に1回だけ。予定は上の表に出ています。</p>' +
     '<h3>場</h3><ul>' +
     '<li>預言者がいれば、まず<b>預言</b>（下）</li>' +
-    '<li>出す順は<b>王→預言者→商人→ゴリラ</b>（空席は飛ばす）。<b>王がリード</b>（先導）</li>' +
+    '<li>出す順は<b>王→商人→預言者→ゴリラ</b>（空席は飛ばす）。<b>王がリード</b>（先導）</li>' +
     '<li>リードは<b>1枚</b>か、<b>連番</b>（同じスートの続き数字2〜3枚）か、<b>同数</b>（同じ数字2〜3枚）。<b>バナナ</b>は組の足りない1枚の代わり</li>' +
-    '<li>以降は順にぐるぐる回り、いちばん上の札に<b>重ねる</b>か<b>パス</b>。重ねられるのは同じ形・同じ枚数で、<b>同じスートで数字が上</b>か、<b>同じ数字で色かえ</b>。<b>連番と同数は色を問わず、数字が上なら重ねられる</b></li>' +
+    '<li>以降は順にぐるぐる回り、いちばん上の札に<b>重ねる</b>か<b>パス</b>。重ねられるのは同じ形・同じ枚数で、<b>同じスートで数字が上</b>か、<b>同じ数字で色かえ</b>。<b>連番と同数は色を問わず、数字が上なら重ねられる</b>。<b>いちばん大きい数字（4人なら13）の上には1を出せる</b>（1周。1枚は同じスート、同数は色を問わず。連番は1周しない）</li>' +
     '<li><b>パスしたらその場から抜ける</b>。最後に出した人以外が全員抜けたら、<b>最後に出した人が場の札を総取り</b></li></ul>' +
     '<h3>役割の能力</h3><ul>' +
     '<li><b>王（先導）</b>：場の最初にリードする</li>' +

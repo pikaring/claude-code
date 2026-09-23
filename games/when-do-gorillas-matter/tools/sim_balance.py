@@ -1,9 +1,10 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.4）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.5）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
 # 能力: 王=先導 / 預言者=指名して伏せて1枚ずつやりとり（シルバーバックは必ず渡す）＋指名した人が取れば先に1枚
 #       商人=取れなかったら先に貨幣の最小1枚、貨幣なら色を問わず上げられる / ゴリラ=色を問わず上げられる、シルバーバックで即決
+# opt: ring2=回る順 王→商人→預言者→ゴリラ(v1.5) / wrap=いちばん大きい数字の上に1(v1.5) / wrap_strict=1周は同じスートの1枚と同数だけ(v1.5)
 # opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_raid=襲撃 'gor'=群れを率いる(v1.4)・'max'/'max2'=最大の札 / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_thr=出す目安（試した案）
 # opt: edict=王の札には色かえ不可（試した案） / king_reentry=王が一度だけ復帰（試した案） / mer_nojump=商人の貨幣の色かえなし（試した案）
 # 使い方: python3 tools/sim_balance.py
@@ -71,6 +72,9 @@ def form(cmb, R):
 # 役割: 0商人 1預言者 2王 3ゴリラ（スートも 0貨幣 1聖典 2冠 3ゴリラ）
 MR,PR,KR,GR=0,1,2,3
 ORDER=[KR,PR,MR,GR]
+RING=[0,1,2,3]   # 円卓の並び（役割番号）。v1.5 は [PR,MR,KR,GR]：各人が 王→商人→預言者→ゴリラ と回る
+def hi(a,b,R):  # 数字が上か。wrap=いちばん大きい数字の上に1（1枚と同数）
+    return a>b or (OPT.get('wrap') and b==R and a==1)   # wrap_strict=ゴリラ・商人の色を問わない上げには使えない
 NR=4
 def val(c): return OPT.get('sb_pts',15) if isgc(c) else (0 if isban(c) else c[1])
 def legal_next(top, cm, R, role):
@@ -78,16 +82,18 @@ def legal_next(top, cm, R, role):
     if not fc or fc[0] in ('gc','ban'): return False
     if ft[0]=='gc': return False
     if ft[0]!=fc[0] or ft[2]!=fc[2]: return False
-    if ft[0]=='set': return fc[3]>ft[3]
+    if ft[0]=='set': return hi(fc[3],ft[3],R)
     if ft[0]=='run' and OPT.get('runfree') and fc[3]>ft[3]: return True   # 連番は色を問わず上げられる
-    if fc[1]==ft[1] and fc[3]>ft[3]: return True          # 同じ色で上
+    if fc[1]==ft[1] and (hi(fc[3],ft[3],R) if ft[0]=='single' else fc[3]>ft[3]): return True          # 同じ色で上
     if fc[1]!=ft[1] and fc[3]==ft[3] and not EDICT[0]: return True          # 同じ数字で色かえ
-    if role==GR and fc[3]>ft[3]: return True               # ゴリラは色を問わず上
-    if role==MR and fc[1]==0 and fc[3]>ft[3] and not OPT.get('mer_nojump'): return True  # 商人は貨幣で上なら色かえ
+    if role==GR and ((hi(fc[3],ft[3],R) and not OPT.get('wrap_strict')) if ft[0]=='single' else fc[3]>ft[3]): return True               # ゴリラは色を問わず上
+    if role==MR and fc[1]==0 and ((hi(fc[3],ft[3],R) and not OPT.get('wrap_strict')) if ft[0]=='single' else fc[3]>ft[3]) and not OPT.get('mer_nojump'): return True  # 商人は貨幣で上なら色かえ
     return False
 EDICT=[False]; OPT={}
 def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
     OPT.clear(); OPT.update(opt)
+    global ORDER, RING
+    ORDER=[KR,MR,PR,GR] if OPT.get('ring2') else [KR,PR,MR,GR]; RING=[PR,MR,KR,GR] if OPT.get('ring2') else [0,1,2,3]
     deck=[(s,r,k) for s in range(4) for r in range(1,R+1) for k in range(COPIES)]
     deck+=[(BAN,0,k) for k in range(4)]+[(GC,15,0)]
     score=[0]*N; byrole=[0]*NR; removed=set(); hands=[[] for _ in range(N)]
@@ -105,10 +111,10 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
         S['rounds']+=1
         for t in range(NR):
             if any(len(h)==0 for h in hands): break
-            roles=[(p-t+rnd)%NR for p in range(N)]
+            roles=[RING[(p-t+rnd)%NR] for p in range(N)]
             holder={roles[p]:p for p in range(N)}
             order=sorted(range(N),key=lambda q:ORDER.index(roles[q]))
-            later=lambda p:{(p-u+rnd)%NR for u in range(t+1,NR)}
+            later=lambda p:{RING[(p-u+rnd)%NR] for u in range(t+1,NR)}
             def hold(p,c):
                 if isgc(c): return 40 if GR in later(p) else 8
                 return c[1]*0.3+(c[1]*0.5 if GR in later(p) else 0)
@@ -194,8 +200,9 @@ RANGE={2:9,3:11,4:13}
 OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1}
 OPT_V13=dict(OPT_V12,sb_double=1)
 OPT_V14=dict(OPT_V12,sb_raid='gor')
+OPT_V15=dict(OPT_V14,ring2=1,wrap=1,wrap_strict=1)
 if __name__=="__main__":
-    for name,opt in [("v1.2（商人＝貨幣の最大、預言者＝当てたら聖典の最大、返す札は受け取った札以外）",OPT_V12),("v1.4（シルバーバックの群れを率いる）",OPT_V14)]:
+    for name,opt in [("v1.4（シルバーバックの群れを率いる）",OPT_V14),("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
