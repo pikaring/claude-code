@@ -1,9 +1,10 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.0）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.3）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
 # 能力: 王=先導 / 預言者=指名して伏せて1枚ずつやりとり（シルバーバックは必ず渡す）＋指名した人が取れば先に1枚
 #       商人=取れなかったら先に貨幣の最小1枚、貨幣なら色を問わず上げられる / ゴリラ=色を問わず上げられる、シルバーバックで即決
+# opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_thr=出す目安（試した案）
 # opt: edict=王の札には色かえ不可（試した案） / king_reentry=王が一度だけ復帰（試した案） / mer_nojump=商人の貨幣の色かえなし（試した案）
 # 使い方: python3 tools/sim_balance.py
 import random, statistics as st, itertools
@@ -71,7 +72,7 @@ def form(cmb, R):
 MR,PR,KR,GR=0,1,2,3
 ORDER=[KR,PR,MR,GR]
 NR=4
-def val(c): return 15 if isgc(c) else (0 if isban(c) else c[1])
+def val(c): return OPT.get('sb_pts',15) if isgc(c) else (0 if isban(c) else c[1])
 def legal_next(top, cm, R, role):
     ft=form(top,R); fc=form(cm,R)
     if not fc or fc[0] in ('gc','ban'): return False
@@ -90,7 +91,8 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
     deck=[(s,r,k) for s in range(4) for r in range(1,R+1) for k in range(COPIES)]
     deck+=[(BAN,0,k) for k in range(4)]+[(GC,15,0)]
     score=[0]*N; byrole=[0]*NR; removed=set(); hands=[[] for _ in range(N)]
-    S={'rounds':0,'tricks':0,'cards':0,'short':0,'gcwin':0,'steal':0}
+    S={'rounds':0,'tricks':0,'cards':0,'short':0,'gcwin':0,'steal':0,'sbgain':0,'sbend':0,'sbusers':0,'sbtop':0}
+    users=set()
     knows=[None]*N
     def refill():
         pool=[c for c in deck if c not in removed and not any(c in h for h in hands)];rng.shuffle(pool)
@@ -117,8 +119,8 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                 name=knows[pp] if knows[pp] not in (None,pp) else rng.choice([q for q in range(N) if q!=pp]) if N>1 else pp
                 pred=name
                 if name!=pp and hands[name] and hands[pp] and OPT.get('pro_mode','both')!='predict':
-                    gcs=[c for c in hands[name] if isgc(c)]
-                    c1=gcs[0] if gcs else min(hands[name],key=lambda c:val(c)+hold(name,c))
+                    gcs=[c for c in hands[name] if isgc(c)] if not OPT.get('sb_nosteal') else []
+                    c1=gcs[0] if gcs else min([c for c in hands[name] if not isgc(c)] or hands[name],key=lambda c:val(c)+hold(name,c))
                     hands[name].remove(c1);hands[pp].append(c1)
                     c2=min([c for c in hands[pp] if not isgc(c) and c is not c1] or [c for c in hands[pp] if c is not c1] or hands[pp],key=lambda c:val(c)+hold(pp,c))
                     hands[pp].remove(c2);hands[name].append(c2)
@@ -141,7 +143,7 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                         if q==last or q not in inn: continue
                         h=hands[q];n=len(top);rq=roles[q]
                         potv=sum(val(c) for c in pile)
-                        if rq==GR and any(isgc(c) for c in h) and potv>=12:
+                        if rq==GR and any(isgc(c) for c in h) and potv-OPT.get('sb_pts',15)*any(isgc(c) for c in pile)>=OPT.get('sb_thr',12):
                             gc=next(c for c in h if isgc(c));h.remove(gc);pile.append(gc);last=q;S['gcwin']+=1;inn=[];break
                         EDICT[0]=bool(opt.get('edict') and roles[last]==KR)
                         opts=[cm for cm in (combos(h,n,R) if n>1 else [[c] for c in h]) if len(cm)==n and legal_next(top,cm,R,rq)]
@@ -157,6 +159,14 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                         inn.remove(q)
                         if not [x for x in inn if x!=last]: break
                     if not inn or not [x for x in inn if x!=last] or not moved: break
+            if OPT.get('sb_late') and GR in holder and not any(isgc(c) for c in pile):
+                gq=holder[GR]
+                if gq!=last and any(isgc(c) for c in hands[gq]) and sum(val(c) for c in pile)>=OPT.get('sb_thr',12):
+                    gc=next(c for c in hands[gq] if isgc(c));hands[gq].remove(gc);pile.append(gc);last=gq;S['gcwin']+=1
+            sbw=any(isgc(c) for c in pile)
+            if sbw: S['sbgain']+=sum(val(c) for c in pile if not isgc(c)); users.add(last)
+            if sbw and OPT.get('sb_keep'):
+                gc=next(c for c in pile if isgc(c));pile.remove(gc);hands[last].append(gc)
             # 能力：勝者より先に抜く
             w=last
             if MR in holder and holder[MR]!=w:
@@ -164,15 +174,20 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                 if coins: c=(max if OPT.get('mer_max') else min)(coins,key=lambda c:c[1]);pile.remove(c);score[holder[MR]]+=c[1];byrole[MR]+=c[1];removed.add(c)
             if PR in holder and pred==w and holder[PR]!=w and pile and OPT.get('pro_mode','both')!='steal' and (not OPT.get('pro_suit') or any(c[0]==1 for c in pile)):
                 c=max([c for c in pile if c[0]==1] if OPT.get('pro_suit') else pile,key=val);pile.remove(c);score[holder[PR]]+=val(c);byrole[PR]+=val(c);removed.add(c)
-            v=sum(val(c) for c in pile);score[w]+=v;byrole[roles[w]]+=v;removed.update(pile);S['cards']+=len(pile)
+            v=sum(val(c) for c in pile)+(sum(val(c) for c in pile if not isgc(c)) if sbw and OPT.get('sb_double') else 0);score[w]+=v;byrole[roles[w]]+=v;removed.update(pile);S['cards']+=len(pile)
             refill()
+    if OPT.get('sb_keep'):
+        for i,h in enumerate(hands):
+            if any(isgc(c) for c in h): score[i]+=OPT.get('sb_pts',15); S['sbend']+=1
+    S['sbusers']=len(users); S['sbtop']=sum(1 for u in users if score[u]==max(score))
     return score,byrole,S
 
 
 RANGE={2:9,3:11,4:13}
 OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1}
+OPT_V13=dict(OPT_V12,sb_double=1)
 if __name__=="__main__":
-    for name,opt in [("v1.1",{'runfree':1}),("v1.2（商人＝貨幣の最大、預言者＝当てたら聖典の最大、返す札は受け取った札以外）",OPT_V12)]:
+    for name,opt in [("v1.2（商人＝貨幣の最大、預言者＝当てたら聖典の最大、返す札は受け取った札以外）",OPT_V12),("v1.3（シルバーバックの倍取り）",OPT_V13)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
@@ -180,4 +195,4 @@ if __name__=="__main__":
                 sc,b,s_=game(rng,N,R,opt);BR=[x+y for x,y in zip(BR,b)]
                 for k,v in s_.items(): SS[k]=SS.get(k,0)+v
             T=sum(BR)
-            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預王ゴ",BR))+f" | 奪取{SS['steal']/n:.1f}")
+            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預王ゴ",BR))+f" | 奪取{SS['steal']/n:.1f} シルバーバック{SS['gcwin']/n:.2f}回")
