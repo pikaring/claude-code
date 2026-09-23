@@ -251,3 +251,8 @@ details p { margin-top: 12px; font-size: 15px; padding-left: 24px; }
   .header .brand { font-size: 14px; letter-spacing: 0; }
   .nav .btn-main { white-space: nowrap; }
 }
+
+/* 王とゴリラ：イラスト */
+.card .por { float: right; width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin: -4px -4px 8px 12px; border: 2px solid rgba(0,0,0,.08); }
+.art-banner { background: #1C1920; }
+.art-banner img { display: block; width: 100%; max-width: 1200px; height: auto; margin: 0 auto; }

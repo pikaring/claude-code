@@ -37,6 +37,7 @@ for (let i = 0; i < 400; i++) {
   if (await page.locator('.slot .card').count() >= 3 && await page.locator('#hand .card.pick').count()
       && await page.locator('#passBtn').count() && await page.locator('.sched td.cur').first().evaluate(td => td.cellIndex >= 2)) break;
   const nb = page.locator('#nextBtn'); if (await nb.count()) { await nb.click(); continue; }
+  const gb = page.locator('#giveBtn'); if (await gb.count()) { await gb.click(); continue; }   // 預言の札渡しの確認
   const pr = page.locator('[data-pred]'); if (await pr.count()) { await pr.first().click(); continue; }
   const pb = page.locator('#passBtn'); if (await pb.count()) { await pb.click(); continue; }
   const pl = page.locator('[data-play]');

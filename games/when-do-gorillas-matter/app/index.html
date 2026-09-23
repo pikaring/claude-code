@@ -68,8 +68,13 @@
   .role.big{height:22px; font-size:12px; padding:0 6px; gap:4px}
 
   /* ── 場：このトリックの札 ── */
-  .table{background:var(--bg2); border:1px solid var(--line); border-radius:4px; padding:9px 10px;
+  .table{background:linear-gradient(rgba(17,16,21,.8),rgba(17,16,21,.8)), url(../assets/hero.jpg) right 30% / cover no-repeat, var(--bg2);
+    border:1px solid var(--line); border-radius:4px; padding:9px 10px;
     display:flex; flex-direction:column; gap:7px}
+  .por{width:40px; height:40px; border-radius:50%; object-fit:cover; flex:none; border:1.5px solid var(--line2); background:#1C1920}
+  .por.r0{border-color:var(--s0)} .por.r1{border-color:var(--s1)} .por.r2{border-color:var(--s2)} .por.r3{border-color:var(--s3)}
+  .sheet .banner{display:block; width:calc(100% + 44px); margin:-22px -22px 14px; height:auto; aspect-ratio:1600/893; object-fit:cover; object-position:right center;
+    border-radius:5px 5px 0 0; max-height:220px}
   .trick{display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
   .slot{display:flex; flex-direction:column; align-items:center; gap:3px; width:70px}
   .slot .lbl{font-size:10.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70px;
@@ -197,6 +202,7 @@
     .bigbtn{padding:6px 10px; font-size:12.5px}
     .table{padding:7px 6px}
     .me .say{font-size:11.5px}
+    .por{width:30px; height:30px}
   }
   @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important; transition-duration:.01ms!important} }
 </style>
@@ -273,6 +279,7 @@ var COPIES = 2, BANANAS = 4, SB_PTS = 0;   // シルバーバックは得点札�
 var HAND_MAX = 8, TRICKS = 4, ROUNDS = 4, MAX_COMBO = 3;
 var PLAY_ORDER = [KIN, MER, PRO, GOR];  // 出す順：王→商人→預言者→ゴリラ（王の席から反時計回り）
 var ROLE_AT = [PRO, MER, KIN, GOR];     // 円卓の並び。各プレイヤーの役割は 王→商人→預言者→ゴリラ→王 と移る
+var ROLE_IMG = ['../assets/role-merchant.jpg', '../assets/role-prophet.jpg', '../assets/role-king.jpg', '../assets/role-gorilla.jpg'];
 var FORM_NAME = {single:"1枚", run:"連番", set:"同数", sb:"シルバーバック"};
 /* 対戦相手は all-in-texas の PERSONAS と同じ5人 */
 var PERSONAS = [
@@ -618,7 +625,7 @@ function endGame(){
   var youWin = winners.some(function(x){ return x.p === 0; });
   var cls = youWin ? (winners.length > 1 ? "draw" : "win") : "lose";
   var word = youWin ? (winners.length > 1 ? "引き分け" : "あなたの勝ち") : nm(winners[0].p) + "の勝ち";
-  var html = '<h2>' + (G.round >= ROUNDS ? '4局おわり' : '札が尽きて終わり') + '</h2><div class="result ' + cls + '">' + esc(word) + '</div>' +
+  var html = '<img class="banner" src="../assets/hero.jpg" alt="">' + '<h2>' + (G.round >= ROUNDS ? '4局おわり' : '札が尽きて終わり') + '</h2><div class="result ' + cls + '">' + esc(word) + '</div>' +
     '<table><tr><th>順位</th><th>名前</th><th>取った札</th><th>合計</th></tr>';
   rows.forEach(function(x, i){
     html += '<tr><td>' + (i+1) + '</td><td>' + esc(nm(x.p)) + '</td><td class="n">' + G.piles[x.p].length + '枚</td><td class="n"><b>' + x.s + '</b></td></tr>';
@@ -734,7 +741,7 @@ function cardHTML(c, extra, attrs, inner){
   if (isBan(c)) return '<div class="card cb' + (extra ? ' ' + extra : '') + '" ' + (attrs || '') + ' aria-label="バナナ">' +
     '<span class="band"></span><svg class="art"><use href="#banana"/></svg><span class="sn">バナナ</span>' + (inner || '') + '</div>';
   if (isSB(c)) return '<div class="card csb' + (extra ? ' ' + extra : '') + '" ' + (attrs || '') + ' aria-label="シルバーバック">' +
-    '<span class="band"></span><svg class="art"><use href="#ape"/></svg><span class="sn">15</span>' + (inner || '') + '</div>';
+    '<span class="band"></span><svg class="art"><use href="#ape"/></svg><span class="sn">群れ</span>' + (inner || '') + '</div>';
   return '<div class="card c' + c.s + (extra ? ' ' + extra : '') + '" ' + (attrs || '') + ' aria-label="' + cardName(c) + '">' +
     '<span class="band"></span><span class="num">' + c.r + '</span><span class="sn">' + SUITS[c.s] + '</span>' +
     '<svg class="suit"><use href="#su' + c.s + '"/></svg>' + (inner || '') + '</div>';
@@ -827,7 +834,8 @@ function renderMe(){
     3:'ゴリラ：色を問わず上げられる。シルバーバックを出せば場を即座に取り、全員からゴリラ札を1枚ずつもらう（野生）'
   }[r];
   if (G.over) say = '';
-  $("meRow").innerHTML = '<span class="who">あなた</span>' + (G.over ? '' : roleBadge(r, true)) + '<span class="say">' + esc(say) + '</span>';
+  $("meRow").innerHTML = (G.over ? '' : '<img class="por r' + r + '" src="' + ROLE_IMG[r] + '" alt="">') +
+    '<span class="who">あなた</span>' + (G.over ? '' : roleBadge(r, true)) + '<span class="say">' + esc(say) + '</span>';
 }
 
 function myTurn(){ return G.phase === "play" && G.cur === 0; }
@@ -971,6 +979,7 @@ function closeModal(){ $("modal").hidden = true; }
 
 function showRules(){
   $("sheet").innerHTML =
+    '<img class="banner" src="../assets/hero.jpg" alt="円卓で札を囲む王・商人・預言者と、その後ろに立つシルバーバック">' +
     '<h2>あそびかた</h2><p class="sub">2〜4人。役割が回る「場」に札を重ね、最後に出した人が場の札を総取りします。4局で得点札の点の合計を競います。</p>' +
     '<h3>札と役割</h3>' +
     '<p>数字札は4スート（<b>貨幣・聖典・冠・ゴリラ</b>）で、<b>同じ数字が2枚ずつ</b>。数字がそのまま強さと点です（2人1〜9／3人1〜11／4人1〜13）。ほかに<b>バナナ4枚</b>と<b>シルバーバック1枚</b>。</p>' +
