@@ -880,6 +880,7 @@ function renderActions(){
     if (cs.length) a += '<button class="bigbtn ghost" id="clearBtn">選び直す</button>';
     hint = lead ? (roleNow(0) === KIN ? '王の先導です。' : 'あなたのリードです。') + '1枚か、<em>連番</em>（同じスートの続き数字2〜3枚）か、<em>同数</em>（同じ数字2〜3枚）を出します。バナナは同数の足りない1枚の代わり（連番には使えない）。'
                 : '重ねられるのは ' + stackHint() + '。出さないならパス（この場ではもう出せない）。';
+    if (lead && roleNow(0) === KIN && DIFF[G.diff].hint) hint += ' <em>弱い札1枚で先導すると、みんなが重ねて場が育ちやすい。いらない札を処分する好機でもあります。</em>';
     if (cs.length && !ok) hint += ' <span class="warn">その札は重ねられません。</span>';
   } else if (G.phase === "trickEnd"){
     var last = G.trick + 1 >= TRICKS;
