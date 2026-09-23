@@ -1,15 +1,17 @@
-# 商人・預言者・指導者・ゴリラ
+# 王とゴリラ — (When) Do Gorillas Matter?
 
-リーダーは、歴史を動かすのか。
+ゴリラは本当に歴史を動かすのか。
 
 商人・預言者・指導者・王・ゴリラの5つの役割が1トリックごとに隣の席へ回る、
 2〜5人用（あなた＋CPU）のトリックテイキング。
 ブラウザだけで動く（ビルドなし、外部依存はGoogle Fontsのみ、通信なし）。
 
-**あそぶ → https://pikaring.github.io/merchant-prophet-leader-gorilla/** （公開後）
+**あそぶ → https://pikaring.github.io/when-do-gorillas-matter/** （公開後）
 
 題はジャレド・ダイアモンド『商人・預言者・指導者・王 リーダーは本当に歴史を動かすのか』
-（土方奈美 訳、日経BP）の「王」をゴリラに差し替えたもの。
+（土方奈美 訳、日経BP。原題 *Profits, Prophets, Coaches, and Kings: (When) Do Leaders Matter?*）のもじり。
+副題の「リーダー」を「ゴリラ」に、原題の Leaders を Gorillas に差し替えた。
+リポジトリ名の `(When)` は、ゴリラが1局に1回、自分の番にしか力を持たないことにかけている。
 「第三のチンパンジー → 第三のゴリラ」「銃・病原菌・鉄 → 銃・病原菌・ダイヤモンド」に続くシリーズ3作目。
 ルールはオリジナル。
 
