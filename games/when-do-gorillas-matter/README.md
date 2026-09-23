@@ -20,7 +20,7 @@
     index.html                  紹介ページ（ツール群共通の作り）
     app/index.html              ゲーム本体（単体で動く）
     assets/site.css             共通デザイン。アクセントだけ王の紫 #7a55a8
-    assets/icon.png             ポータルのカード用アイコン（冠をかぶったゴリラ。元絵 assets/icon-src.jpg から tools/make_icons.py で作る）
+    assets/icon.png             ポータルのカード用アイコン（ゲームのゴリラの肖像に王の冠を載せたもの。元絵 assets/icon-src.jpg から tools/make_icons.py で作る）
     assets/favicon.png          ファビコン
     assets/screen.png           紹介ページの画面（app を390px幅で撮ったもの）
     assets/goods.json           本の画像と価格（ワークフローが毎日更新）
