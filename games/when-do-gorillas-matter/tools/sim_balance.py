@@ -1,4 +1,4 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.8）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.9）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
@@ -83,9 +83,9 @@ def legal_next(top, cm, R, role):
     if not fc or fc[0] in ('gc','ban'): return False
     if ft[0]=='gc': return False
     if ft[0]!=fc[0] or ft[2]!=fc[2]: return False
-    if ft[0]=='set': return hi(fc[3],ft[3],R)
+    if ft[0]=='set': return hi(fc[3],ft[3],R) or (OPT.get('seteq') and fc[3]==ft[3])   # seteq=同数は同じ数字でも重ねられる(v1.9)
     if ft[0]=='run' and OPT.get('runfree') and fc[3]>ft[3]: return True   # 連番は色を問わず上げられる
-    if ft[0]=='run' and OPT.get('wraprun') and ft[3]==R and fc[3]==fc[2]: return True   # 連番の1周（…12・13 の上に 1・2）
+    if ft[0]=='run' and OPT.get('wraprun') and ft[3]==R and (fc[3]==fc[2] or (OPT.get('wraprun2') and any(isban(c) for c in cm) and fc[3]==fc[2]+1 and min(c[1] for c in cm if not isban(c))==2)): return True   # wraprun2=バナナ・2＝1・2(v1.9)   # 連番の1周（…12・13 の上に 1・2）
     if fc[1]==ft[1] and (hi(fc[3],ft[3],R) if ft[0]=='single' else fc[3]>ft[3]): return True          # 同じ色で上
     if (fc[1]!=ft[1] or (OPT.get('sameeq') and ft[0]!='set')) and fc[3]==ft[3] and not EDICT[0]: return True          # 同じ数字で色かえ
     if role==GR and ((hi(fc[3],ft[3],R) and not OPT.get('wrap_strict')) if ft[0]=='single' else fc[3]>ft[3]): return True               # ゴリラは色を問わず上
@@ -213,8 +213,9 @@ OPT_V15=dict(OPT_V14,ring2=1,wrap=1,wrap_strict=1)
 OPT_V16=dict(OPT_V15,sb_redeal=1,sb_raid='gor1')
 OPT_V17=dict(OPT_V16,lead_backup=1,sameeq=1)
 OPT_V18=dict(OPT_V17,wraprun=1)
+OPT_V19=dict(OPT_V18,wraprun2=1,seteq=1)
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
