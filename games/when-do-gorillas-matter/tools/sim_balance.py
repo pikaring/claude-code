@@ -1,10 +1,10 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.7）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.8）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
 # 能力: 王=先導 / 預言者=指名して伏せて1枚ずつやりとり（シルバーバックは必ず渡す）＋指名した人が取れば先に1枚
 #       商人=取れなかったら先に貨幣の最小1枚、貨幣なら色を問わず上げられる / ゴリラ=色を問わず上げられる、シルバーバックで即決
-# opt: lead_backup=組でリードするのは上から4つの数字か、重ね返せる組がもう1つあるときだけ（CPUの考え方） / sameeq=同じ数字なら同じ色でも重ねられる(v1.7)
+# opt: lead_backup=組でリードするのは上から4つの数字か、重ね返せる組がもう1つあるときだけ（CPUの考え方） / sameeq=同じ数字なら同じ色でも重ねられる(v1.7) / wraprun=連番の1周(v1.8)
 # opt: ring2=回る順 王→商人→預言者→ゴリラ(v1.5) / wrap=いちばん大きい数字の上に1(v1.5) / wrap_strict=1周は同じスートの1枚と同数だけ(v1.5)
 # opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_raid=襲撃 'gor'=群れを率いる(v1.4)・'max'/'max2'=最大の札 / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_redeal=使ったら山札に戻る / sb_endpts=最後に持っていたときの点 / sb_raid 'gor1'=各自のゴリラ札の最大1枚 / sb_thr=出す目安（試した案）
 # opt: edict=王の札には色かえ不可（試した案） / king_reentry=王が一度だけ復帰（試した案） / mer_nojump=商人の貨幣の色かえなし（試した案）
@@ -85,6 +85,7 @@ def legal_next(top, cm, R, role):
     if ft[0]!=fc[0] or ft[2]!=fc[2]: return False
     if ft[0]=='set': return hi(fc[3],ft[3],R)
     if ft[0]=='run' and OPT.get('runfree') and fc[3]>ft[3]: return True   # 連番は色を問わず上げられる
+    if ft[0]=='run' and OPT.get('wraprun') and ft[3]==R and fc[3]==fc[2]: return True   # 連番の1周（…12・13 の上に 1・2）
     if fc[1]==ft[1] and (hi(fc[3],ft[3],R) if ft[0]=='single' else fc[3]>ft[3]): return True          # 同じ色で上
     if (fc[1]!=ft[1] or (OPT.get('sameeq') and ft[0]!='set')) and fc[3]==ft[3] and not EDICT[0]: return True          # 同じ数字で色かえ
     if role==GR and ((hi(fc[3],ft[3],R) and not OPT.get('wrap_strict')) if ft[0]=='single' else fc[3]>ft[3]): return True               # ゴリラは色を問わず上
@@ -211,8 +212,9 @@ OPT_V14=dict(OPT_V12,sb_raid='gor')
 OPT_V15=dict(OPT_V14,ring2=1,wrap=1,wrap_strict=1)
 OPT_V16=dict(OPT_V15,sb_redeal=1,sb_raid='gor1')
 OPT_V17=dict(OPT_V16,lead_backup=1,sameeq=1)
+OPT_V18=dict(OPT_V17,wraprun=1)
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.6（使ったシルバーバックは山札へ、群れを率いるは各自1枚）",OPT_V16),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
