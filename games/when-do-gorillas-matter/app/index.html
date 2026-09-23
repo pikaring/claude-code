@@ -323,7 +323,7 @@ function flat(played){ var o=[]; played.forEach(function(x){ o = o.concat(x.card
 
 /* ══ 組 ════════════════════════════════════════════ */
 /* 1枚／連番（同じスートの続き数字2〜3枚）／同数（同じ数字2〜3枚、スート不問）／シルバーバック（1枚）。
-   バナナは組の足りない1枚の代わり（1組1枚まで）。数字札1枚＋バナナは同数にも連番にもなるので hint で決める */
+   バナナは同数の足りない1枚の代わり（同じ数字のコピー、1組1枚まで）。連番には使えない */
 function formOf(cs, hint){
   var n = cs.length;
   if (!n || n > MAX_COMBO) return null;
@@ -336,28 +336,16 @@ function formOf(cs, hint){
   var sameS = real.every(function(c){ return c.s === real[0].s; });
   var distinct = rs.every(function(r,i){ return i === 0 || r !== rs[i-1]; });
   var span = rs[rs.length-1] - rs[0];
-  var canSet = sameR;
-  var canRun = sameS && distinct && (bans.length ? span <= n - 1 : span === n - 1);
-  var asRun = canRun && (!canSet || hint === "run");
-  if (canSet && !asRun) return {t:"set", s:-1, n:n, top:rs[0]};
-  if (asRun){
-    var top = rs[rs.length-1];
-    var alt = null;
-    if (bans.length && span === n - 2){
-      top = top + 1 <= G.ranks ? top + 1 : top;             // バナナを端に付けるなら大きい側
-      if (rs[0] > 1 && top !== rs[rs.length-1]) alt = rs[rs.length-1];   // 小さい側に付けたときのいちばん大きい数字（バナナ・2＝1・2）
-    }
-    return {t:"run", s:real[0].s, n:n, top:top, alt:alt};
-  }
+  if (sameR) return {t:"set", s:-1, n:n, top:rs[0]};       // 同数（バナナは同じ数字のコピー）
+  if (!bans.length && sameS && distinct && span === n - 1) return {t:"run", s:real[0].s, n:n, top:rs[rs.length-1]};
   return null;
 }
-function ambiguous(cs){ return cs.length === 2 && cs.filter(isBan).length === 1 && cs.filter(isNum).length === 1; }
 
 /* 場のいちばん上に重ねられるか。同じ形・同じ枚数で「同じスートで上げる」か「同じ数字（色は問わない）」。
    連番と同数は色を問わず上げられる。1枚で色を問わず上げられるのはゴリラだけ */
 /* 数字が上か。いちばん大きい数字（4人なら13）の上には1を出せる（1周）。
    1枚は同じスートの1（ゴリラはどの色の1でも）。同数は色を問わず。
-   連番は、いちばん大きい数字で終わる連番の上に、1から始まる連番（1・2／1・2・3。バナナ・2 も 1・2）を色を問わず出せる */
+   連番は、いちばん大きい数字で終わる連番の上に、1から始まる連番（1・2／1・2・3）を色を問わず出せる */
 function above(a, b){ return a > b || (b === G.ranks && a === 1); }
 function canStack(role, top, f){
   if (!f) return false;
@@ -373,15 +361,7 @@ function canStack(role, top, f){
   return false;
 }
 function topPlay(){ return G.played.length ? G.played[G.played.length-1] : null; }
-function formFor(cs, hint){
-  var t = topPlay();
-  if (t && t.f) hint = t.f.t === "run" ? "run" : "set";
-  var f = formOf(cs, hint || "set");
-  // 1周：13で終わる連番の上では、バナナを小さい側に付けて1から始まる連番にできる（バナナ・2＝1・2）
-  if (f && f.t === "run" && f.alt && t && t.f && t.f.t === "run" && t.f.n === f.n && t.f.top === G.ranks && f.top !== G.ranks && f.alt === f.n)
-    f = {t:"run", s:f.s, n:f.n, top:f.alt, alt:null};
-  return f;
-}
+function formFor(cs, hint){ return formOf(cs, hint); }
 function legalPlay(p, cs, hint){
   var f = formFor(cs, hint);
   if (!f) return false;
@@ -390,7 +370,7 @@ function legalPlay(p, cs, hint){
   return canStack(roleNow(p), t ? t.f : null, f);
 }
 
-/* 手札から作れる組をすべて（バナナ入りは hint つき） */
+/* 手札から作れる組をすべて */
 function combosOf(h, maxN){
   var out = [];
   var nums = h.filter(isNum), ban = h.filter(isBan)[0], sb = h.filter(isSB)[0];
@@ -406,7 +386,7 @@ function combosOf(h, maxN){
           if (ban) add([nums[i], nums[j], ban]);
         }
       }
-      if (ban){ add([nums[i], ban], "set"); add([nums[i], ban], "run"); }
+      if (ban) add([nums[i], ban]);
     }
   }
   return out;
@@ -891,15 +871,11 @@ function renderActions(){
   } else if (myTurn()){
     var cs = selCards(), lead = !G.played.length;
     var ok = cs.length && legalPlay(0, cs);
-    if (lead && ok && ambiguous(cs)){
-      a = '<button class="bigbtn" data-play="set">同数で出す</button><button class="bigbtn" data-play="run">連番で出す</button>';
-    } else {
-      var ff = cs.length ? formFor(cs) : null;
-      a = '<button class="bigbtn" data-play=""' + (ok ? '' : ' disabled') + '>' + (ok && ff ? '出す（' + FORM_NAME[ff.t] + (ff.n > 1 ? ff.n + '枚' : '') + '）' : '出す') + '</button>';
-    }
+    var ff = cs.length ? formFor(cs) : null;
+    a = '<button class="bigbtn" data-play=""' + (ok ? '' : ' disabled') + '>' + (ok && ff ? '出す（' + FORM_NAME[ff.t] + (ff.n > 1 ? ff.n + '枚' : '') + '）' : '出す') + '</button>';
     if (!lead) a += '<button class="bigbtn ghost" id="passBtn">パス（この場から抜ける）</button>';
     if (cs.length) a += '<button class="bigbtn ghost" id="clearBtn">選び直す</button>';
-    hint = lead ? (roleNow(0) === KIN ? '王の先導です。' : 'あなたのリードです。') + '1枚か、<em>連番</em>（同じスートの続き数字2〜3枚）か、<em>同数</em>（同じ数字2〜3枚）を出します。バナナは組の足りない1枚の代わり。'
+    hint = lead ? (roleNow(0) === KIN ? '王の先導です。' : 'あなたのリードです。') + '1枚か、<em>連番</em>（同じスートの続き数字2〜3枚）か、<em>同数</em>（同じ数字2〜3枚）を出します。バナナは同数の足りない1枚の代わり（連番には使えない）。'
                 : '重ねられるのは ' + stackHint() + '。出さないならパス（この場ではもう出せない）。';
     if (cs.length && !ok) hint += ' <span class="warn">その札は重ねられません。</span>';
   } else if (G.phase === "trickEnd"){
@@ -992,8 +968,8 @@ function showRules(){
     '<h3>場</h3><ul>' +
     '<li>預言者がいれば、まず<b>預言</b>（下）</li>' +
     '<li>出す順は<b>王→商人→預言者→ゴリラ</b>（空席は飛ばす）。<b>王がリード</b>（先導）</li>' +
-    '<li>リードは<b>1枚</b>か、<b>連番</b>（同じスートの続き数字2〜3枚）か、<b>同数</b>（同じ数字2〜3枚）。<b>バナナ</b>は組の足りない1枚の代わり</li>' +
-    '<li>以降は順にぐるぐる回り、いちばん上の札に<b>重ねる</b>か<b>パス</b>。重ねられるのは同じ形・同じ枚数で、<b>同じスートで数字が上</b>か、<b>同じ数字</b>（色は問わない。札は2枚ずつあるので同じ色でもよい）。<b>連番と同数は色を問わず、数字が上なら重ねられる</b>（同数は同じ数字でもよい）。<b>いちばん大きい数字（4人なら13）の上には1を出せる</b>（1周。1枚は同じスートの1。ゴリラはどの色の1でもよい。同数は色を問わず。連番は13で終わる連番の上に1から始まる連番（12・13の上に1・2、バナナ・2も1・2になる））</li>' +
+    '<li>リードは<b>1枚</b>か、<b>連番</b>（同じスートの続き数字2〜3枚）か、<b>同数</b>（同じ数字2〜3枚）。<b>バナナ</b>は同数の足りない1枚の代わり（同じ数字のコピー。連番には使えない）</li>' +
+    '<li>以降は順にぐるぐる回り、いちばん上の札に<b>重ねる</b>か<b>パス</b>。重ねられるのは同じ形・同じ枚数で、<b>同じスートで数字が上</b>か、<b>同じ数字</b>（色は問わない。札は2枚ずつあるので同じ色でもよい）。<b>連番と同数は色を問わず、数字が上なら重ねられる</b>（同数は同じ数字でもよい）。<b>いちばん大きい数字（4人なら13）の上には1を出せる</b>（1周。1枚は同じスートの1。ゴリラはどの色の1でもよい。同数は色を問わず。連番は13で終わる連番の上に1から始まる連番（12・13の上に1・2））</li>' +
     '<li><b>パスしたらその場から抜ける</b>。最後に出した人以外が全員抜けたら、<b>最後に出した人が場の札を総取り</b></li></ul>' +
     '<h3>役割の能力</h3><ul>' +
     '<li><b>王（先導）</b>：場の最初にリードする</li>' +

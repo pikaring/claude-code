@@ -1,4 +1,4 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v2.1）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v2.2）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
@@ -64,6 +64,7 @@ def form(cmb, R):
         if nb==0:
             if rs[-1]-rs[0]!=len(rs)-1: return None
             return ('run',real[0][0],len(cmb),rs[-1])
+        if OPT.get('ban_setonly'): return None   # v2.2: バナナは同数だけ（連番には使えない）
         span=rs[-1]-rs[0]
         if span==len(cmb)-1: return ('run',real[0][0],len(cmb),rs[-1])
         if span==len(cmb)-2: return ('run',real[0][0],len(cmb),min(R,rs[-1]+1))
@@ -216,8 +217,9 @@ OPT_V18=dict(OPT_V17,wraprun=1)
 OPT_V19=dict(OPT_V18,wraprun2=1,seteq=1)
 OPT_V20=dict(OPT_V19,wrap_strict=0)
 OPT_V21=dict(OPT_V20,mer_nojump=1)
+OPT_V22=dict(OPT_V21,ban_setonly=1)
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
