@@ -1,10 +1,10 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.3）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.4）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
 # 能力: 王=先導 / 預言者=指名して伏せて1枚ずつやりとり（シルバーバックは必ず渡す）＋指名した人が取れば先に1枚
 #       商人=取れなかったら先に貨幣の最小1枚、貨幣なら色を問わず上げられる / ゴリラ=色を問わず上げられる、シルバーバックで即決
-# opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_thr=出す目安（試した案）
+# opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_raid=襲撃 'gor'=群れを率いる(v1.4)・'max'/'max2'=最大の札 / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_thr=出す目安（試した案）
 # opt: edict=王の札には色かえ不可（試した案） / king_reentry=王が一度だけ復帰（試した案） / mer_nojump=商人の貨幣の色かえなし（試した案）
 # 使い方: python3 tools/sim_balance.py
 import random, statistics as st, itertools
@@ -92,7 +92,7 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
     deck+=[(BAN,0,k) for k in range(4)]+[(GC,15,0)]
     score=[0]*N; byrole=[0]*NR; removed=set(); hands=[[] for _ in range(N)]
     S={'rounds':0,'tricks':0,'cards':0,'short':0,'gcwin':0,'steal':0,'sbgain':0,'sbend':0,'sbusers':0,'sbtop':0}
-    users=set()
+    users=set(); won=[[] for _ in range(N)]
     knows=[None]*N
     def refill():
         pool=[c for c in deck if c not in removed and not any(c in h for h in hands)];rng.shuffle(pool)
@@ -171,10 +171,17 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
             w=last
             if MR in holder and holder[MR]!=w:
                 coins=[c for c in pile if c[0]==0]
-                if coins: c=(max if OPT.get('mer_max') else min)(coins,key=lambda c:c[1]);pile.remove(c);score[holder[MR]]+=c[1];byrole[MR]+=c[1];removed.add(c)
+                if coins: c=(max if OPT.get('mer_max') else min)(coins,key=lambda c:c[1]);pile.remove(c);won[holder[MR]].append(c);score[holder[MR]]+=c[1];byrole[MR]+=c[1];removed.add(c)
             if PR in holder and pred==w and holder[PR]!=w and pile and OPT.get('pro_mode','both')!='steal' and (not OPT.get('pro_suit') or any(c[0]==1 for c in pile)):
-                c=max([c for c in pile if c[0]==1] if OPT.get('pro_suit') else pile,key=val);pile.remove(c);score[holder[PR]]+=val(c);byrole[PR]+=val(c);removed.add(c)
-            v=sum(val(c) for c in pile)+(sum(val(c) for c in pile if not isgc(c)) if sbw and OPT.get('sb_double') else 0);score[w]+=v;byrole[roles[w]]+=v;removed.update(pile);S['cards']+=len(pile)
+                c=max([c for c in pile if c[0]==1] if OPT.get('pro_suit') else pile,key=val);pile.remove(c);won[holder[PR]].append(c);score[holder[PR]]+=val(c);byrole[PR]+=val(c);removed.add(c)
+            v=sum(val(c) for c in pile)+(sum(val(c) for c in pile if not isgc(c)) if sbw and OPT.get('sb_double') else 0);score[w]+=v;byrole[roles[w]]+=v;won[w]+=pile;removed.update(pile);S['cards']+=len(pile)
+            if sbw and OPT.get('sb_raid'):   # 襲撃：ほかの全員の得点札から奪う
+                for q in range(N):
+                    if q==w or not won[q]: continue
+                    md=OPT['sb_raid']
+                    tk=[c for c in won[q] if c[0]==3] if md=='gor' else sorted(won[q],key=val,reverse=True)[:(2 if md=='max2' else 1)]
+                    for c in tk:
+                        won[q].remove(c);won[w].append(c);score[q]-=val(c);score[w]+=val(c);byrole[roles[q]]-=val(c);byrole[GR]+=val(c)
             refill()
     if OPT.get('sb_keep'):
         for i,h in enumerate(hands):
@@ -186,8 +193,9 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
 RANGE={2:9,3:11,4:13}
 OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1}
 OPT_V13=dict(OPT_V12,sb_double=1)
+OPT_V14=dict(OPT_V12,sb_raid='gor')
 if __name__=="__main__":
-    for name,opt in [("v1.2（商人＝貨幣の最大、預言者＝当てたら聖典の最大、返す札は受け取った札以外）",OPT_V12),("v1.3（シルバーバックの倍取り）",OPT_V13)]:
+    for name,opt in [("v1.2（商人＝貨幣の最大、預言者＝当てたら聖典の最大、返す札は受け取った札以外）",OPT_V12),("v1.4（シルバーバックの群れを率いる）",OPT_V14)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
