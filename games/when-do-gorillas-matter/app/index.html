@@ -267,6 +267,7 @@ var BAN = -1, GCS = -2;                 // バナナ・ゴリラ札のスート�
 var RANGE = {2:7, 3:9, 4:11, 5:13};     // 人数ごとの数字の範囲（各スート、同じ数字が2枚ずつ）
 var COPIES = 2, BANANAS = 4, BAN_PTS = 5, GC_PTS = 15;
 var HAND_MAX = 8, TRICKS = 5, ROUNDS = 5, MAX_COMBO = 3;
+var PLAY_ORDER = [3, 2, 1, 0, 4];        // 出す順：王→指導者→預言者→商人→ゴリラ（王の席から反時計回り）
 var FORM_NAME = {single:"1枚", run:"連番", set:"同数", gc:"ゴリラ札"};
 /* 対戦相手は all-in-texas の PERSONAS と同じ5人 */
 var PERSONAS = [
@@ -441,18 +442,19 @@ function startRound(){
   var d = Math.min(need, Math.floor(G.pile.length / G.N));
   for (var p=0;p<G.N;p++){ for (var i=0;i<d;i++) G.hands[p].push(G.pile.pop()); sortHand(G.hands[p]); }
   G.TR = Math.min(TRICKS, G.hands[0].length);
-  G.trick = 0; G.lead = G.round % G.N;
+  G.trick = 0;
   G.voids = []; for (var q=0;q<G.N;q++) G.voids.push([false,false,false,false]);
-  logMsg("── 第" + (G.round+1) + "局。親は" + nm(G.lead) + "。" + (G.round ? "持ち越し" + (HAND_MAX-need) + "枚＋補充" + d + "枚。" : "8枚ずつ配った。"), "hot");
+  logMsg("── 第" + (G.round+1) + "局。" + (G.round ? "持ち越し" + (HAND_MAX-need) + "枚＋補充" + d + "枚。" : "8枚ずつ配った。"), "hot");
   startTrick();
 }
 
 function startTrick(){
   G.played = []; G.pred = -1; G.result = null; G.fresh = {}; G.sel = []; G.pex = null;
-  // 王の先導：王がいれば王がリード
-  var king = holder(KIN);
-  if (king >= 0) G.lead = king;
-  G.order = []; for (var k=0;k<G.N;k++) G.order.push((G.lead + k) % G.N);
+  // 出す順は役割で決まる：王が最初（先導）、ゴリラが最後。空席の役割は飛ばす
+  G.order = [];
+  for (var k=0;k<G.N;k++) G.order.push(k);
+  G.order.sort(function(a,b){ return PLAY_ORDER.indexOf(roleNow(a)) - PLAY_ORDER.indexOf(roleNow(b)); });
+  G.lead = G.order[0];
   G.turn = 0;
   startProphecy();
 }
@@ -562,7 +564,6 @@ function resolveTrick(){
   G.result = { w:wp, role:wr, pts:pts, dest:dest, notes:notes };
   logMsg(nm(wp) + "（" + ROLES[wr].name + "）が " + cardsName(w.cards) + " で取った。" + (isG ? "ゴリラが全部持っていく：" : "") + G.result.pts + "点" + (notes.length ? "／" + notes.join("／") : ""),
     wp === 0 ? "you" : (isG ? "bad" : ""));
-  G.lead = wp;
   G.phase = "trickEnd";
   render();
 }
@@ -997,7 +998,7 @@ function showRules(){
     '<p><b>役割は1トリックごとに時計回りに隣へ移ります</b>。1局は最大5トリックで、ゴリラになるのは1局に1回だけ。予定は上の表にすべて出ています。</p>' +
     '<h3>トリック</h3><ul>' +
     '<li>預言者がいれば、まず<b>預言</b>（下）</li>' +
-    '<li><b>王がいれば王がリード</b>（先導）。いなければ前のトリックの勝者（第1トリックは親）</li>' +
+    '<li>出す順は<b>王→指導者→預言者→商人→ゴリラ</b>（空席は飛ばす）。<b>王が最初にリード</b>（先導）し、<b>ゴリラは必ず最後</b>。王が空席なら指導者から</li>' +
     '<li>リードは<b>1枚</b>のほか、<b>連番</b>（同じスートの続き数字2〜3枚）や<b>同数</b>（同じ数字2〜3枚）を重ねて出せる。<b>バナナ</b>は組の足りない1枚の代わり（1組1枚、1枚だけでは出せない）</li>' +
     '<li>ほかの人は<b>リードと同じ枚数</b>を出す。1枚や連番のリードには、そのスートの札を持っているだけ含める</li>' +
     '<li>勝てるのは<b>リードと同じ形</b>だけ。いちばん大きい数字が上回れば勝ち。同じ数字なら先に出した方。切り札はない</li>' +

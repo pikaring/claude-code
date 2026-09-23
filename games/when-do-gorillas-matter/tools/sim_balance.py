@@ -79,6 +79,8 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
             roles=[role(p,t,rnd) for p in range(N)];holder={roles[p]:p for p in range(N)}
             if K in holder and opt.get('king')=='lead': lead=holder[K]
             order=[(lead+k)%N for k in range(N)]
+            if opt.get('roleorder'):   # 王→指導者→預言者→商人→ゴリラ（空席は飛ばす）
+                order=sorted(range(N),key=lambda q:[K,L,P,M,G].index(roles[q]))
             def later(p): return {role(p,u,rnd) for u in range(t+1,5)}
             def hold(p,c):
                 if isgc(c): return 40 if G in later(p) else (8 if rnd<ROUNDS-1 else -5)
@@ -196,11 +198,11 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
         deck=[c for c in deck if c not in removed];keep=[list(h) for h in hands]
     return score,byrole,S
 
+
 if __name__=="__main__":
-    VARS=[("v0.8（王＝献上と下賜、預言＝勝者を当てる、追加札なし）",{'predict':1,'bananas':0,'king':'exchange'}),
-          ("提案（王＝先導、預言者A、バナナ4＋ゴリラ札）",{'prophetA':1,'bananas':4,'gc':1,'king':'lead'}),
-          ("参考：提案から王の先導を抜いたもの",{'prophetA':1,'bananas':4,'gc':1,'king':'none'})]
-    for name,opt in VARS:
+    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead'}
+    for name,opt in [("v0.9（王から時計回り、王が空席なら前の勝者から）",base),
+                     ("v0.10案（王→指導者→預言者→商人→ゴリラ）",dict(base,roleorder=1))]:
         print("==",name)
         for N,R in {2:7,3:9,4:11,5:13}.items():
             rng=random.Random(4);BR=[0]*5;SS={};n=800;five=0
@@ -208,5 +210,4 @@ if __name__=="__main__":
                 sc,b,s_=game(rng,N,R,opt);BR=[x+y for x,y in zip(BR,b)];five+=s_['rounds']==5
                 for k,v in s_.items(): SS[k]=SS.get(k,0)+v
             T=sum(BR)
-            extra=f" 預言で奪えた {SS['steal_hit']/n:.1f}回/ゲーム（試{SS['steal_try']/n:.0f}）ゴリラ札をゴリラ役で出した {SS['gc_play_g']/n:.2f}回" if opt.get('gc') else ""
-            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f" | 5局{five/n:.0%} 早終{SS['short']/SS['rounds']:.0%}"+extra)
+            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f" | 5局{five/n:.0%} 早終{SS['short']/SS['rounds']:.0%}")
