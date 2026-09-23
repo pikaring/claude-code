@@ -38,7 +38,7 @@
 `assets/goods.json` を更新するワークフローには、リポジトリの Secrets に
 `CREATORS_CLIENT_ID` / `CREATORS_CLIENT_SECRET` が要る。
 未登録のあいだは何もせず、本のカードは文字のまま表示される。
-本書の ASIN `4296118587` は Amazon の商品ページで見えたもので、Creators API ではまだ確かめていない。
+本書の ASIN `4296118587` は Creators API で確かめた（2026-09-23）。発売前で表紙画像がまだないあいだは、文字だけのカードになる。
 
 ## ルールの要点
 

@@ -334,7 +334,8 @@
     cards.forEach(function (c) {
       var it = d.items && d.items[c.dataset.asin];
       if (!it) return;
-      if (it.image) {
+      // 発売前の本は Amazon が1pxの透明GIFを返すので、そのときは画像を出さない
+      if (it.image && !/\.gif$/i.test(it.image)) {
         var img = document.createElement('img');
         img.className = 'gimg'; img.src = it.image; img.alt = ''; img.loading = 'lazy';
         c.insertBefore(img, c.firstChild);

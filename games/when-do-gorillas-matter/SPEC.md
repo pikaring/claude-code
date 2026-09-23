@@ -392,8 +392,7 @@ T1とT2は王も空席なので、王の先導は起きない（→ 第5節）�
     tools/sim_balance.py        バランス確認用のシミュレーション
     sitemap.xml                 紹介ページと app/ の2本
 
-- 本の棚には本書を載せる。ASIN は Amazon の商品ページで見えた `4296118587` だが、
-  規約どおり Creators API の `searchItems` で実在を確かめる
+- 本の棚には本書を載せる。ASIN `4296118587` は Creators API で確かめた（2026-09-23）
 - GA4（`G-3FCFQY4W85`）は紹介ページだけ。JSON-LD・canonical・OG も規約どおり
 - ゲーム画面にはクレジットや紹介文を出さない
 
