@@ -304,7 +304,7 @@ function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&am
 
 /* プレイヤー p の場 t（第k局）での役割。役割は場が終わるごとに時計回りに隣へ移る
    （預言者の次の場はゴリラなので、預言で奪ったシルバーバックをすぐ使える） */
-function roleOf(p, t, k){ return ROLE_AT[((p - t + k) % NR + NR) % NR]; }
+function roleOf(p, t, k){ return ROLE_AT[((p - t + k + (G ? G.off : 0)) % NR + NR) % NR]; }   // G.off：ゲームごとにランダムな円卓の向き
 function roleNow(p){ return roleOf(p, G.trick, G.round); }
 function holder(role){ for (var p=0;p<G.N;p++) if (roleNow(p) === role) return p; return -1; }
 function nm(p){ return p === 0 ? "あなた" : G.names[p]; }
@@ -420,7 +420,7 @@ function newGame(){
   for (var s=0;s<4;s++) for (var r=1;r<=RANGE[N];r++) for (var k=0;k<COPIES;k++) cards.push({s:s, r:r, id:id++});
   for (var b=0;b<BANANAS;b++) cards.push({s:BAN, r:0, id:id++});
   cards.push({s:SBK, r:0, id:id++});
-  G = { N:N, diff:diff, ranks:RANGE[N], names:["あなた"], tags:[""], per:[null],
+  G = { N:N, diff:diff, ranks:RANGE[N], off:Math.floor(rnd() * NR), names:["あなた"], tags:[""], per:[null],
         pile:shuffle(cards), hands:[], piles:[], round:0, trick:0,
         played:[], passed:[], order:[], cur:-1, last:-1, pred:-1, phase:"idle", pex:null, result:null,
         log:[], over:false, fresh:{}, sel:[], sbKnow:[], stats:{steal:0, sbWin:0} };
