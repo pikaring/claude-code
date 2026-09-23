@@ -539,16 +539,18 @@ function endTrick(){
   if (wp < 0){ G.result = {w:-1, pts:0, dest:dest, notes:["だれも出せなかった"]}; G.phase = "trickEnd"; render(); return; }
   var left = cards.slice();
   function take(p, c){ G.piles[p].push(c); dest[c.id] = p; left.splice(left.indexOf(c), 1); }
-  // ① 商人の仲買：場を取れなかったら、先に貨幣の最小1枚
+  // ① 商人の仲買：場を取れなかったら、先に貨幣のいちばん大きい1枚
   var mer = holder(MER);
   if (mer >= 0 && mer !== wp){
     var coins = left.filter(function(c){ return c.s === 0; });
-    if (coins.length){ var cm = coins.reduce(function(a,b){ return a.r <= b.r ? a : b; }); take(mer, cm); notes.push("商人 " + nm(mer) + " が仲買で" + cardName(cm)); }
+    if (coins.length){ var cm = maxBy(coins, ptsOf); take(mer, cm); notes.push("商人 " + nm(mer) + " が仲買で" + cardName(cm)); }
   }
-  // ② 預言：指名した人が取ったら、先に好きな1枚（アプリではいちばん点の大きい札）
+  // ② 預言：指名した人が取ったら、先に場の聖典のいちばん大きい1枚
   var pr = holder(PRO);
-  if (pr >= 0 && pr !== wp && G.pred === wp && left.length){
-    var pc = maxBy(left, ptsOf); take(pr, pc); notes.push("預言的中、" + nm(pr) + " が" + cardName(pc));
+  if (pr >= 0 && pr !== wp && G.pred === wp){
+    var scr = left.filter(function(c){ return c.s === 1; });
+    if (scr.length){ var pc = maxBy(scr, ptsOf); take(pr, pc); notes.push("預言的中、" + nm(pr) + " が" + cardName(pc)); }
+    else notes.push("預言は的中したが、場に聖典がない");
   }
   // ③ 残りを総取り
   var pts = sumPts(left);
@@ -655,8 +657,11 @@ function cpuPickForProphet(q){
   if (sb) return sb;
   return h.reduce(function(a,b){ return (ptsOf(a) + holdVal(q,a)) <= (ptsOf(b) + holdVal(q,b)) ? a : b; });
 }
+/* 預言者が返す札：受け取った札以外（何もしなかったことにはできない） */
 function cpuPickReturn(pr){
-  var h = G.hands[pr].filter(function(c){ return !isSB(c); });
+  var got = G.pex && G.pex.got;
+  var h = G.hands[pr].filter(function(c){ return !isSB(c) && c !== got; });
+  if (!h.length) h = G.hands[pr].filter(function(c){ return c !== got; });
   if (!h.length) h = G.hands[pr];
   return h.reduce(function(a,b){ return (ptsOf(a) + holdVal(pr,a)) <= (ptsOf(b) + holdVal(pr,b)) ? a : b; });
 }
@@ -766,8 +771,8 @@ function statusText(){
 function renderMe(){
   var r = roleNow(0);
   var say = {
-    0:'商人：取れなかったら、先に場の貨幣の最小1枚をもらう。貨幣なら色を問わず上げられる（仲買）',
-    1:'預言者：指名した人と札を1枚ずつやりとり。シルバーバックなら奪える。指名した人が取れば先に1枚（預言）',
+    0:'商人：取れなかったら、先に場の貨幣のいちばん大きい1枚をもらう。貨幣なら色を問わず上げられる（仲買）',
+    1:'預言者：指名した人と札を1枚ずつやりとり。シルバーバックなら奪える。指名した人が取れば先に場の聖典のいちばん大きい1枚（預言）',
     2:'王：この場は王がリードする（先導）',
     3:'ゴリラ：色を問わず上げられる。シルバーバックを出せば場は即座にゴリラのもの（野生）'
   }[r];
@@ -780,7 +785,8 @@ function selCards(){ return G.hands[0].filter(function(c){ return G.sel.indexOf(
 
 function renderHand(){
   var h = G.hands[0], phase = G.phase, pickable = {};
-  if (myTurn() || phase === "preturn") h.forEach(function(c){ pickable[c.id] = 1; });
+  if (myTurn()) h.forEach(function(c){ pickable[c.id] = 1; });
+  if (phase === "preturn") h.forEach(function(c){ if (c !== G.pex.got || h.length === 1) pickable[c.id] = 1; });
   if (phase === "pgive"){ var sb = h.filter(isSB)[0]; (sb ? [sb] : h).forEach(function(c){ pickable[c.id] = 1; }); }
   var busy = myTurn() || phase === "pgive" || phase === "preturn";
   var t = topPlay();
@@ -807,11 +813,11 @@ function renderActions(){
       var q = G.order[k];
       a += '<button class="bigbtn ghost" data-pred="' + q + '">' + roleBadge(roleNow(q)) + esc(nm(q)) + '</button>';
     }
-    hint = '指名した人と<em>伏せて1枚ずつ</em>やりとりし、相手がシルバーバックを持っていれば必ずあなたに来ます。指名した人が場を取れば、先に1枚もらえます。自分を指名するとやりとりなし。';
+    hint = '指名した人と<em>伏せて1枚ずつ</em>やりとりし、相手がシルバーバックを持っていれば必ずあなたに来ます。指名した人が場を取れば、先に場の聖典のいちばん大きい1枚をもらえます。自分を指名するとやりとりなし。';
   } else if (G.phase === "pgive"){
     hint = '預言者 <em>' + esc(nm(G.pex.pr)) + '</em> に渡す札を選んでください。' + (G.hands[0].some(isSB) ? '<span class="warn">シルバーバックを持っているので、それを渡す決まりです。</span>' : '1枚返ってきます。');
   } else if (G.phase === "preturn"){
-    hint = '<em>' + esc(nm(G.pex.q)) + '</em> から <em>' + cardName(G.pex.got) + '</em> を受け取りました' + (isSB(G.pex.got) ? '（シルバーバックを奪った！）' : '') + '。返す札を1枚選んでください。';
+    hint = '<em>' + esc(nm(G.pex.q)) + '</em> から <em>' + cardName(G.pex.got) + '</em> を受け取りました' + (isSB(G.pex.got) ? '（シルバーバックを奪った！）' : '') + '。返す札を1枚選んでください（受け取った札はそのまま返せません）。';
   } else if (myTurn()){
     var cs = selCards(), lead = !G.played.length;
     var ok = cs.length && legalPlay(0, cs);
@@ -858,7 +864,7 @@ function onHandPick(id){
     if (G.hands[0].some(isSB) && !isSB(c)) return;
     prophetGive(c); return;
   }
-  if (G.phase === "preturn"){ prophetReturn(c); return; }
+  if (G.phase === "preturn"){ if (c === G.pex.got && G.hands[0].length > 1) return; prophetReturn(c); return; }
   if (!myTurn()) return;
   var lim = G.played.length ? G.played[0].cards.length : MAX_COMBO;
   if (isSB(c)){ G.sel = [id]; render(); return; }
@@ -912,12 +918,11 @@ function showRules(){
     '<li><b>パスしたらその場から抜ける</b>。最後に出した人以外が全員抜けたら、<b>最後に出した人が場の札を総取り</b></li></ul>' +
     '<h3>役割の能力</h3><ul>' +
     '<li><b>王（先導）</b>：場の最初にリードする</li>' +
-    '<li><b>預言者（預言）</b>：リードの前に1人を指名し、伏せて1枚ずつやりとり（相手がシルバーバックを持っていれば必ずそれが来る）。指名した人が場を取ったら、先に1枚もらう</li>' +
-    '<li><b>商人（仲買）</b>：場を取れなかったら、先に場の貨幣の最小1枚をもらう。貨幣なら、数字が上であれば色を問わず重ねられる</li>' +
+    '<li><b>預言者（預言）</b>：リードの前に1人を指名し、伏せて1枚ずつやりとり（相手がシルバーバックを持っていれば必ずそれが来る。受け取った札をそのまま返すことはできない）。指名した人が場を取ったら、先に場の<b>聖典のいちばん大きい1枚</b>をもらう</li>' +
+    '<li><b>商人（仲買）</b>：場を取れなかったら、先に場の<b>貨幣のいちばん大きい1枚</b>をもらう。貨幣なら、数字が上であれば色を問わず重ねられる</li>' +
     '<li><b>ゴリラ（野生）</b>：数字が上なら色を問わず重ねられる。<b>シルバーバック</b>を出せば、その場は即座にゴリラのもの（ゴリラ以外は出せない）</li></ul>' +
     '<h3>点と手札</h3>' +
     '<p>数字札は数字どおり、シルバーバック15点、バナナ0点。<b>得点札はゲームに戻りません。</b>場が終わるたびに手札を8枚まで補充します（山札が尽きたら配れるだけ）。</p>' +
-    '<p class="sub">預言の「好きな1枚」は、このアプリではいちばん点の大きい札を自動で取ります。</p>' +
     '<div class="sheetfoot"><button class="bigbtn" id="closeBtn">盤面に戻る</button></div>';
   $("modal").hidden = false;
   $("closeBtn").addEventListener("click", closeModal);

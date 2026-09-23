@@ -116,11 +116,11 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                 pp=holder[PR]
                 name=knows[pp] if knows[pp] not in (None,pp) else rng.choice([q for q in range(N) if q!=pp]) if N>1 else pp
                 pred=name
-                if name!=pp and hands[name] and hands[pp]:
+                if name!=pp and hands[name] and hands[pp] and OPT.get('pro_mode','both')!='predict':
                     gcs=[c for c in hands[name] if isgc(c)]
                     c1=gcs[0] if gcs else min(hands[name],key=lambda c:val(c)+hold(name,c))
                     hands[name].remove(c1);hands[pp].append(c1)
-                    c2=min([c for c in hands[pp] if not isgc(c)] or hands[pp],key=lambda c:val(c)+hold(pp,c))
+                    c2=min([c for c in hands[pp] if not isgc(c) and c is not c1] or [c for c in hands[pp] if c is not c1] or hands[pp],key=lambda c:val(c)+hold(pp,c))
                     hands[pp].remove(c2);hands[name].append(c2)
                     if isgc(c1): S['steal']+=1; knows[name]=pp
             # リード
@@ -161,17 +161,18 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
             w=last
             if MR in holder and holder[MR]!=w:
                 coins=[c for c in pile if c[0]==0]
-                if coins: c=min(coins,key=lambda c:c[1]);pile.remove(c);score[holder[MR]]+=c[1];byrole[MR]+=c[1];removed.add(c)
-            if PR in holder and pred==w and holder[PR]!=w and pile:
-                c=max(pile,key=val);pile.remove(c);score[holder[PR]]+=val(c);byrole[PR]+=val(c);removed.add(c)
+                if coins: c=(max if OPT.get('mer_max') else min)(coins,key=lambda c:c[1]);pile.remove(c);score[holder[MR]]+=c[1];byrole[MR]+=c[1];removed.add(c)
+            if PR in holder and pred==w and holder[PR]!=w and pile and OPT.get('pro_mode','both')!='steal' and (not OPT.get('pro_suit') or any(c[0]==1 for c in pile)):
+                c=max([c for c in pile if c[0]==1] if OPT.get('pro_suit') else pile,key=val);pile.remove(c);score[holder[PR]]+=val(c);byrole[PR]+=val(c);removed.add(c)
             v=sum(val(c) for c in pile);score[w]+=v;byrole[roles[w]]+=v;removed.update(pile);S['cards']+=len(pile)
             refill()
     return score,byrole,S
 
 
 RANGE={2:9,3:11,4:13}
+OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1}
 if __name__=="__main__":
-    for name,opt in [("v1.0",{}),("v1.1案（連番は色を問わず上げられる）",{'runfree':1})]:
+    for name,opt in [("v1.1",{'runfree':1}),("v1.2（商人＝貨幣の最大、預言者＝当てたら聖典の最大、返す札は受け取った札以外）",OPT_V12)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
@@ -179,4 +180,4 @@ if __name__=="__main__":
                 sc,b,s_=game(rng,N,R,opt);BR=[x+y for x,y in zip(BR,b)]
                 for k,v in s_.items(): SS[k]=SS.get(k,0)+v
             T=sum(BR)
-            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預王ゴ",BR))+f" | 1場{SS['cards']/SS['tricks']:.1f}枚 補充不足{SS['short']/n:.1f}回")
+            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預王ゴ",BR))+f" | 奪取{SS['steal']/n:.1f}")
