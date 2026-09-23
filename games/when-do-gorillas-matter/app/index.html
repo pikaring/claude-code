@@ -396,7 +396,7 @@ function combosAny(h, n){
 }
 
 /* フォローの決まり：リードと同じ枚数。リード（実効）が1枚か連番なら、そのスートを持っているだけ含める。
-   ゴリラ札は決まりに関係なく出せる（その1枚ぶん、含める枚数が減る） */
+   ゴリラ札は決まりに関係なく出せる。商人は貨幣も決まりに関係なく出せる（そのぶん、含める枚数が減る） */
 function followOk(p, cs){
   if (!G.played.length){
     if (formOf(cs, "set") || formOf(cs, "run")) return true;
@@ -407,6 +407,7 @@ function followOk(p, cs){
   if (cs.length !== n) return false;
   var s = ledSuit(); if (s < 0) return true;
   var g = cs.filter(isGC).length;
+  if (roleNow(p) === MER && s !== 0) g += cs.filter(function(c){ return c.s === 0; }).length;
   var have = G.hands[p].filter(function(c){ return c.s === s; }).length;
   var need = Math.min(n - g, have);
   return cs.filter(function(c){ return c.s === s; }).length >= need;
@@ -723,6 +724,11 @@ function cpuFollow(p){
         if (c.s === 0 && mer >= 0 && mer !== p && mer !== w.p) feed += c.r * 0.3;
       });
       s = -0.8 * feed - wHold * holdSum(p, cs);
+      // 商人：負けても、場に残るいちばん小さい貨幣は仲買で拾い戻せる
+      if (r === MER && wr !== GOR && wr !== 0){
+        var myCoins = cs.filter(function(c){ return c.s === 0; });
+        if (myCoins.length) s += Math.min.apply(null, myCoins.map(function(c){ return c.r; })) * 0.8;
+      }
     }
     s += noise(p);
     if (s > bestS){ bestS = s; best = cs; }
@@ -847,7 +853,7 @@ function statusText(){
 function renderMe(){
   var r = roleNow(0);
   var say = {
-    0:'商人：貨幣の札が点。取れなくても、残った貨幣の最小1枚は拾える（仲買）',
+    0:'商人：貨幣の札が点。貨幣はいつでも出せる。取れなくても、残った貨幣の最小1枚は拾える（仲買）',
     1:'預言者：聖典の札が点。指名した人と札を1枚ずつやりとり。ゴリラ札を持っていれば奪える。指名した人が取れば残りから1枚（預言）',
     2:'指導者：旗の札が点。取ったら、残りからもう1枚（徴税）',
     3:'王：冠の札が点。このトリックは王がリードする（先導）',
@@ -920,7 +926,7 @@ function renderActions(){
         (cs.length && !ok ? ' <span class="warn">この組み合わせは出せません。</span>' : '');
     } else if (quickPlay()){
       var s = ledSuit();
-      hint = '出す札を選んでください。' + (s >= 0 ? 'リードされたスート（' + SUITS[s] + '）があれば、それを出す決まりです。' : '') + 'ゴリラ札はいつでも出せます。';
+      hint = '出す札を選んでください。' + (s >= 0 ? 'リードされたスート（' + SUITS[s] + '）があれば、それを出す決まりです。' : '') + 'ゴリラ札はいつでも出せます。' + (roleNow(0) === MER && s !== 0 ? '商人なので貨幣もいつでも出せます（負けても仲買で拾い戻せるかも）。' : '');
     } else {
       var n = G.played[0].cards.length, cs2 = selCards(), ok2 = followOk(0, cs2), wins = false;
       if (ok2){ G.played.push({p:0, cards:cs2, f:followForm(cs2), role:roleNow(0)}); wins = currentWinner().p === 0; G.played.pop(); }
@@ -1024,7 +1030,7 @@ function showRules(){
     '<p>預言者は1人を指名し、<b>伏せて1枚ずつ札をやりとり</b>します。相手がゴリラ札を持っていれば、<b>必ずそれを渡す</b>決まり。指名した人がトリックを取れば、残りから1枚を得点札にします。自分を指名したらやりとりはありません。</p>' +
     '<h3>札の分けかた</h3><ol style="padding-left:1.3em">' +
     '<li>勝った人が、自分の役割のスートの札を得点札にする（ゴリラなら全部。バナナ5点・ゴリラ札15点）。<b>指導者は徴税で残りからもう1枚</b></li>' +
-    '<li><b>商人の仲買</b>：商人が取れなかったとき、残った貨幣のうち最小の1枚を得点札に</li>' +
+    '<li><b>商人の仲買</b>：商人が取れなかったとき、残った貨幣のうち最小の1枚を得点札に（商人は貨幣をいつでも出せる）</li>' +
     '<li><b>預言</b>：指名した人が取っていれば、残りから1枚を得点札に</li>' +
     '<li>残りは捨て札。局の終わりに山札へ戻る</li></ol>' +
     '<p class="sub">「好きな1枚」を選ぶ場面（徴税・預言）は、このアプリではいちばん大きい札を自動で取ります。</p>' +

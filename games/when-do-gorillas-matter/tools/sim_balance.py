@@ -172,6 +172,15 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
                     dis=sorted(h,key=lambda c:(pts(c,wr) if (wr==G or c[0]==wr) else 0)+hold(p,c))[:n]
                 feed=sum(pts(c,wr) for c in dis if wr==G or c[0]==wr)
                 opts.append((-0.8*feed-0.4*sum(hold(p,c) for c in dis),dis))
+                # 商人は貨幣をいつでも出せる（負けても仲買で拾い戻せる見込み）
+                if opt.get('mercoin') and r==M and lf[0] in ('single','run') and lf[1]!=M:
+                    coins=sorted([c for c in h if c[0]==M],key=lambda c:c[1])
+                    if coins:
+                        k=min(n,len(coins));cm_=coins[:k]
+                        rest=sorted([c for c in h if c not in cm_],key=lambda c:(c[0]!=lf[1], c[1]))
+                        cm_=cm_+rest[:n-k]
+                        back=0 if wr==G else cm_[0][1]*0.8
+                        opts.append((back-0.8*sum(pts(c,wr) for c in cm_ if wr==G or c[0]==wr)-0.4*sum(hold(p,c) for c in cm_),cm_))
                 cm=max(opts,key=lambda o:o[0]+rng.random()*0.3)[1]
                 for c in cm: h.remove(c)
                 plays[p]=cm
@@ -205,9 +214,10 @@ def game(rng,N,RANKS,opt,HMAX=8,ROUNDS=5,COPIES=2):
 
 
 
+
 if __name__=="__main__":
-    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead','roleorder':1}
-    for name,opt in [("v0.10（局ごとに8枚まで補充）",base),("v0.11案（トリックごとに8枚まで補充）",dict(base,refill_trick=1))]:
+    base={'prophetA':1,'bananas':4,'gc':1,'king':'lead','roleorder':1,'refill_trick':1}
+    for name,opt in [("v0.11",base),("v0.12案（商人は貨幣をいつでも出せる）",dict(base,mercoin=1))]:
         print("==",name)
         for N,R in {2:7,3:9,4:11,5:13}.items():
             rng=random.Random(4);BR=[0]*5;SS={};n=800;five=0
@@ -215,4 +225,4 @@ if __name__=="__main__":
                 sc,b,s_=game(rng,N,R,opt);BR=[x+y for x,y in zip(BR,b)];five+=s_['rounds']==5
                 for k,v in s_.items(): SS[k]=SS.get(k,0)+v
             T=sum(BR)
-            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f" | 5局{five/n:.0%} 早終{SS['short']/SS['rounds']:.0%} 補充不足{SS.get('short_refill',0)/n:.2f}回/ゲーム 1人{T/n/N:.0f}点")
+            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預指王ゴ",BR))+f" | 5局{five/n:.0%}")
