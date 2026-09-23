@@ -78,6 +78,7 @@ def legal_next(top, cm, R, role):
     if ft[0]=='gc': return False
     if ft[0]!=fc[0] or ft[2]!=fc[2]: return False
     if ft[0]=='set': return fc[3]>ft[3]
+    if ft[0]=='run' and OPT.get('runfree') and fc[3]>ft[3]: return True   # 連番は色を問わず上げられる
     if fc[1]==ft[1] and fc[3]>ft[3]: return True          # 同じ色で上
     if fc[1]!=ft[1] and fc[3]==ft[3] and not EDICT[0]: return True          # 同じ数字で色かえ
     if role==GR and fc[3]>ft[3]: return True               # ゴリラは色を問わず上
@@ -170,12 +171,12 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
 
 RANGE={2:9,3:11,4:13}
 if __name__=="__main__":
-    for N,R in RANGE.items():
-        rng=random.Random(5);n=400;SS={};BR=[0]*NR;full=0
-        for i in range(n):
-            sc,b,s_=game(rng,N,R,{});BR=[x+y for x,y in zip(BR,b)]
-            for k,v in s_.items(): SS[k]=SS.get(k,0)+v
-            full+= s_['short']==0
-        T=sum(BR)
-        print(f"N={N} 1-{R}x2 ({8*R+5}枚): "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預王ゴ",BR))+
-              f" | 1場{SS['cards']/SS['tricks']:.1f}枚 最後まで8枚補充{full/n:.0%} 補充不足{SS['short']/n:.1f}回 奪取{SS['steal']/n:.1f} SB即決{SS['gcwin']/n:.2f}")
+    for name,opt in [("v1.0",{}),("v1.1案（連番は色を問わず上げられる）",{'runfree':1})]:
+        print("==",name)
+        for N,R in RANGE.items():
+            rng=random.Random(5);n=400;SS={};BR=[0]*NR
+            for i in range(n):
+                sc,b,s_=game(rng,N,R,opt);BR=[x+y for x,y in zip(BR,b)]
+                for k,v in s_.items(): SS[k]=SS.get(k,0)+v
+            T=sum(BR)
+            print(f" N={N}: "+" ".join(f"{a}{x/T:.0%}" for a,x in zip("商預王ゴ",BR))+f" | 1場{SS['cards']/SS['tricks']:.1f}枚 補充不足{SS['short']/n:.1f}回")

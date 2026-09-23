@@ -340,13 +340,14 @@ function formOf(cs, hint){
 function ambiguous(cs){ return cs.length === 2 && cs.filter(isBan).length === 1 && cs.filter(isNum).length === 1; }
 
 /* 場のいちばん上に重ねられるか。同じ形・同じ枚数で「同じスートで上げる」か「同じ数字で色かえ」。
-   ゴリラはスートを問わず上げられる。商人は貨幣ならスートを問わず上げられる */
+   連番と同数は色を問わず上げられる。ゴリラは1枚でも色を問わず上げられる。商人は貨幣なら色を問わず上げられる */
 function canStack(role, top, f){
   if (!f) return false;
   if (f.t === "sb") return role === GOR;
   if (!top) return true;
   if (f.t !== top.t || f.n !== top.n) return false;
   if (f.t === "set") return f.top > top.top;
+  if (f.t === "run" && f.top > top.top) return true;       // 連番は色を問わず上げられる
   if (f.s === top.s) return f.top > top.top;
   if (f.top === top.top) return true;                       // 色かえ
   if (f.top > top.top && (role === GOR || (role === MER && f.s === 0))) return true;
@@ -738,8 +739,9 @@ function renderTrick(){
 function stackHint(){
   var t = topPlay(); if (!t) return '';
   var f = t.f, r = roleNow(0);
-  if (f.t === "set") return '同数' + f.n + '枚で、' + f.top + 'より大きい数字';
-  var what = f.t === "run" ? '連番' + f.n + '枚' : '1枚';
+  if (f.t === "set") return '同数' + f.n + '枚で、' + f.top + 'より大きい数字（色は問わない）';
+  if (f.t === "run") return '連番' + f.n + '枚：いちばん大きい数字が' + (f.top + 1) + '以上なら色は問わない（ほかの色の' + f.top + 'までの連番で色かえも可）';
+  var what = '1枚';
   var s = SUITS[f.s] + 'の' + (f.top + 1) + '以上か、ほかの色の' + f.top + '（色かえ）';
   if (r === GOR) s = (f.top + 1) + '以上なら色を問わず、またはほかの色の' + f.top;
   else if (r === MER && f.s !== 0) s += '、または貨幣の' + (f.top + 1) + '以上';
@@ -906,7 +908,7 @@ function showRules(){
     '<li>預言者がいれば、まず<b>預言</b>（下）</li>' +
     '<li>出す順は<b>王→預言者→商人→ゴリラ</b>（空席は飛ばす）。<b>王がリード</b>（先導）</li>' +
     '<li>リードは<b>1枚</b>か、<b>連番</b>（同じスートの続き数字2〜3枚）か、<b>同数</b>（同じ数字2〜3枚）。<b>バナナ</b>は組の足りない1枚の代わり</li>' +
-    '<li>以降は順にぐるぐる回り、いちばん上の札に<b>重ねる</b>か<b>パス</b>。重ねられるのは同じ形・同じ枚数で、<b>同じスートで数字が上</b>か、<b>同じ数字で色かえ</b>（同数は数字が上だけ）</li>' +
+    '<li>以降は順にぐるぐる回り、いちばん上の札に<b>重ねる</b>か<b>パス</b>。重ねられるのは同じ形・同じ枚数で、<b>同じスートで数字が上</b>か、<b>同じ数字で色かえ</b>。<b>連番と同数は色を問わず、数字が上なら重ねられる</b></li>' +
     '<li><b>パスしたらその場から抜ける</b>。最後に出した人以外が全員抜けたら、<b>最後に出した人が場の札を総取り</b></li></ul>' +
     '<h3>役割の能力</h3><ul>' +
     '<li><b>王（先導）</b>：場の最初にリードする</li>' +
