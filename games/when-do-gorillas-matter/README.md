@@ -20,11 +20,12 @@
     index.html                  紹介ページ（ツール群共通の作り）
     app/index.html              ゲーム本体（単体で動く）
     assets/site.css             共通デザイン。アクセントだけ王の紫 #7a55a8
-    assets/icon.png             ポータルのカード用・OG用アイコン（冠をかぶったゴリラ）
+    assets/icon.png             ポータルのカード用アイコン（冠をかぶったゴリラ。元絵 assets/icon-src.jpg から tools/make_icons.py で作る）
     assets/favicon.png          ファビコン
     assets/screen.png           紹介ページの画面（app を390px幅で撮ったもの）
     assets/goods.json           本の画像と価格（ワークフローが毎日更新）
-    tools/make_images.mjs       アイコンと画面を Playwright で作り直す
+    tools/make_images.mjs       紹介ページの画面を Playwright で撮り直す
+    tools/make_icons.py         アイコンの元絵から角を丸めたアイコン（512px・64px）を作る
     tools/fetch_goods.py        Amazon Creators API で本の画像と価格を取る
     tools/sim_balance.py        バランス確認用のシミュレーション
     .github/workflows/goods.yml 上の fetch_goods.py を毎日3:00 JSTに実行する
