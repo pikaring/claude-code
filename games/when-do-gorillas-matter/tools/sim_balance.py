@@ -1,11 +1,11 @@
-# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.5）
+# 王とゴリラ（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v1.6）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
 # 能力: 王=先導 / 預言者=指名して伏せて1枚ずつやりとり（シルバーバックは必ず渡す）＋指名した人が取れば先に1枚
 #       商人=取れなかったら先に貨幣の最小1枚、貨幣なら色を問わず上げられる / ゴリラ=色を問わず上げられる、シルバーバックで即決
 # opt: ring2=回る順 王→商人→預言者→ゴリラ(v1.5) / wrap=いちばん大きい数字の上に1(v1.5) / wrap_strict=1周は同じスートの1枚と同数だけ(v1.5)
-# opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_raid=襲撃 'gor'=群れを率いる(v1.4)・'max'/'max2'=最大の札 / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_thr=出す目安（試した案）
+# opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_raid=襲撃 'gor'=群れを率いる(v1.4)・'max'/'max2'=最大の札 / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_redeal=使ったら山札に戻る / sb_endpts=最後に持っていたときの点 / sb_raid 'gor1'=各自のゴリラ札の最大1枚 / sb_thr=出す目安（試した案）
 # opt: edict=王の札には色かえ不可（試した案） / king_reentry=王が一度だけ復帰（試した案） / mer_nojump=商人の貨幣の色かえなし（試した案）
 # 使い方: python3 tools/sim_balance.py
 import random, statistics as st, itertools
@@ -171,8 +171,12 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                     gc=next(c for c in hands[gq] if isgc(c));hands[gq].remove(gc);pile.append(gc);last=gq;S['gcwin']+=1
             sbw=any(isgc(c) for c in pile)
             if sbw: S['sbgain']+=sum(val(c) for c in pile if not isgc(c)); users.add(last)
-            if sbw and OPT.get('sb_keep'):
+            if sbw and OPT.get('sb_keep'):   # 使っても手札に戻る。持ち主は全員に知られる
                 gc=next(c for c in pile if isgc(c));pile.remove(gc);hands[last].append(gc)
+                for i in range(N): knows[i]=last
+            if sbw and OPT.get('sb_redeal'):   # 使ったら山札に戻る
+                gc=next(c for c in pile if isgc(c));pile.remove(gc)
+                for i in range(N): knows[i]=None
             # 能力：勝者より先に抜く
             w=last
             if MR in holder and holder[MR]!=w:
@@ -185,13 +189,13 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                 for q in range(N):
                     if q==w or not won[q]: continue
                     md=OPT['sb_raid']
-                    tk=[c for c in won[q] if c[0]==3] if md=='gor' else sorted(won[q],key=val,reverse=True)[:(2 if md=='max2' else 1)]
+                    tk=[c for c in won[q] if c[0]==3] if md=='gor' else sorted([c for c in won[q] if c[0]==3],key=val,reverse=True)[:1] if md=='gor1' else sorted(won[q],key=val,reverse=True)[:(2 if md=='max2' else 1)]
                     for c in tk:
                         won[q].remove(c);won[w].append(c);score[q]-=val(c);score[w]+=val(c);byrole[roles[q]]-=val(c);byrole[GR]+=val(c)
             refill()
     if OPT.get('sb_keep'):
         for i,h in enumerate(hands):
-            if any(isgc(c) for c in h): score[i]+=OPT.get('sb_pts',15); S['sbend']+=1
+            if any(isgc(c) for c in h): score[i]+=OPT.get('sb_endpts',OPT.get('sb_pts',15)); S['sbend']+=1
     S['sbusers']=len(users); S['sbtop']=sum(1 for u in users if score[u]==max(score))
     return score,byrole,S
 
@@ -201,8 +205,9 @@ OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1}
 OPT_V13=dict(OPT_V12,sb_double=1)
 OPT_V14=dict(OPT_V12,sb_raid='gor')
 OPT_V15=dict(OPT_V14,ring2=1,wrap=1,wrap_strict=1)
+OPT_V16=dict(OPT_V15,sb_redeal=1,sb_raid='gor1')
 if __name__=="__main__":
-    for name,opt in [("v1.4（シルバーバックの群れを率いる）",OPT_V14),("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.6（使ったシルバーバックは山札へ、群れを率いるは各自1枚）",OPT_V16)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR

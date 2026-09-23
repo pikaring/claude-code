@@ -269,7 +269,7 @@ var MER = 0, PRO = 1, KIN = 2, GOR = 3, NR = 4;
 var SUITS = ["貨幣","聖典","冠","ゴリラ"];
 var BAN = -1, SBK = -2;                 // バナナ・シルバーバックのスート番号（スートなし）
 var RANGE = {2:9, 3:11, 4:13};          // 人数ごとの数字の範囲（各スート、同じ数字が2枚ずつ）
-var COPIES = 2, BANANAS = 4, SB_PTS = 15;
+var COPIES = 2, BANANAS = 4, SB_PTS = 0;   // シルバーバックは得点札にならず、使うと山札に戻る
 var HAND_MAX = 8, TRICKS = 4, ROUNDS = 4, MAX_COMBO = 3;
 var PLAY_ORDER = [KIN, MER, PRO, GOR];  // 出す順：王→商人→預言者→ゴリラ（王の席から反時計回り）
 var ROLE_AT = [PRO, MER, KIN, GOR];     // 円卓の並び。各プレイヤーの役割は 王→商人→預言者→ゴリラ→王 と移る
@@ -524,7 +524,7 @@ function playCards(p, cs, hint){
   if (f.t === "sb"){
     G.sbKnow = G.sbKnow.map(function(){ return -1; });
     G.stats.sbWin++;
-    logMsg(nm(p) + " がシルバーバックを出した。この場はゴリラのもの、群れのゴリラ札も集まってくる！", "bad");
+    logMsg(nm(p) + " がシルバーバックを出した。この場はゴリラのもの、群れのゴリラが集まってくる！", "bad");
     G.cur = -1; later(endTrick, DIFF[G.diff].delay); render(); return;
   }
   if (lead) logMsg(nm(p) + "（" + ROLES[roleNow(p)].name + "）が " + cardsName(cs) + " をリード" + (cs.length > 1 ? "（" + FORM_NAME[f.t] + cs.length + "枚）" : "") + "。", p === 0 ? "you" : "");
@@ -557,19 +557,25 @@ function endTrick(){
     if (scr.length){ var pc = maxBy(scr, ptsOf); take(pr, pc); notes.push("預言的中、" + nm(pr) + " が" + cardName(pc)); }
     else notes.push("預言は的中したが、場に聖典がない");
   }
-  // ③ 残りを総取り
+  // ③ シルバーバックは得点札にせず、山札に戻して混ぜる（また誰かに配られる）
+  var sbc = left.filter(isSB)[0];
+  if (sbc){ left.splice(left.indexOf(sbc), 1); G.pile.splice(Math.floor(rnd() * (G.pile.length + 1)), 0, sbc); }
+  // ④ 残りを総取り
   var pts = sumPts(left);
   left.slice().forEach(function(c){ take(wp, c); });
-  // ④ 群れを率いる：シルバーバックで取ったら、ほかの全員の得点札からゴリラのスートの札を全部もらう
-  if (cards.some(isSB)){
+  // ⑤ 群れを率いる：ほかの全員が、得点札のゴリラのスートでいちばん大きい1枚を差し出す
+  if (sbc){
     var got = 0, cnt = 0;
     for (var q=0;q<G.N;q++){
       if (q === wp) continue;
       var gs = G.piles[q].filter(function(c){ return c.s === GOR; });
-      gs.forEach(function(c){ G.piles[q].splice(G.piles[q].indexOf(c), 1); G.piles[wp].push(c); got += ptsOf(c); cnt++; });
+      if (!gs.length) continue;
+      var gc = maxBy(gs, ptsOf);
+      G.piles[q].splice(G.piles[q].indexOf(gc), 1); G.piles[wp].push(gc); got += ptsOf(gc); cnt++;
     }
     pts += got;
-    notes.push(cnt ? "群れを率いる：全員からゴリラ札" + cnt + "枚・" + got + "点" : "群れを率いる：まだだれもゴリラ札を持っていない");
+    notes.push(cnt ? "群れを率いる：" + cnt + "人からゴリラ札・" + got + "点" : "群れを率いる：まだだれもゴリラ札を持っていない");
+    notes.push("シルバーバックは山札へ戻った");
   }
   G.result = { w:wp, role:roleNow(wp), pts:pts, dest:dest, notes:notes, n:cards.length };
   logMsg(nm(wp) + "（" + ROLES[roleNow(wp)].name + "）が場を取った：" + cards.length + "枚・" + pts + "点" + (notes.length ? "／" + notes.join("／") : ""),
@@ -607,7 +613,7 @@ function endGame(){
   rows.forEach(function(x, i){
     html += '<tr><td>' + (i+1) + '</td><td>' + esc(nm(x.p)) + '</td><td class="n">' + G.piles[x.p].length + '枚</td><td class="n"><b>' + x.s + '</b></td></tr>';
   });
-  html += '</table><p class="sub">得点札の点の合計（数字札は数字、シルバーバック15点、バナナ0点）。</p>' +
+  html += '</table><p class="sub">得点札の点の合計（数字札は数字、バナナ0点）。</p>' +
     '<div class="sheetfoot"><button class="bigbtn" id="againBtn">もう一度</button><button class="bigbtn ghost" id="closeBtn">盤面を見る</button></div>';
   $("sheet").innerHTML = html; $("modal").hidden = false;
   $("againBtn").addEventListener("click", function(){ $("modal").hidden = true; newGame(); });
@@ -648,7 +654,7 @@ function cpuRespond(p){
   var pot = sumPts(flat(G.played));
   var sb = h.filter(isSB)[0];
   var raid = 0;
-  if (sb) for (var q=0;q<G.N;q++) if (q !== p) raid += sumPts(G.piles[q].filter(function(c){ return c.s === GOR; }));
+  if (sb) for (var q=0;q<G.N;q++) if (q !== p){ var gq = G.piles[q].filter(function(c){ return c.s === GOR; }); if (gq.length) raid += ptsOf(maxBy(gq, ptsOf)); }
   if (sb && r === GOR && pot + raid >= 14 - P.aggr * 6) return {cs:[sb]};
   var opts = [];
   combosOf(h, n).forEach(function(o){
@@ -792,7 +798,7 @@ function renderMe(){
     0:'商人：取れなかったら、先に場の貨幣のいちばん大きい1枚をもらう。貨幣なら色を問わず上げられる（仲買）',
     1:'預言者：指名した人と札を1枚ずつやりとり。シルバーバックなら奪える。指名した人が取れば先に場の聖典のいちばん大きい1枚（預言）',
     2:'王：この場は王がリードする（先導）',
-    3:'ゴリラ：色を問わず上げられる。シルバーバックを出せば場を即座に取り、全員の得点札からゴリラ札を全部もらう（野生）'
+    3:'ゴリラ：色を問わず上げられる。シルバーバックを出せば場を即座に取り、全員からゴリラ札を1枚ずつもらう（野生）'
   }[r];
   if (G.over) say = '';
   $("meRow").innerHTML = '<span class="who">あなた</span>' + (G.over ? '' : roleBadge(r, true)) + '<span class="say">' + esc(say) + '</span>';
@@ -938,9 +944,9 @@ function showRules(){
     '<li><b>王（先導）</b>：場の最初にリードする</li>' +
     '<li><b>預言者（預言）</b>：リードの前に1人を指名し、伏せて1枚ずつやりとり（相手がシルバーバックを持っていれば必ずそれが来る。受け取った札をそのまま返すことはできない）。指名した人が場を取ったら、先に場の<b>聖典のいちばん大きい1枚</b>をもらう</li>' +
     '<li><b>商人（仲買）</b>：場を取れなかったら、先に場の<b>貨幣のいちばん大きい1枚</b>をもらう。貨幣なら、数字が上であれば色を問わず重ねられる</li>' +
-    '<li><b>ゴリラ（野生）</b>：数字が上なら色を問わず重ねられる。<b>シルバーバック</b>を出せば、その場は即座にゴリラのもの。さらに<b>ほかの全員の得点札から、ゴリラのスートの札を全部</b>もらう（群れを率いる）。ゴリラ以外は出せない</li></ul>' +
+    '<li><b>ゴリラ（野生）</b>：数字が上なら色を問わず重ねられる。<b>シルバーバック</b>を出せば、その場は即座にゴリラのもの。さらに<b>ほかの全員が、得点札のゴリラのスートでいちばん大きい1枚</b>を差し出す（群れを率いる）。使ったシルバーバックは<b>山札に戻して混ぜる</b>ので、また誰かに配られ、預言者に狙われる。ゴリラ以外は出せない</li></ul>' +
     '<h3>点と手札</h3>' +
-    '<p>数字札は数字どおり、シルバーバック15点、バナナ0点。<b>得点札はゲームに戻りません。</b>場が終わるたびに手札を8枚まで補充します（山札が尽きたら配れるだけ）。</p>' +
+    '<p>数字札は数字どおり、バナナ0点（シルバーバックは点にならない）。<b>得点札はゲームに戻りません。</b>場が終わるたびに手札を8枚まで補充します（山札が尽きたら配れるだけ）。</p>' +
     '<div class="sheetfoot"><button class="bigbtn" id="closeBtn">盤面に戻る</button></div>';
   $("modal").hidden = false;
   $("closeBtn").addEventListener("click", closeModal);
