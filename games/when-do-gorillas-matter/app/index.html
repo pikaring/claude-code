@@ -26,7 +26,7 @@
   }
   *{box-sizing:border-box}
   [hidden]{display:none!important}
-  body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--body); font-size:15px; line-height:1.5;
+  body{margin:0; background:linear-gradient(rgba(22,21,27,.72),rgba(22,21,27,.72)), url(../assets/pattern.jpg) 0 0 / 420px auto repeat, var(--bg); color:var(--fg); font-family:var(--body); font-size:15px; line-height:1.5;
     -webkit-text-size-adjust:100%;
     background-image:radial-gradient(120% 70% at 50% -10%, #2a2436 0%, rgba(22,21,27,0) 60%)}
   .wrap{max-width:1000px; margin:0 auto; padding-inline:16px; padding-block:10px 16px;
@@ -119,9 +119,10 @@
   .stack .card.sm + .card.sm{margin-left:-16px}
   .stack .card.sm:nth-child(2){margin-top:8px} .stack .card.sm:nth-child(3){margin-top:16px}
   .bigbtn[disabled]{opacity:.45; cursor:default; filter:none}
-  .card.cb{background:#F6E7A8}
+  .card.cb{background:#EEE6CF url(../assets/card-banana.jpg) center 60% / cover no-repeat}
+  .card.cb .art, .card.csb .art, .card.cb .sn, .card.csb .sn{display:none}
   .card.cb .band{background:#D9A915} .card.cb .art{fill:#C9960E} .card.cb .sn{color:#7A5A06}
-  .card.csb{background:#34373C; color:#ECE5D4}
+  .card.csb{background:#EFE7D0 url(../assets/card-silverback.jpg) center 60% / cover no-repeat; color:#ECE5D4}
   .card.csb .band{background:linear-gradient(90deg,#9EA3AA,#E3E6EA,#9EA3AA)} .card.csb .art{fill:#D9DCE0} .card.csb .sn{color:#E3E6EA}
   .slot .passed{font-size:11px; color:var(--muted); border:1px dashed var(--line2); border-radius:4px; width:52px; height:74px; display:grid; place-items:center}
   .pileinfo{font-size:11.5px; color:var(--muted); text-align:center; font-family:var(--mono)}
@@ -625,7 +626,7 @@ function endGame(){
   var youWin = winners.some(function(x){ return x.p === 0; });
   var cls = youWin ? (winners.length > 1 ? "draw" : "win") : "lose";
   var word = youWin ? (winners.length > 1 ? "引き分け" : "あなたの勝ち") : nm(winners[0].p) + "の勝ち";
-  var html = '<img class="banner" src="../assets/hero.jpg" alt="">' + '<h2>' + (G.round >= ROUNDS ? '4局おわり' : '札が尽きて終わり') + '</h2><div class="result ' + cls + '">' + esc(word) + '</div>' +
+  var html = '<img class="banner" src="../assets/result.jpg" alt="">' + '<h2>' + (G.round >= ROUNDS ? '4局おわり' : '札が尽きて終わり') + '</h2><div class="result ' + cls + '">' + esc(word) + '</div>' +
     '<table><tr><th>順位</th><th>名前</th><th>取った札</th><th>合計</th></tr>';
   rows.forEach(function(x, i){
     html += '<tr><td>' + (i+1) + '</td><td>' + esc(nm(x.p)) + '</td><td class="n">' + G.piles[x.p].length + '枚</td><td class="n"><b>' + x.s + '</b></td></tr>';
