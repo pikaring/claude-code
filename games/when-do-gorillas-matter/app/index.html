@@ -864,10 +864,17 @@ function renderActions(){
       a += '<button class="bigbtn ghost" data-pred="' + q + '">' + roleBadge(roleNow(q)) + esc(nm(q)) + '</button>';
     }
     hint = '指名した人と<em>伏せて1枚ずつ</em>やりとりし、相手がシルバーバックを持っていれば必ずあなたに来ます。指名した人が場を取れば、先に場の聖典のいちばん大きい1枚をもらえます。自分を指名するとやりとりなし。次の場であなたはゴリラなので、奪ったシルバーバックはすぐ使えます。';
-  } else if (G.phase === "pgive"){
-    hint = '預言者 <em>' + esc(nm(G.pex.pr)) + '</em> に渡す札を選んでください。' + (G.hands[0].some(isSB) ? '<span class="warn">シルバーバックを持っているので、それを渡す決まりです。</span>' : '1枚返ってきます。');
-  } else if (G.phase === "preturn"){
-    hint = '<em>' + esc(nm(G.pex.q)) + '</em> から <em>' + cardName(G.pex.got) + '</em> を受け取りました' + (isSB(G.pex.got) ? '（シルバーバックを奪った！）' : '') + '。返す札を1枚選んでください（受け取った札はそのまま返せません）。';
+  } else if (G.phase === "pgive" || G.phase === "preturn"){
+    // 渡す札・返す札は、選んだあとにボタンで確かめてから渡す（うっかり必要な札を渡さないように）
+    var pick = selCards()[0], giving = G.phase === "pgive";
+    var to = giving ? G.pex.pr : G.pex.q;
+    if (pick){
+      a = '<button class="bigbtn" id="giveBtn">' + esc(cardName(pick)) + ' を' + esc(nm(to)) + 'に' + (giving ? '渡す' : '返す') + '</button>' +
+          '<button class="bigbtn ghost" id="clearBtn">選び直す</button>';
+    }
+    if (giving) hint = '預言者 <em>' + esc(nm(G.pex.pr)) + '</em> に指名されました。渡す札を選んでください。' + (G.hands[0].some(isSB) ? '<span class="warn">シルバーバックを持っているので、それを渡す決まりです。</span>' : '1枚返ってきます。');
+    else hint = '<em>' + esc(nm(G.pex.q)) + '</em> から <em>' + cardName(G.pex.got) + '</em> を受け取りました' + (isSB(G.pex.got) ? '（シルバーバックを奪った！）' : '') + '。返す札を1枚選んでください（受け取った札はそのまま返せません）。';
+    if (pick) hint += ' <span class="warn">' + esc(cardName(pick)) + ' を' + (giving ? '渡します' : '返します') + '。よければボタンを押してください。</span>';
   } else if (myTurn()){
     var cs = selCards(), lead = !G.played.length;
     var ok = cs.length && legalPlay(0, cs);
@@ -891,6 +898,11 @@ function renderActions(){
   var nb = $("nextBtn"); if (nb){ nb.addEventListener("click", advance); nb.focus({preventScroll:true}); }
   var ab = $("againBtn2"); if (ab) ab.addEventListener("click", newGame);
   var cb = $("clearBtn"); if (cb) cb.addEventListener("click", function(){ G.sel = []; render(); });
+  var gb = $("giveBtn"); if (gb) gb.addEventListener("click", function(){
+    var c = selCards()[0]; if (!c) return;
+    G.sel = [];
+    if (G.phase === "pgive") prophetGive(c); else if (G.phase === "preturn") prophetReturn(c);
+  });
   var pb = $("passBtn"); if (pb) pb.addEventListener("click", function(){ if (myTurn()){ G.fresh = {}; pass(0); } });
   Array.prototype.forEach.call(document.querySelectorAll("[data-play]"), function(b){
     b.addEventListener("click", function(){ submitSel(b.getAttribute("data-play") || undefined); });
@@ -912,9 +924,12 @@ function onHandPick(id){
   if (!c) return;
   if (G.phase === "pgive"){
     if (G.hands[0].some(isSB) && !isSB(c)) return;
-    prophetGive(c); return;
+    G.sel = G.sel[0] === id ? [] : [id]; render(); return;   // 選ぶだけ。渡すのは確認のボタンで
   }
-  if (G.phase === "preturn"){ if (c === G.pex.got && G.hands[0].length > 1) return; prophetReturn(c); return; }
+  if (G.phase === "preturn"){
+    if (c === G.pex.got && G.hands[0].length > 1) return;
+    G.sel = G.sel[0] === id ? [] : [id]; render(); return;
+  }
   if (!myTurn()) return;
   var lim = G.played.length ? G.played[0].cards.length : MAX_COMBO;
   if (isSB(c)){ G.sel = [id]; render(); return; }
