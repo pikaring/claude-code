@@ -1,9 +1,10 @@
-# 商人・預言者・ゴリラ・王（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v2.4）
+# 商人・預言者・ゴリラ・王（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v2.5）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
 # 能力: 王=先導 / 預言者=指名して伏せて1枚ずつやりとり（シルバーバックは必ず渡す）＋指名した人が取れば先に1枚
 #       商人=取れなかったら先に貨幣の最小1枚、貨幣なら色を問わず上げられる / ゴリラ=色を問わず上げられる、シルバーバックで即決
+# opt: pro_best=名指された人はSBか最強の数字札を渡す(v2.5) / pro_mode='steal'=聖典の先取りなし
 # opt: lead_backup=組でリードするのは上から4つの数字か、重ね返せる組がもう1つあるときだけ（CPUの考え方） / sameeq=同じ数字なら同じ色でも重ねられる(v1.7) / wraprun=連番の1周(v1.8)
 # opt: ring2=回る順 王→商人→預言者→ゴリラ(v1.5) / wrap=いちばん大きい数字の上に1(v1.5) / wrap_strict=1周は同じスートの1枚と同数だけ(v1.5)
 # opt: sb_pts=シルバーバックの点 / sb_double=倍取り(v1.3) / sb_raid=襲撃 'gor'=群れを率いる(v1.4)・'max'/'max2'=最大の札 / sb_late=パス後も割り込み / sb_nosteal=預言で奪われない / sb_keep=使っても手札に戻る / sb_redeal=使ったら山札に戻る / sb_endpts=最後に持っていたときの点 / sb_raid 'gor1'=各自のゴリラ札の最大1枚 / sb_thr=出す目安（試した案）
@@ -129,7 +130,7 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                 pred=name
                 if name!=pp and hands[name] and hands[pp] and OPT.get('pro_mode','both')!='predict':
                     gcs=[c for c in hands[name] if isgc(c)] if not OPT.get('sb_nosteal') else []
-                    c1=gcs[0] if gcs else min([c for c in hands[name] if not isgc(c)] or hands[name],key=lambda c:val(c)+hold(name,c))
+                    c1=gcs[0] if gcs else (max([c for c in hands[name] if c[0]>=0] or hands[name],key=lambda c:c[1]) if OPT.get('pro_best') else None) or min([c for c in hands[name] if not isgc(c)] or hands[name],key=lambda c:val(c)+hold(name,c))
                     hands[name].remove(c1);hands[pp].append(c1)
                     c2=min([c for c in hands[pp] if not isgc(c) and c is not c1] or [c for c in hands[pp] if c is not c1] or hands[pp],key=lambda c:val(c)+hold(pp,c))
                     hands[pp].remove(c2);hands[name].append(c2)
@@ -220,8 +221,9 @@ OPT_V21=dict(OPT_V20,mer_nojump=1)
 OPT_V22=dict(OPT_V21,ban_setonly=1)
 OPT_V23=dict(OPT_V22,runfree=0,run_color=1)
 OPT_V24=dict(OPT_V22)   # v2.4: 連番の色の縛りを外す（v2.2 と同じ判定）
+OPT_V25=dict(OPT_V24,pro_best=1,pro_mode='steal')   # v2.5: 預言者は最強の札かSBを受け取る、聖典の先取りなし
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
