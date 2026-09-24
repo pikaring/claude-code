@@ -32,6 +32,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REGISTRANTS = os.path.join(HERE, 'registrants.csv')
 STATS_PATH = os.path.join(HERE, 'license_stats.json')
 
+JST = datetime.timezone(datetime.timedelta(hours=9))
+
 LIMIT = 1000          # 無償プランのライセンス上限
 WARN_WORKDAYS = 10    # 到達予測がこの稼働日数を切ったら警告
 
@@ -59,6 +61,16 @@ SEED = {
     '2026-09-05': {'total': 924},
     '2026-09-13': {'total': 943, 'pending': 95},
 }
+
+
+def today_jst():
+    """記録日はJSTで判定する。
+
+    実行環境のタイムゾーンはUTCで、定時実行はJST日曜8時(=UTC土曜23時)に走るため、
+    date.today() をそのまま使うと記録日が1日前にずれる(2026-09-20の実行が
+    2026-09-19として記録された)。
+    """
+    return datetime.datetime.now(JST).date()
 
 
 def workdays(a, b):
@@ -134,7 +146,7 @@ def monthly_summary(stats):
 
 
 def build(update=True):
-    today = datetime.date.today()
+    today = today_jst()
     total, pending = read_registrants()
     stats = load_stats()
     if update:
