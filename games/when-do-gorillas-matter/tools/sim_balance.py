@@ -1,4 +1,4 @@
-# 商人・預言者・ゴリラ・王（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v2.5）
+# 商人・預言者・ゴリラ・王（(When) Do Gorillas Matter?） — バランス確認用の簡易シミュレーション（v2.6）
 # 2〜4人・4役割（商人・預言者・王・ゴリラ）。場は「同じ形・同じ枚数で、同じ色で上げる／同じ数字で色かえ」で重ね、
 # パスしたら抜ける。最後に出した人が総取り（役割に関係なく全部点）。得点札はゲームに戻らない。
 # 手札は場ごとに8枚まで補充。4局×4つの場。
@@ -98,6 +98,8 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
     OPT.clear(); OPT.update(opt)
     global ORDER, RING
     ORDER=[KR,MR,PR,GR] if OPT.get('ring2') else [KR,PR,MR,GR]; RING=[PR,MR,KR,GR] if OPT.get('ring2') else [0,1,2,3]
+    NT=4
+    if OPT.get('two_nopro') and N==2: RING=[GR,MR,KR]; NT=3   # v2.6: 2人は預言者なし（王→商人→ゴリラ、1局3場）
     deck=[(s,r,k) for s in range(4) for r in range(1,R+1) for k in range(COPIES)]
     deck+=[(BAN,0,k) for k in range(4)]+[(GC,15,0)]
     score=[0]*N; byrole=[0]*NR; removed=set(); hands=[[] for _ in range(N)]
@@ -113,12 +115,12 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
         refill()
         if all(len(h)==0 for h in hands): break
         S['rounds']+=1
-        for t in range(NR):
+        for t in range(NT):
             if any(len(h)==0 for h in hands): break
-            roles=[RING[(p-t+rnd)%NR] for p in range(N)]
+            roles=[RING[(p-t+rnd)%NT] for p in range(N)]
             holder={roles[p]:p for p in range(N)}
             order=sorted(range(N),key=lambda q:ORDER.index(roles[q]))
-            later=lambda p:{RING[(p-u+rnd)%NR] for u in range(t+1,NR)}
+            later=lambda p:{RING[(p-u+rnd)%NT] for u in range(t+1,NT)}
             def hold(p,c):
                 if isgc(c): return 40 if GR in later(p) else 8
                 return c[1]*0.3+(c[1]*0.5 if GR in later(p) else 0)
@@ -126,7 +128,8 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
             pred=None
             if PR in holder:
                 pp=holder[PR]
-                name=knows[pp] if knows[pp] not in (None,pp) else rng.choice([q for q in range(N) if q!=pp]) if N>1 else pp
+                cand=[q for q in range(N) if q!=pp and not (OPT.get('pro_nogor') and roles[q]==GR)]   # pro_nogor: ゴリラ役は名指せない(v2.6)
+                name=knows[pp] if knows[pp] not in (None,pp) and knows[pp] in cand else (rng.choice(cand) if cand else pp)
                 pred=name
                 if name!=pp and hands[name] and hands[pp] and OPT.get('pro_mode','both')!='predict':
                     gcs=[c for c in hands[name] if isgc(c)] if not OPT.get('sb_nosteal') else []
@@ -222,8 +225,9 @@ OPT_V22=dict(OPT_V21,ban_setonly=1)
 OPT_V23=dict(OPT_V22,runfree=0,run_color=1)
 OPT_V24=dict(OPT_V22)   # v2.4: 連番の色の縛りを外す（v2.2 と同じ判定）
 OPT_V25=dict(OPT_V24,pro_best=1,pro_mode='steal')   # v2.5: 預言者は最強の札かSBを受け取る、聖典の先取りなし
+OPT_V26=dict(OPT_V25,pro_nogor=1,two_nopro=1)   # v2.6: ゴリラ役は名指せない、2人は預言者なし
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25),("v2.6（ゴリラ役は名指せない、2人は預言者なし）",OPT_V26)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR

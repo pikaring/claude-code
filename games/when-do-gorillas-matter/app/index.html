@@ -277,9 +277,12 @@ var SUITS = ["貨幣","聖典","冠","ゴリラ"];
 var BAN = -1, SBK = -2;                 // バナナ・シルバーバックのスート番号（スートなし）
 var RANGE = {2:9, 3:11, 4:13};          // 人数ごとの数字の範囲（各スート、同じ数字が2枚ずつ）
 var COPIES = 2, BANANAS = 4, SB_PTS = 0;   // シルバーバックは得点札にならず、使うと山札に戻る
-var HAND_MAX = 8, TRICKS = 4, ROUNDS = 4, MAX_COMBO = 3;
+var HAND_MAX = 8, ROUNDS = 4, MAX_COMBO = 3;   // 1局の場の数は nTricks()（4人・3人は4、2人は3）
 var PLAY_ORDER = [KIN, MER, PRO, GOR];  // 出す順：王→商人→預言者→ゴリラ（王の席から反時計回り）
 var ROLE_AT = [PRO, MER, KIN, GOR];     // 円卓の並び。各プレイヤーの役割は 王→商人→預言者→ゴリラ→王 と移る
+var ROLE_AT2 = [GOR, MER, KIN];         // 2人は預言者なし：王→商人→ゴリラ→王 と移り、1局は3場
+function ring(){ return G && G.N === 2 ? ROLE_AT2 : ROLE_AT; }
+function nTricks(){ return ring().length; }
 var ROLE_IMG = ['../assets/role-merchant.jpg', '../assets/role-prophet.jpg', '../assets/role-king.jpg', '../assets/role-gorilla.jpg'];
 var FORM_NAME = {single:"1枚", run:"連番", set:"同数", sb:"シルバーバック"};
 /* 対戦相手は all-in-texas の PERSONAS と同じ5人 */
@@ -304,7 +307,7 @@ function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&am
 
 /* プレイヤー p の場 t（第k局）での役割。役割は場が終わるごとに時計回りに隣へ移る
    （預言者の次の場はゴリラなので、預言で奪ったシルバーバックをすぐ使える） */
-function roleOf(p, t, k){ return ROLE_AT[((p - t + k + (G ? G.off : 0)) % NR + NR) % NR]; }   // G.off：ゲームごとにランダムな円卓の向き
+function roleOf(p, t, k){ var r = ring(), n = r.length; return r[((p - t + k + (G ? G.off : 0)) % n + n) % n]; }   // G.off：ゲームごとにランダムな円卓の向き
 function roleNow(p){ return roleOf(p, G.trick, G.round); }
 function holder(role){ for (var p=0;p<G.N;p++) if (roleNow(p) === role) return p; return -1; }
 function nm(p){ return p === 0 ? "あなた" : G.names[p]; }
@@ -444,10 +447,12 @@ function startTrick(){
 }
 
 /* ── 預言：1人を指名し、伏せて1枚ずつやりとり（シルバーバックを持っていれば必ずそれを渡す） ── */
+/* 預言者が名指せる相手：自分とゴリラ役以外で、手札のある人（真の王はゴリラではない） */
+function canName(pr, q){ return q !== pr && roleNow(q) !== GOR && G.hands[q].length > 0; }
 function startProphecy(){
   var pr = holder(PRO);
   if (pr < 0 || !G.hands[pr].length){ startPlay(); return; }
-  if (!G.order.some(function(q){ return q !== pr && G.hands[q].length; })){ startPlay(); return; }   // 名指せる相手がいない
+  if (!G.order.some(function(q){ return canName(pr, q); })){ startPlay(); return; }   // 名指せる相手がいない
   if (pr === 0){ G.phase = "prophecy"; render(); return; }
   var q = cpuPredict(pr);
   if (q < 0){ startPlay(); return; }
@@ -580,7 +585,7 @@ function advance(){
   refill(true);
   var anyCards = G.hands.some(function(h){ return h.length; });
   if (!anyCards){ endGame(); return; }
-  if (G.trick < TRICKS){ startTrick(); return; }
+  if (G.trick < nTricks()){ startTrick(); return; }
   var line = [];
   for (var p=0;p<G.N;p++) line.push(nm(p) + " " + scoreOf(p));
   logMsg("第" + (G.round+1) + "局おわり：" + line.join("・"), "hot");
@@ -612,7 +617,7 @@ function endGame(){
 
 /* ══ CPU ══════════════════════════════════════════════ */
 function per(p){ return G.per[p] || PERSONAS[3]; }
-function laterRoles(p){ var s = {}; for (var u=G.trick+1; u<TRICKS; u++) s[roleOf(p,u,G.round)] = true; return s; }
+function laterRoles(p){ var s = {}; for (var u=G.trick+1; u<nTricks(); u++) s[roleOf(p,u,G.round)] = true; return s; }
 /* 札を手元に残す価値。この局のゴリラの番のための強い札とシルバーバック */
 function holdVal(p, c){
   var lt = laterRoles(p), lastRound = G.round >= ROUNDS - 1;
@@ -705,10 +710,10 @@ function cpuPickReturn(pr){
 function cpuPredict(pr){
   var h = G.hands[pr];
   var known = G.sbKnow[pr];
-  if (known >= 0 && known !== pr && !h.some(isSB) && G.hands[known].length) return known;
-  var gor = holder(GOR);
-  if (gor >= 0 && gor !== pr && G.hands[gor].length && rnd() < 0.5 + per(pr).aggr * 0.3) return gor;   // ゴリラの最強札を召し上げる
-  var others = G.order.filter(function(q){ return q !== pr && G.hands[q].length; });
+  if (known >= 0 && !h.some(isSB) && canName(pr, known)) return known;
+  var others = G.order.filter(function(q){ return canName(pr, q); });
+  if (others.length > 1 && rnd() < 0.5 + per(pr).aggr * 0.3)   // 得点首位から最強の札を召し上げる
+    return others.reduce(function(a,b){ return scoreOf(a) >= scoreOf(b) ? a : b; });
   return others.length ? others[Math.floor(rnd() * others.length)] : -1;
 }
 
@@ -730,19 +735,19 @@ function cardHTML(c, extra, attrs, inner){
 function render(){
   if (!G) return;
   $("roundNum").textContent = Math.min(G.round + 1, ROUNDS);
-  $("trickNum").textContent = Math.min(G.trick + 1, TRICKS);
-  $("trickMax").textContent = TRICKS;
+  $("trickNum").textContent = Math.min(G.trick + 1, nTricks());
+  $("trickMax").textContent = nTricks();
   $("pileCount").textContent = G.pile.length;
   renderSched(); renderTrick(); renderMe(); renderHand(); renderActions(); renderLog();
 }
 
 function renderSched(){
   var html = '<tr><th></th>';
-  for (var t=0;t<TRICKS;t++) html += '<th class="' + (t===G.trick && !G.over ? 'now' : '') + '">場' + (t+1) + '</th>';
+  for (var t=0;t<nTricks();t++) html += '<th class="' + (t===G.trick && !G.over ? 'now' : '') + '">場' + (t+1) + '</th>';
   html += '<th>手</th><th>得点</th></tr>';
   for (var p=0;p<G.N;p++){
     html += '<tr class="' + (p===0?'mine':'') + '"><td><span class="nm">' + esc(nm(p)) + '</span>' + (G.tags[p] ? '<span class="tag">' + esc(G.tags[p]) + '</span>' : '') + '</td>';
-    for (var t2=0;t2<TRICKS;t2++){
+    for (var t2=0;t2<nTricks();t2++){
       var cls = t2 === G.trick && !G.over ? 'cur' : (t2 < G.trick ? 'past' : '');
       html += '<td class="' + cls + '">' + roleBadge(roleOf(p, t2, G.round)) + '</td>';
     }
@@ -816,7 +821,7 @@ function renderMe(){
   var r = roleNow(0);
   var say = {
     0:'商人：場を取れなかったら、先に場の貨幣のいちばん大きい1枚をもらう（仲買）',
-    1:'預言者：1人を名指し、その人のシルバーバック（なければいちばん大きい数字の札）を受け取って、別の1枚を返す（預言）',
+    1:'預言者：ゴリラ役と自分以外の1人を名指し、その人のシルバーバック（なければいちばん大きい数字の札）を受け取って、別の1枚を返す（預言）',
     2:'王：この場は王がリードする（先導）',
     3:'ゴリラ：色を問わず上げられる。シルバーバックを出せば場を即座に取り、全員からゴリラ札を1枚ずつもらう（野生）'
   }[r];
@@ -856,10 +861,10 @@ function renderActions(){
   } else if (G.phase === "prophecy"){
     for (var k=0;k<G.order.length;k++){
       var q = G.order[k];
-      if (q === 0 || !G.hands[q].length) continue;
+      if (!canName(0, q)) continue;
       a += '<button class="bigbtn ghost" data-pred="' + q + '">' + roleBadge(roleNow(q)) + esc(nm(q)) + '</button>';
     }
-    hint = '1人を名指してください。相手は<em>シルバーバック</em>を、なければ<em>いちばん大きい数字の札</em>を伏せてあなたに渡し、あなたは受け取った札以外の1枚を返します。次の場であなたはゴリラなので、奪ったシルバーバックはすぐ使えます。';
+    hint = '1人を名指してください（ゴリラ役は名指せません）。相手は<em>シルバーバック</em>を、なければ<em>いちばん大きい数字の札</em>を伏せてあなたに渡し、あなたは受け取った札以外の1枚を返します。次の場であなたはゴリラなので、奪ったシルバーバックはすぐ使えます。';
   } else if (G.phase === "pgive" || G.phase === "preturn"){
     // 渡す札・返す札は、選んだあとにボタンで確かめてから渡す（うっかり必要な札を渡さないように）
     var pick = selCards()[0], giving = G.phase === "pgive";
@@ -883,7 +888,7 @@ function renderActions(){
     if (lead && roleNow(0) === KIN && DIFF[G.diff].hint) hint += ' <em>弱い札1枚で先導すると、みんなが重ねて場が育ちやすい。いらない札を処分する好機でもあります。</em>';
     if (cs.length && !ok) hint += ' <span class="warn">その札は重ねられません。</span>';
   } else if (G.phase === "trickEnd"){
-    var last = G.trick + 1 >= TRICKS;
+    var last = G.trick + 1 >= nTricks();
     a = '<button class="bigbtn" id="nextBtn">' + (last ? (G.round + 1 >= ROUNDS ? '結果を見る' : '次の局へ') : '次の場へ') + '</button>';
   }
   $("actions").innerHTML = a;
@@ -968,7 +973,7 @@ function showRules(){
     '<h2>あそびかた</h2><p class="sub">2〜4人。役割が回る「場」に札を重ね、最後に出した人が場の札を総取りします。4局で得点札の点の合計を競います。</p>' +
     '<h3>札と役割</h3>' +
     '<p>数字札は4スート（<b>貨幣・聖典・冠・ゴリラ</b>）で、<b>同じ数字が2枚ずつ</b>。数字がそのまま強さと点です（2人1〜9／3人1〜11／4人1〜13）。ほかに<b>バナナ4枚</b>と<b>シルバーバック1枚</b>。</p>' +
-    '<p>役割は<b>王・商人・預言者・ゴリラ</b>の4つ。<b>場が終わるごとに時計回りに隣へ移り</b>、だれもが王→商人→預言者→ゴリラの順に回ります（預言者の次はゴリラ）。1局は4つの場で、ゴリラになるのは1局に1回だけ。予定は上の表に出ています。</p>' +
+    '<p>役割は<b>王・商人・預言者・ゴリラ</b>の4つ。<b>場が終わるごとに時計回りに隣へ移り</b>、だれもが王→商人→預言者→ゴリラの順に回ります（預言者の次はゴリラ）。1局は4つの場で、ゴリラになるのは1局に1回だけ。予定は上の表に出ています。<b>2人のときは預言者を使わず</b>、王→商人→ゴリラの3役割で回し、1局は3つの場です。</p>' +
     '<h3>場</h3><ul>' +
     '<li>預言者がいれば、まず<b>預言</b>（下）</li>' +
     '<li>出す順は<b>王→商人→預言者→ゴリラ</b>（空席は飛ばす）。<b>王がリード</b>（先導）</li>' +
@@ -977,7 +982,7 @@ function showRules(){
     '<li><b>パスしたらその場から抜ける</b>。最後に出した人以外が全員抜けたら、<b>最後に出した人が場の札を総取り</b></li></ul>' +
     '<h3>役割の能力</h3><ul>' +
     '<li><b>王（先導）</b>：場の最初にリードする<br><span class="sub">王はゲームを規律する。厳しい掟（強い組の先導）は民衆を怯えさせ、寛容な掟（弱い1枚の先導）は莫大な富を産むこともあるが、それは誰かの権力を利することにも繋がりかねない。</span></li>' +
-    '<li><b>預言者（預言）</b>：リードの前に自分以外の1人を名指す。名指された人は<b>シルバーバック</b>を、なければ<b>いちばん大きい数字の札</b>を伏せて渡し、預言者は受け取った札以外の1枚を伏せて返す<br><span class="sub">預言者は「真の王」を名指し、その者のいちばん尊い宝（群れの長の証シルバーバック、なければ最も強い札）を神の名のもとに召し上げる。</span></li>' +
+    '<li><b>預言者（預言）</b>：リードの前にゴリラ役と自分以外の1人を名指す。名指された人は<b>シルバーバック</b>を、なければ<b>いちばん大きい数字の札</b>を伏せて渡し、預言者は受け取った札以外の1枚を伏せて返す<br><span class="sub">預言者は「真の王」を名指し、その者のいちばん尊い宝（群れの長の証シルバーバック、なければ最も強い札）を神の名のもとに召し上げる。</span></li>' +
     '<li><b>商人（仲買）</b>：場を取れなかったら、先に場の<b>貨幣のいちばん大きい1枚</b>をもらう<br><span class="sub">商人は誰がリーダーかには興味がない。考えるのは私腹を肥やすことだけ。誰が勝とうと、手数料として貨幣を1枚せしめる。</span></li>' +
     '<li><b>ゴリラ（野生）</b>：数字が上なら色を問わず重ねられる。<b>シルバーバック</b>を出せば、その場は即座にゴリラのもの。さらに<b>ほかの全員が、得点札のゴリラのスートでいちばん大きい1枚</b>を差し出す（群れを率いる）。使ったシルバーバックは<b>山札に戻して混ぜる</b>ので、また誰かに配られ、預言者に狙われる。ゴリラ以外は出せず、パスした後も出せない<br><span class="sub">ゴリラには秩序が分からぬ。強いものこそが頂点であり、その象徴シルバーバックは、飼い慣らされたゴリラたちに野生の本能を呼び覚ます（群れを率いる）。</span></li></ul>' +
     '<h3>点と手札</h3>' +
