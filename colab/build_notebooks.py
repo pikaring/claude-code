@@ -93,6 +93,97 @@ else:
 """, title=True))
 
 cells.append(code(
+"""#@title 3b.（任意）LoRA を追加
+#@markdown Civitai のモデルページ URL（`?modelVersionId=` 付きならその版）か、`.safetensors` の直接 URL（Hugging Face など）。空欄なら何もしません。URL を変えて何度でも実行でき、複数追加できます。
+#@markdown
+#@markdown **Civitai は API キーが必要**です。Civitai の「アカウント設定 → API Keys」で作ったキーを、左の 🔑（シークレット）に名前 `CIVITAI_TOKEN` で登録し、このノートブックからのアクセスを許可してください（キーはノートブックに書き込みません）。
+LORA_URL = "" #@param {type:"string"}
+
+import json, os, re, struct, urllib.parse, urllib.request
+
+LORA_DIR = "/content/ComfyUI/models/loras"
+os.makedirs(LORA_DIR, exist_ok=True)
+
+def get_json(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    return json.loads(urllib.request.urlopen(req, timeout=30).read())
+
+def civitai_token():
+    try:
+        from google.colab import userdata
+        return userdata.get("CIVITAI_TOKEN")
+    except Exception:
+        return None
+
+def resolve_lora(url):
+    u = urllib.parse.urlparse(url)
+    if "civitai" in u.netloc:
+        vid = urllib.parse.parse_qs(u.query).get("modelVersionId", [None])[0]
+        m = re.search(r"/api/download/models/(\\d+)", u.path)
+        if m:
+            vid = m.group(1)
+        if not vid:
+            mid = re.search(r"/models/(\\d+)", u.path)
+            if not mid:
+                raise ValueError("Civitai の URL からモデルを特定できません")
+            vid = get_json(f"https://civitai.com/api/v1/models/{mid.group(1)}")["modelVersions"][0]["id"]
+        info = get_json(f"https://civitai.com/api/v1/model-versions/{vid}")
+        print(f"{info['model']['name']} / {info['name']}（ベースモデル: {info.get('baseModel')}）")
+        base = str(info.get("baseModel", "")).lower()
+        if "qwen" not in base or "2.1" not in base:
+            print("⚠️ Qwen-Image-2.1 用ではない可能性があります（効かないか、絵が崩れます）")
+        if info.get("trainedWords"):
+            print("トリガーワード（プロンプトに入れる）:", ", ".join(info["trainedWords"]))
+        files = [f for f in info["files"] if f.get("metadata", {}).get("format") == "SafeTensor"]
+        if not files:
+            raise ValueError("safetensors 形式のファイルがないため使えません")
+        f = next((f for f in files if f.get("primary")), files[0])
+        token = civitai_token()
+        if not token:
+            raise ValueError("Civitai の API キーがありません。シークレット CIVITAI_TOKEN を登録してアクセスを許可してください")
+        sep = "&" if "?" in f["downloadUrl"] else "?"
+        return f["downloadUrl"] + sep + urllib.parse.urlencode({"token": token}), f["name"]
+    if "huggingface.co" in u.netloc:
+        url = url.replace("/blob/", "/resolve/")
+    return url, os.path.basename(u.path)
+
+def is_safetensors(path):
+    # 先頭 8 バイトがヘッダー長、続けて JSON のヘッダー。pickle 形式（.pt/.ckpt）は実行されうるので受け付けない
+    with open(path, "rb") as f:
+        n = struct.unpack("<Q", f.read(8))[0]
+        if not 2 <= n <= 100_000_000:
+            return False
+        try:
+            return isinstance(json.loads(f.read(n)), dict)
+        except Exception:
+            return False
+
+if LORA_URL.strip():
+    src, name = resolve_lora(LORA_URL.strip())
+    name = re.sub(r"[^\\w.\\-]+", "_", urllib.parse.unquote(name))
+    if not name.endswith(".safetensors"):
+        raise ValueError(f"safetensors 形式ではないため使えません: {name}")
+    dest, tmp = f"{LORA_DIR}/{name}", f"{LORA_DIR}/.{name}.part"
+    print("ダウンロード中…")
+    req = urllib.request.Request(src, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r, open(tmp, "wb") as out:
+            while chunk := r.read(1 << 20):
+                out.write(chunk)
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            raise ValueError(f"ダウンロードを拒否されました（{e.code}）。API キーが正しいか、Civitai にログインしてこのモデルを表示できるか確認してください") from None
+        raise
+    if not is_safetensors(tmp):
+        os.remove(tmp)
+        raise ValueError("safetensors 以外が返されました。API キーが正しいか確認してください（エラーやログイン画面が返された可能性）")
+    os.replace(tmp, dest)
+    print(f"追加しました: {name}（{os.path.getsize(dest) / 1e6:.0f} MB）")
+
+print("使える LoRA:", sorted(f for f in os.listdir(LORA_DIR) if f.endswith(".safetensors")) or "なし")
+""", title=True))
+
+cells.append(code(
 """#@title 4. ComfyUI をバックグラウンドで起動
 import subprocess, time, urllib.request
 
@@ -132,6 +223,9 @@ seed = -1 #@param {type:"integer"}
 text_mode = False #@param {type:"boolean"}
 switch_step = 24 #@param {type:"integer"}
 cfg_text = 3.0 #@param {type:"number"}
+#@markdown **LoRA**：セル 3b で表示されたファイル名（空欄なら使わない）
+lora_name = "" #@param {type:"string"}
+lora_strength = 0.8 #@param {type:"slider", min:0, max:1.5, step:0.05}
 
 import json, random, time, urllib.request, urllib.parse
 from IPython.display import Image, display
@@ -150,7 +244,8 @@ def api(path, data=None):
 
 if seed < 0:
     seed = random.randint(0, 2**32 - 1)
-wf = build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, DIT, TE, VAE)
+loras = [(lora_name.strip(), lora_strength)] if lora_name.strip() else []
+wf = build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, DIT, TE, VAE, loras)
 
 t0 = time.time()
 pid = api("/prompt", {"prompt": wf})["prompt_id"]
@@ -214,7 +309,7 @@ cells.append(code(
 !tail -n 60 /content/comfyui.log
 """, title=True))
 
-SETUP = cells[1:5]   # GPU 確認・インストール・ダウンロード・ComfyUI 起動
+SETUP = cells[1:6]   # GPU 確認・インストール・ダウンロード・LoRA・ComfyUI 起動
 LOG = cells[-1]
 
 mobile_cells = [md(

@@ -15,7 +15,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # --- workflow ---
-def build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, dit, te, vae):
+def build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, dit, te, vae, loras=()):
     wf = {
         "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": dit}},
         # 公式スケジューラと同じく解像度に応じて shift を変える（base 0.5 @256 トークン、傾き 0.4/7936）。
@@ -29,6 +29,13 @@ def build_workflow(prompt, negative, width, height, steps, seed, text_mode, swit
             "clip": ["2", 0], "prompt": prompt, "negative_prompt": negative, "resolution": 1024}},
         "5": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
     }
+    # LoRA は DiT の読み込み直後に順に重ねる（(ファイル名, 強さ) のリスト）
+    model = ["1", 0]
+    for i, (name, strength) in enumerate(loras):
+        wf[str(11 + i)] = {"class_type": "LoraLoaderModelOnly", "inputs": {
+            "model": model, "lora_name": name, "strength_model": strength}}
+        model = [str(11 + i), 0]
+    wf["10"]["inputs"]["model"] = model
     def ksampler(add_noise, cfg, start, end, leftover, latent):
         return {"class_type": "KSamplerAdvanced", "inputs": {
             "model": ["10", 0], "add_noise": add_noise, "noise_seed": seed, "steps": steps, "cfg": cfg,
@@ -93,6 +100,14 @@ textarea, input[type=number] {
   border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
 }
 textarea { min-height: 110px; resize: vertical; }
+select {
+  width: 100%; font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+}
+.slider { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.slider input { flex: 1; accent-color: var(--accent); }
+.slider span { font-variant-numeric: tabular-nums; min-width: 3em; text-align: right; }
+.slider.off { opacity: .4; }
 .row { margin-top: 14px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips button {
@@ -143,6 +158,16 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
       <input type="checkbox" id="text_mode">
     </div>
 
+    <div class="row" id="lora_row">
+      <label for="lora">LoRA</label>
+      <select id="lora"><option value="">使わない</option></select>
+      <div class="slider">
+        <input type="range" id="lora_strength" min="0" max="1.5" step="0.05" value="0.8">
+        <span id="lora_strength_value">0.80</span>
+      </div>
+      <p class="hint" id="lora_hint">ノートブックのセル 3b で追加した LoRA を選べます</p>
+    </div>
+
     <details class="row">
       <summary>詳細設定</summary>
       <div class="row">
@@ -180,6 +205,22 @@ function chips(id, options, initial) {
 const getSize = chips("sizes", ["1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"].map(s => [s, s]), "3:4");
 const getQuality = chips("quality", [["high", "標準（高品質）"], ["fast", "高速"]], "high");
 
+const loraEl = document.getElementById("lora");
+const strengthEl = document.getElementById("lora_strength");
+const strengthRow = strengthEl.parentElement;
+function syncLora() {
+  document.getElementById("lora_strength_value").textContent = Number(strengthEl.value).toFixed(2);
+  strengthEl.disabled = !loraEl.value;
+  strengthRow.classList.toggle("off", !loraEl.value);
+}
+strengthEl.oninput = syncLora;
+loraEl.onchange = syncLora;
+syncLora();
+fetch("api/loras").then(r => r.json()).then(({loras}) => {
+  for (const name of loras) loraEl.add(new Option(name.replace(/\.safetensors$/, ""), name));
+  if (!loras.length) document.getElementById("lora_hint").textContent = "LoRA はまだありません（ノートブックのセル 3b で追加できます）";
+}).catch(() => {});
+
 const go = document.getElementById("go");
 const statusEl = document.getElementById("status");
 function setStatus(text, isError) {
@@ -207,6 +248,7 @@ go.onclick = async () => {
       negative: document.getElementById("negative").value,
       text_mode: document.getElementById("text_mode").checked,
       seed: seedText === "" ? null : Number(seedText),
+      lora: loraEl.value || null, lora_strength: Number(strengthEl.value),
     });
     let label = "送信しました";
     timer = setInterval(() => setStatus(`${label}… ${Math.round((Date.now() - t0) / 1000)} 秒`), 1000);
@@ -216,7 +258,7 @@ go.onclick = async () => {
       if (st.state === "queued") label = `順番待ち（${st.position} 番目）`;
       else if (st.state === "running") label = "生成中（初回はモデルの読み込みで数分、標準画質は 1 枚数分かかります）";
       else if (st.state === "error") throw new Error(st.error);
-      else if (st.state === "done") { showResult(st.image, job.seed, prompt, (Date.now() - t0) / 1000); break; }
+      else if (st.state === "done") { showResult(st.image, job.seed, job.lora, prompt, (Date.now() - t0) / 1000); break; }
     }
     setStatus(`完了（${Math.round((Date.now() - t0) / 1000)} 秒）`);
   } catch (e) {
@@ -227,7 +269,7 @@ go.onclick = async () => {
   }
 };
 
-function showResult(name, seed, prompt, secs) {
+function showResult(name, seed, lora, prompt, secs) {
   const url = "api/image?name=" + encodeURIComponent(name);
   const card = document.createElement("div");
   card.className = "card result";
@@ -236,7 +278,7 @@ function showResult(name, seed, prompt, secs) {
   const meta = document.createElement("div");
   meta.className = "meta";
   const info = document.createElement("span");
-  info.textContent = `seed ${seed} ・ ${Math.round(secs)} 秒`;
+  info.textContent = `seed ${seed}${lora ? " ・ LoRA " + lora : ""} ・ ${Math.round(secs)} 秒`;
   const dl = document.createElement("a");
   dl.href = url + "&download=1"; dl.textContent = "ファイルに保存";
   dl.setAttribute("download", name);
@@ -261,6 +303,11 @@ def make_handler(args):
         except urllib.error.HTTPError as e:
             raise RuntimeError(e.read().decode()[:500]) from None
 
+    def list_loras():
+        if not os.path.isdir(args.loras):
+            return []
+        return sorted(f for f in os.listdir(args.loras) if f.endswith(".safetensors"))
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *a):
             pass
@@ -283,6 +330,8 @@ def make_handler(args):
             try:
                 if url.path == "/":
                     self.send(200, PAGE.encode(), "text/html; charset=utf-8")
+                elif url.path == "/api/loras":
+                    self.send(200, {"loras": list_loras()})
                 elif url.path == "/api/status":
                     self.send(200, self.status(q.get("id", [""])[0]))
                 elif url.path == "/api/image":
@@ -310,12 +359,17 @@ def make_handler(args):
                 width, height = int(width * scale), int(height * scale)
                 seed = body.get("seed")
                 seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
+                lora = body.get("lora")
+                if lora and lora not in list_loras():
+                    return self.send(400, {"error": f"LoRA が見つかりません: {lora}"})
+                strength = min(max(float(body.get("lora_strength", 0.8)), 0.0), 2.0)
                 wf = build_workflow(prompt, str(body.get("negative", "")), width, height, steps, seed,
                                     # 文字入りモードは前半 6 割を cfg 1.0、残りを cfg_text で
                                     bool(body.get("text_mode")), round(steps * 0.6), args.cfg_text,
-                                    args.dit, args.te, args.vae)
+                                    args.dit, args.te, args.vae, [(lora, strength)] if lora else [])
                 pid = comfy("/prompt", {"prompt": wf})["prompt_id"]
-                self.send(200, {"prompt_id": pid, "seed": seed})
+                self.send(200, {"prompt_id": pid, "seed": seed,
+                                "lora": f"{lora.removesuffix('.safetensors')} ×{strength:g}" if lora else None})
             except Exception as e:
                 self.send(500, {"error": str(e)})
 
@@ -347,6 +401,7 @@ if __name__ == "__main__":
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--comfy", default="http://127.0.0.1:8188")
     p.add_argument("--output", default="/content/ComfyUI/output")
+    p.add_argument("--loras", default="/content/ComfyUI/models/loras")
     p.add_argument("--dit", required=True)
     p.add_argument("--te", required=True)
     p.add_argument("--vae", required=True)
