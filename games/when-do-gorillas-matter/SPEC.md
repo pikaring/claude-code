@@ -1,7 +1,7 @@
-# 王とゴリラ — ルールと仕様（v2.4）
+# 商人・預言者・ゴリラ・王 — ルールと仕様（v2.4）
 
-**王とゴリラ ― ゴリラは本当に歴史を動かすのか**
-**Kings and Gorillas: (When) Do Gorillas Matter?**　リポジトリ `when-do-gorillas-matter`
+**商人・預言者・ゴリラ・王 ― ゴリラは本当に歴史を動かすのか**
+**Profits, Prophets, Gorillas, and Kings: (When) Do Gorillas Matter?**　リポジトリ `when-do-gorillas-matter`
 
 ジャレド・ダイアモンド『商人・預言者・指導者・王 リーダーは本当に歴史を動かすのか』
 （土方奈美 訳、日経BP、2026年。原題 *Profits, Prophets, Coaches, and Kings: (When) Do Leaders Matter?*）
@@ -11,10 +11,12 @@
 | --- | --- | --- |
 | 第三のチンパンジー | 第三のゴリラ | チンパンジー → ゴリラ |
 | 銃・病原菌・鉄 | 銃・病原菌・ダイヤモンド | 鉄 → ダイヤモンド |
+| 商人・預言者・指導者・王 | **商人・預言者・ゴリラ・王** | 指導者 → ゴリラ |
 | リーダーは本当に歴史を動かすのか | **ゴリラは本当に歴史を動かすのか** | リーダー → ゴリラ |
+| Profits, Prophets, Coaches, and Kings | **Profits, Prophets, Gorillas, and Kings** | Coaches → Gorillas |
 | (When) Do Leaders Matter? | **(When) Do Gorillas Matter?** | Leaders → Gorillas |
 
-題は『王とゴリラ』。「(When)」は「重要かどうか」ではなく「どんな条件のときに重要か」を問う形で、
+題は『商人・預言者・ゴリラ・王』（v2.4 で『王とゴリラ』から改題。指導者の役割を外して4役割になったので、原題の4語と役割が一致する。『王とゴリラ』は略称として使ってよい）。「(When)」は「重要かどうか」ではなく「どんな条件のときに重要か」を問う形で、
 1局に1回、自分の番にしか力を持たないこのゲームのゴリラにそのまま当てはまる。
 
 ### 変更の履歴

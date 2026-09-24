@@ -1,4 +1,6 @@
-# 王とゴリラ — (When) Do Gorillas Matter?
+# 商人・預言者・ゴリラ・王 — ゴリラは本当に歴史を動かすのか
+
+*Profits, Prophets, Gorillas, and Kings: (When) Do Gorillas Matter?*
 
 ゴリラは本当に歴史を動かすのか。
 
