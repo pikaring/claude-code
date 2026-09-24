@@ -123,13 +123,14 @@ cells.append(code(
 """#@title 5. 画像を生成（ここを書き換えて何度でも実行）
 prompt = "A cozy Japanese city hall service counter at dusk, warm lighting, a wooden sign that says 市民課" #@param {type:"string"}
 negative = "oversaturated, overexposed, gibberish text" #@param {type:"string"}
-width = 1024 #@param {type:"slider", min:512, max:1536, step:32}
-height = 1024 #@param {type:"slider", min:512, max:1536, step:32}
-steps = 25 #@param {type:"integer"}
+#@markdown 公式の推奨は約 400 万画素・40 ステップ（例 2048×2048、縦長 1792×2400）。人物は解像度を下げると崩れやすくなります
+width = 2048 #@param {type:"slider", min:512, max:2752, step:32}
+height = 2048 #@param {type:"slider", min:512, max:2752, step:32}
+steps = 40 #@param {type:"integer"}
 seed = -1 #@param {type:"integer"}
 #@markdown **文字入りモード**：前半を cfg 1.0、`switch_step` 以降を `cfg_text` で描き直して文字をくっきりさせる
-text_mode = True #@param {type:"boolean"}
-switch_step = 15 #@param {type:"integer"}
+text_mode = False #@param {type:"boolean"}
+switch_step = 24 #@param {type:"integer"}
 cfg_text = 3.0 #@param {type:"number"}
 
 import json, random, time, urllib.request, urllib.parse

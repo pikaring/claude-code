@@ -18,6 +18,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 def build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, dit, te, vae):
     wf = {
         "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": dit}},
+        # 公式スケジューラと同じく解像度に応じて shift を変える（base 0.5 @256 トークン、傾き 0.4/7936）。
+        # ComfyUI の既定は 1024x1024 相当の 0.69 固定で、高解像度では構図が崩れやすい。
+        # ModelSamplingFlux は 4096 トークンで max_shift に達する式なので、同じ傾きになる 0.6935 を渡す
+        "10": {"class_type": "ModelSamplingFlux", "inputs": {
+            "model": ["1", 0], "max_shift": 0.6935, "base_shift": 0.5, "width": width, "height": height}},
         "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": te, "type": "qwen_image", "device": "default"}},
         "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae}},
         "4": {"class_type": "TextEncodeQwenImage21", "inputs": {
@@ -26,7 +31,7 @@ def build_workflow(prompt, negative, width, height, steps, seed, text_mode, swit
     }
     def ksampler(add_noise, cfg, start, end, leftover, latent):
         return {"class_type": "KSamplerAdvanced", "inputs": {
-            "model": ["1", 0], "add_noise": add_noise, "noise_seed": seed, "steps": steps, "cfg": cfg,
+            "model": ["10", 0], "add_noise": add_noise, "noise_seed": seed, "steps": steps, "cfg": cfg,
             "sampler_name": "euler", "scheduler": "simple",
             "positive": ["4", 0], "negative": ["4", 1], "latent_image": latent,
             "start_at_step": start, "end_at_step": end, "return_with_leftover_noise": leftover}}
@@ -43,13 +48,18 @@ def build_workflow(prompt, negative, width, height, steps, seed, text_mode, swit
     return wf
 # --- end workflow ---
 
+# 公式の推奨解像度（約 4MP）。高速モードは縦横それぞれ半分（約 1MP）
 SIZES = {
-    "1:1": (1024, 1024),
-    "3:4": (864, 1152),
-    "4:3": (1152, 864),
-    "9:16": (768, 1344),
-    "16:9": (1344, 768),
+    "1:1": (2048, 2048),
+    "3:4": (1792, 2400),
+    "4:3": (2400, 1792),
+    "2:3": (1696, 2528),
+    "3:2": (2528, 1696),
+    "9:16": (1536, 2752),
+    "16:9": (2752, 1536),
 }
+# (解像度の倍率, ステップ数)。公式の既定は 40 ステップ
+QUALITY = {"high": (1.0, 40), "fast": (0.5, 25)}
 IMAGE_NAME = re.compile(r"^qwen21_\d+_\.png$")
 
 PAGE = r"""<!doctype html>
@@ -119,12 +129,18 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
       <div class="chips" id="sizes"></div>
     </div>
 
+    <div class="row">
+      <label>画質</label>
+      <div class="chips" id="quality"></div>
+      <p class="hint">標準は公式の推奨設定（約 400 万画素・40 ステップ）。人物や手はこちらで。高速は約 100 万画素・25 ステップで、崩れやすくなります</p>
+    </div>
+
     <div class="row toggle">
       <div>
         <div>文字入りモード</div>
         <p class="hint">看板やポスターの文字をくっきりさせます</p>
       </div>
-      <input type="checkbox" id="text_mode" checked>
+      <input type="checkbox" id="text_mode">
     </div>
 
     <details class="row">
@@ -146,19 +162,23 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
   <div id="results"></div>
 </main>
 <script>
-const SIZES = ["1:1", "3:4", "4:3", "9:16", "16:9"];
-let size = "3:4";
-const sizesEl = document.getElementById("sizes");
-for (const s of SIZES) {
-  const b = document.createElement("button");
-  b.type = "button"; b.textContent = s;
-  b.setAttribute("aria-pressed", s === size);
-  b.onclick = () => {
-    size = s;
-    for (const x of sizesEl.children) x.setAttribute("aria-pressed", x.textContent === s);
-  };
-  sizesEl.appendChild(b);
+function chips(id, options, initial) {
+  const el = document.getElementById(id);
+  let value = initial;
+  for (const [key, label] of options) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.dataset.key = key;
+    b.setAttribute("aria-pressed", key === value);
+    b.onclick = () => {
+      value = key;
+      for (const x of el.children) x.setAttribute("aria-pressed", x.dataset.key === key);
+    };
+    el.appendChild(b);
+  }
+  return () => value;
 }
+const getSize = chips("sizes", ["1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"].map(s => [s, s]), "3:4");
+const getQuality = chips("quality", [["high", "標準（高品質）"], ["fast", "高速"]], "high");
 
 const go = document.getElementById("go");
 const statusEl = document.getElementById("status");
@@ -183,7 +203,7 @@ go.onclick = async () => {
   let timer;
   try {
     const job = await api("api/generate", {
-      prompt, size,
+      prompt, size: getSize(), quality: getQuality(),
       negative: document.getElementById("negative").value,
       text_mode: document.getElementById("text_mode").checked,
       seed: seedText === "" ? null : Number(seedText),
@@ -194,7 +214,7 @@ go.onclick = async () => {
       await new Promise(r => setTimeout(r, 2000));
       const st = await api("api/status?id=" + encodeURIComponent(job.prompt_id));
       if (st.state === "queued") label = `順番待ち（${st.position} 番目）`;
-      else if (st.state === "running") label = "生成中（初回はモデルの読み込みで数分かかります）";
+      else if (st.state === "running") label = "生成中（初回はモデルの読み込みで数分、標準画質は 1 枚数分かかります）";
       else if (st.state === "error") throw new Error(st.error);
       else if (st.state === "done") { showResult(st.image, job.seed, prompt, (Date.now() - t0) / 1000); break; }
     }
@@ -286,10 +306,13 @@ def make_handler(args):
                 if not prompt:
                     return self.send(400, {"error": "プロンプトが空です"})
                 width, height = SIZES.get(body.get("size"), SIZES["1:1"])
+                scale, steps = QUALITY.get(body.get("quality"), QUALITY["high"])
+                width, height = int(width * scale), int(height * scale)
                 seed = body.get("seed")
                 seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
-                wf = build_workflow(prompt, str(body.get("negative", "")), width, height, args.steps, seed,
-                                    bool(body.get("text_mode")), args.switch_step, args.cfg_text,
+                wf = build_workflow(prompt, str(body.get("negative", "")), width, height, steps, seed,
+                                    # 文字入りモードは前半 6 割を cfg 1.0、残りを cfg_text で
+                                    bool(body.get("text_mode")), round(steps * 0.6), args.cfg_text,
                                     args.dit, args.te, args.vae)
                 pid = comfy("/prompt", {"prompt": wf})["prompt_id"]
                 self.send(200, {"prompt_id": pid, "seed": seed})
@@ -327,8 +350,6 @@ if __name__ == "__main__":
     p.add_argument("--dit", required=True)
     p.add_argument("--te", required=True)
     p.add_argument("--vae", required=True)
-    p.add_argument("--steps", type=int, default=25)
-    p.add_argument("--switch-step", type=int, default=15)
     p.add_argument("--cfg-text", type=float, default=3.0)
     args = p.parse_args()
     ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(args)).serve_forever()
