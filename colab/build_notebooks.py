@@ -63,7 +63,11 @@ for repo in ["city96/ComfyUI-GGUF", "pottokao-dotcom/ComfyUI-GGUF-Qwen3VL-TE"]:
         sh(f"rm -rf {d} && git clone -q --depth 1 https://github.com/{repo} {d}")
 
 sh("pip install -q -r requirements.txt -r custom_nodes/ComfyUI-GGUF/requirements.txt")
-sh("pip install -q -U huggingface_hub hf_xet")
+# huggingface_hub は transformers が受け付ける範囲に合わせる（最新版に上げると ComfyUI が起動しなくなることがある）
+from importlib.metadata import requires
+hub = next((r.split(";")[0] for r in requires("transformers") or [] if r.startswith("huggingface-hub")), "huggingface_hub")
+sh(f'pip install -q hf_xet "{hub}"')
+sh("python -c 'import transformers, huggingface_hub; print(transformers.__version__, huggingface_hub.__version__)'")  # 読み込めなければここで止まる
 sh('git log -1 --format="ComfyUI commit: %h (%cd)"')
 print("インストール完了")
 """, title=True))
