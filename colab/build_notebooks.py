@@ -44,7 +44,7 @@ print(f"System RAM: {psutil.virtual_memory().total / 1e9:.1f} GB")
 
 cells.append(code(
 """#@title 2. ComfyUI とカスタムノードをインストール（数分）
-import os, subprocess
+import os, subprocess, sys
 
 ROOT = "/content/ComfyUI"
 
@@ -62,12 +62,12 @@ for repo in ["city96/ComfyUI-GGUF", "pottokao-dotcom/ComfyUI-GGUF-Qwen3VL-TE"]:
     if not os.path.isdir(f"{d}/.git"):
         sh(f"rm -rf {d} && git clone -q --depth 1 https://github.com/{repo} {d}")
 
-sh("pip install -q -r requirements.txt -r custom_nodes/ComfyUI-GGUF/requirements.txt")
+sh(f"{sys.executable} -m pip install -q -r requirements.txt -r custom_nodes/ComfyUI-GGUF/requirements.txt")
 # huggingface_hub は transformers が受け付ける範囲に合わせる（最新版に上げると ComfyUI が起動しなくなることがある）
 from importlib.metadata import requires
 hub = next((r.split(";")[0] for r in requires("transformers") or [] if r.startswith("huggingface-hub")), "huggingface_hub")
-sh(f'pip install -q hf_xet "{hub}"')
-sh("python -c 'import transformers, huggingface_hub; print(transformers.__version__, huggingface_hub.__version__)'")  # 読み込めなければここで止まる
+sh(f'{sys.executable} -m pip install -q hf_xet "{hub}"')
+sh(f"{sys.executable} -c 'import transformers, huggingface_hub; print(transformers.__version__, huggingface_hub.__version__)'")  # 読み込めなければここで止まる
 sh('git log -1 --format="ComfyUI commit: %h (%cd)"')
 print("インストール完了")
 """, title=True))
@@ -188,8 +188,8 @@ print("使える LoRA:", sorted(f for f in os.listdir(LORA_DIR) if f.endswith(".
 """, title=True))
 
 cells.append(code(
-"""#@title 4. ComfyUI をバックグラウンドで起動
-import subprocess, time, urllib.request
+"""#@title 4. ComfyUI をバックグラウンドで起動（初回は数分）
+import subprocess, sys, time, urllib.request
 
 def comfy_ready():
     try:
@@ -198,20 +198,29 @@ def comfy_ready():
     except Exception:
         return False
 
-if not comfy_ready():
-    log = open("/content/comfyui.log", "w")
-    comfy = subprocess.Popen(
-        ["python", "main.py", "--listen", "127.0.0.1", "--port", "8188"],
-        cwd="/content/ComfyUI", stdout=log, stderr=subprocess.STDOUT)
+def show_log():
+    print(open("/content/comfyui.log", encoding="utf-8", errors="replace").read()[-3000:])
 
-for _ in range(120):
-    if comfy_ready():
-        print("ComfyUI 起動完了")
-        break
-    time.sleep(2)
-else:
-    print("起動に失敗しました。ログ ↓")
-    print(open("/content/comfyui.log").read()[-3000:])
+if not comfy_ready():
+    comfy = subprocess.Popen(
+        [sys.executable, "main.py", "--listen", "127.0.0.1", "--port", "8188"],
+        cwd="/content/ComfyUI", stdout=open("/content/comfyui.log", "w"), stderr=subprocess.STDOUT)
+    t0 = time.time()
+    shown = 0
+    while not comfy_ready():
+        elapsed = time.time() - t0
+        if comfy.poll() is not None:
+            show_log()
+            # 例外にして「すべてのセルを実行」をここで止める
+            raise RuntimeError("ComfyUI が起動途中で終了しました（上のログを確認してください）")
+        if elapsed > 900:
+            show_log()
+            raise RuntimeError("15 分待っても ComfyUI が起動しませんでした（上のログを確認してください）")
+        if elapsed >= shown + 30:
+            shown += 30
+            print(f"起動中… {shown} 秒")
+        time.sleep(2)
+print("ComfyUI 起動完了")
 """, title=True))
 
 cells.append(code(
@@ -336,6 +345,7 @@ mobile_cells = [md(
 import subprocess, sys, time, urllib.request
 from google.colab import output
 from google.colab.output import eval_js
+from IPython.display import HTML, display
 
 APP_SRC = r\'\'\'""" + APP_SRC + """\'\'\'
 
@@ -345,6 +355,9 @@ def app_ready():
         return True
     except Exception:
         return False
+
+if not comfy_ready():
+    raise RuntimeError("ComfyUI が起動していません。セル 4 を実行してください")
 
 if not app_ready():
     with open("/content/mobile_app.py", "w", encoding="utf-8") as f:
@@ -356,12 +369,19 @@ if not app_ready():
             break
         time.sleep(1)
 
-if app_ready():
-    print("別タブで開くとき（このランタイムの間だけ有効）:", eval_js("google.colab.kernel.proxyPort(8000)"))
-    output.serve_kernel_port_as_iframe(8000, height=1100)
-else:
-    print("画面の起動に失敗しました")
+if not app_ready():
     print(open("/content/mobile_app.log").read()[-2000:])
+    raise RuntimeError("生成画面の起動に失敗しました（上のログを確認してください）")
+
+# iPhone の Safari などでは下の埋め込み表示が真っ白になることがあるので、新しいタブで開くボタンを先に出す
+url = eval_js("google.colab.kernel.proxyPort(8000)")
+display(HTML(
+    f'<a href="{url}" target="_blank" rel="noopener" style="display:block;margin:8px 0;padding:14px;'
+    f'border-radius:12px;background:#2f5bd3;color:#fff;text-align:center;font:600 17px sans-serif;'
+    f'text-decoration:none">生成画面を新しいタブで開く</a>'
+    f'<p style="font:14px sans-serif;color:#888">下に画面が出ないときは上のボタンから開いてください。'
+    f'このリンクはこのランタイムの間だけ有効です。</p>'))
+output.serve_kernel_port_as_iframe(8000, height=1100)
 """, title=True), LOG]
 
 
