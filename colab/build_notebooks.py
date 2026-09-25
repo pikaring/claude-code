@@ -339,49 +339,30 @@ mobile_cells = [md(
 > - Qwen-Image-2.1 本体（DiT / VAE）は **qwen-research ライセンス**です。個人の試用・研究向けで、商用や業務利用は条件を確認してください。
 > - Heretic は拒否応答を除去した派生エンコーダーです。業務検証ではセル3で「公式 BF16」を選んでください。
 > - 生成画像は VM 内にだけ置き、Google ドライブやフォトには**自動保存しません**。残したい画像は画面の「ファイルに保存」から端末へ。セルの出力もノートブックに保存しない設定です。
-> - 画面は Colab 標準のポート転送で開きます（ngrok などの外部トンネルは使いません）。**無料枠では Web UI 主体の操作が禁止**されているため、Colab Pro 相当の有料枠で使ってください。
+> - 画面はセル5の出力の中に表示します（ポート転送や ngrok などの外部トンネルは使いません）。画面が消えたらセル5をもう一度実行してください。
 """)] + SETUP + [code(
 """#@title 5. スマホ用の画面を開く
-import subprocess, sys, time, urllib.request
-from google.colab import output
-from google.colab.output import eval_js
+# 画面はこのセルの出力に表示し、ボタン操作は Colab のカーネル呼び出し（invokeFunction）で Python に届ける。
+# ポート転送を使わないので、iPhone の Safari でも真っ白にならない
+import importlib.util, types
 from IPython.display import HTML, display
 
 APP_SRC = r\'\'\'""" + APP_SRC + """\'\'\'
 
-def app_ready():
-    try:
-        urllib.request.urlopen("http://127.0.0.1:8000/", timeout=2)
-        return True
-    except Exception:
-        return False
-
 if not comfy_ready():
     raise RuntimeError("ComfyUI が起動していません。セル 4 を実行してください")
 
-if not app_ready():
-    with open("/content/mobile_app.py", "w", encoding="utf-8") as f:
-        f.write(APP_SRC)
-    subprocess.Popen([sys.executable, "/content/mobile_app.py", "--dit", DIT, "--te", TE, "--vae", VAE],
-                     stdout=open("/content/mobile_app.log", "w"), stderr=subprocess.STDOUT)
-    for _ in range(30):
-        if app_ready():
-            break
-        time.sleep(1)
+with open("/content/mobile_app.py", "w", encoding="utf-8") as f:
+    f.write(APP_SRC)
+spec = importlib.util.spec_from_file_location("mobile_app", "/content/mobile_app.py")
+mobile_app = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mobile_app)
 
-if not app_ready():
-    print(open("/content/mobile_app.log").read()[-2000:])
-    raise RuntimeError("生成画面の起動に失敗しました（上のログを確認してください）")
-
-# iPhone の Safari などでは下の埋め込み表示が真っ白になることがあるので、新しいタブで開くボタンを先に出す
-url = eval_js("google.colab.kernel.proxyPort(8000)")
-display(HTML(
-    f'<a href="{url}" target="_blank" rel="noopener" style="display:block;margin:8px 0;padding:14px;'
-    f'border-radius:12px;background:#2f5bd3;color:#fff;text-align:center;font:600 17px sans-serif;'
-    f'text-decoration:none">生成画面を新しいタブで開く</a>'
-    f'<p style="font:14px sans-serif;color:#888">下に画面が出ないときは上のボタンから開いてください。'
-    f'このリンクはこのランタイムの間だけ有効です。</p>'))
-output.serve_kernel_port_as_iframe(8000, height=1100)
+app = mobile_app.App(types.SimpleNamespace(
+    comfy="http://127.0.0.1:8188", output="/content/ComfyUI/output", loras="/content/ComfyUI/models/loras",
+    dit=DIT, te=TE, vae=VAE, cfg_text=3.0))
+mobile_app.register_colab(app)
+display(HTML(mobile_app.PAGE))
 """, title=True), LOG]
 
 

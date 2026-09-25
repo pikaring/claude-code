@@ -1,10 +1,14 @@
 """スマホ向けの Qwen-Image-2.1 生成画面。
 
-Colab の VM 内で ComfyUI の API を叩く小さな Web サーバーです。
-Colab 標準のポート転送（serve_kernel_port_as_iframe / proxyPort）で開きます。
+Colab の VM 内で ComfyUI の API を叩きます。画面とのやりとりは 2 通り:
+- Colab のセル出力に画面を表示し、google.colab.kernel.invokeFunction で呼ぶ（register_colab）。
+  ポート転送を通らないので、iPhone の Safari でも表示される
+- 小さな Web サーバーとして動かし、ポート転送（proxyPort）で開く（__main__）
 画像は VM の ComfyUI/output にだけ置き、ドライブやフォトには保存しません。
 """
 import argparse
+import base64
+import io
 import json
 import os
 import random
@@ -216,7 +220,22 @@ function syncLora() {
 strengthEl.oninput = syncLora;
 loraEl.onchange = syncLora;
 syncLora();
-fetch("api/loras").then(r => r.json()).then(({loras}) => {
+// Colab のセル出力の中ではカーネルを直接呼び、単独の Web ページでは HTTP で呼ぶ
+const COLAB = !!(window.google && google.colab && google.colab.kernel);
+async function call(op, payload = {}) {
+  let data;
+  if (COLAB) {
+    const r = await google.colab.kernel.invokeFunction("qwen21.call", [op, payload], {});
+    data = r.data["application/json"];
+  } else {
+    const res = await fetch("api/" + op, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+    data = await res.json();
+  }
+  if (!data || data.error) throw new Error((data && data.error) || "応答がありません");
+  return data;
+}
+
+call("loras").then(({loras}) => {
   for (const name of loras) loraEl.add(new Option(name.replace(/\.safetensors$/, ""), name));
   if (!loras.length) document.getElementById("lora_hint").textContent = "LoRA はまだありません（ノートブックのセル 3b で追加できます）";
 }).catch(() => {});
@@ -228,13 +247,6 @@ function setStatus(text, isError) {
   statusEl.className = isError ? "error" : "";
 }
 
-async function api(path, body) {
-  const res = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.statusText);
-  return data;
-}
-
 go.onclick = async () => {
   const prompt = document.getElementById("prompt").value.trim();
   if (!prompt) { setStatus("プロンプトを入力してください", true); return; }
@@ -243,7 +255,7 @@ go.onclick = async () => {
   const t0 = Date.now();
   let timer;
   try {
-    const job = await api("api/generate", {
+    const job = await call("generate", {
       prompt, size: getSize(), quality: getQuality(),
       negative: document.getElementById("negative").value,
       text_mode: document.getElementById("text_mode").checked,
@@ -254,11 +266,11 @@ go.onclick = async () => {
     timer = setInterval(() => setStatus(`${label}… ${Math.round((Date.now() - t0) / 1000)} 秒`), 1000);
     for (;;) {
       await new Promise(r => setTimeout(r, 2000));
-      const st = await api("api/status?id=" + encodeURIComponent(job.prompt_id));
+      const st = await call("status", {id: job.prompt_id});
       if (st.state === "queued") label = `順番待ち（${st.position} 番目）`;
       else if (st.state === "running") label = "生成中（初回はモデルの読み込みで数分、標準画質は 1 枚数分かかります）";
       else if (st.state === "error") throw new Error(st.error);
-      else if (st.state === "done") { showResult(st.image, job.seed, job.lora, prompt, (Date.now() - t0) / 1000); break; }
+      else if (st.state === "done") { await showResult(st.image, job.seed, job.lora, prompt, (Date.now() - t0) / 1000); break; }
     }
     setStatus(`完了（${Math.round((Date.now() - t0) / 1000)} 秒）`);
   } catch (e) {
@@ -269,19 +281,37 @@ go.onclick = async () => {
   }
 };
 
-function showResult(name, seed, lora, prompt, secs) {
-  const url = "api/image?name=" + encodeURIComponent(name);
+async function showResult(name, seed, lora, prompt, secs) {
+  // 表示は縮小 JPEG、保存するときだけ元の PNG を取りに行く
+  const {jpeg} = await call("preview", {name});
   const card = document.createElement("div");
   card.className = "card result";
   const img = document.createElement("img");
-  img.src = url; img.alt = prompt;
+  img.src = "data:image/jpeg;base64," + jpeg; img.alt = prompt;
   const meta = document.createElement("div");
   meta.className = "meta";
   const info = document.createElement("span");
   info.textContent = `seed ${seed}${lora ? " ・ LoRA " + lora : ""} ・ ${Math.round(secs)} 秒`;
   const dl = document.createElement("a");
-  dl.href = url + "&download=1"; dl.textContent = "ファイルに保存";
-  dl.setAttribute("download", name);
+  dl.href = "#"; dl.textContent = "ファイルに保存";
+  dl.onclick = async (ev) => {
+    ev.preventDefault();
+    const label = dl.textContent;
+    dl.textContent = "準備中…";
+    try {
+      const {png} = await call("png", {name});
+      const bytes = Uint8Array.from(atob(png), c => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], {type: "image/png"}));
+      const a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      setStatus("保存できませんでした：" + e.message, true);
+    } finally {
+      dl.textContent = label;
+    }
+  };
   meta.append(info, dl);
   card.append(img, meta);
   document.getElementById("results").prepend(card);
@@ -292,10 +322,15 @@ function showResult(name, seed, lora, prompt, secs) {
 """
 
 
-def make_handler(args):
-    def comfy(path, data=None):
+class App:
+    """画面からの呼び出し（op, payload）を ComfyUI への操作に変換する。エラーは {"error": ...} で返す"""
+
+    def __init__(self, args):
+        self.args = args
+
+    def comfy(self, path, data=None):
         req = urllib.request.Request(
-            args.comfy + path,
+            self.args.comfy + path,
             data=json.dumps(data).encode() if data is not None else None,
             headers={"Content-Type": "application/json"})
         try:
@@ -303,95 +338,122 @@ def make_handler(args):
         except urllib.error.HTTPError as e:
             raise RuntimeError(e.read().decode()[:500]) from None
 
-    def list_loras():
-        if not os.path.isdir(args.loras):
+    def loras(self):
+        if not os.path.isdir(self.args.loras):
             return []
-        return sorted(f for f in os.listdir(args.loras) if f.endswith(".safetensors"))
+        return sorted(f for f in os.listdir(self.args.loras) if f.endswith(".safetensors"))
 
+    def image_path(self, name):
+        if not IMAGE_NAME.match(str(name)):
+            raise ValueError("bad name")
+        return os.path.join(self.args.output, name)
+
+    def call(self, op, payload=None):
+        payload = payload or {}
+        try:
+            if op == "loras":
+                return {"loras": self.loras()}
+            if op == "generate":
+                return self.generate(payload)
+            if op == "status":
+                return self.status(str(payload.get("id", "")))
+            if op == "preview":
+                return {"jpeg": self.preview(payload.get("name"))}
+            if op == "png":
+                with open(self.image_path(payload.get("name")), "rb") as f:
+                    return {"png": base64.b64encode(f.read()).decode()}
+            return {"error": f"unknown op: {op}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def preview(self, name):
+        from PIL import Image
+        img = Image.open(self.image_path(name)).convert("RGB")
+        img.thumbnail((1600, 1600))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=90)
+        return base64.b64encode(buf.getvalue()).decode()
+
+    def generate(self, body):
+        prompt = str(body.get("prompt", "")).strip()
+        if not prompt:
+            raise ValueError("プロンプトが空です")
+        width, height = SIZES.get(body.get("size"), SIZES["1:1"])
+        scale, steps = QUALITY.get(body.get("quality"), QUALITY["high"])
+        width, height = int(width * scale), int(height * scale)
+        seed = body.get("seed")
+        seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
+        lora = body.get("lora")
+        if lora and lora not in self.loras():
+            raise ValueError(f"LoRA が見つかりません: {lora}")
+        strength = min(max(float(body.get("lora_strength", 0.8)), 0.0), 2.0)
+        a = self.args
+        wf = build_workflow(prompt, str(body.get("negative", "")), width, height, steps, seed,
+                            # 文字入りモードは前半 6 割を cfg 1.0、残りを cfg_text で
+                            bool(body.get("text_mode")), round(steps * 0.6), a.cfg_text,
+                            a.dit, a.te, a.vae, [(lora, strength)] if lora else [])
+        pid = self.comfy("/prompt", {"prompt": wf})["prompt_id"]
+        return {"prompt_id": pid, "seed": seed,
+                "lora": f"{lora.removesuffix('.safetensors')} ×{strength:g}" if lora else None}
+
+    def status(self, pid):
+        h = self.comfy(f"/history/{urllib.parse.quote(pid)}")
+        if pid not in h:
+            q = self.comfy("/queue")
+            if any(item[1] == pid for item in q.get("queue_running", [])):
+                return {"state": "running"}
+            pending = sorted(q.get("queue_pending", []), key=lambda item: item[0])
+            for i, item in enumerate(pending):
+                if item[1] == pid:
+                    return {"state": "queued", "position": i + 1}
+            return {"state": "running"}
+        st = h[pid]["status"]
+        if st.get("status_str") != "success":
+            for kind, msg in st.get("messages", []):
+                if kind == "execution_error":
+                    return {"state": "error", "error": f"{msg['node_type']}: {msg['exception_message']}"}
+            return {"state": "error", "error": "生成に失敗しました（ログ確認セルを見てください）"}
+        img = h[pid]["outputs"]["9"]["images"][0]
+        return {"state": "done", "image": img["filename"]}
+
+
+def register_colab(app):
+    """Colab のセルから呼ぶ。画面の invokeFunction("qwen21.call") を app.call につなぐ"""
+    from google.colab import output
+    from IPython.display import JSON
+    output.register_callback("qwen21.call", lambda op, payload: JSON(app.call(op, payload)))
+
+
+def make_handler(app):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *a):
             pass
 
-        def send(self, code, body, ctype="application/json", extra=None):
+        def send(self, code, body, ctype="application/json"):
             if not isinstance(body, bytes):
                 body = json.dumps(body, ensure_ascii=False).encode()
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
-            for k, v in (extra or {}).items():
-                self.send_header(k, v)
             self.end_headers()
             self.wfile.write(body)
 
         def do_GET(self):
-            url = urllib.parse.urlparse(self.path)
-            q = urllib.parse.parse_qs(url.query)
-            try:
-                if url.path == "/":
-                    self.send(200, PAGE.encode(), "text/html; charset=utf-8")
-                elif url.path == "/api/loras":
-                    self.send(200, {"loras": list_loras()})
-                elif url.path == "/api/status":
-                    self.send(200, self.status(q.get("id", [""])[0]))
-                elif url.path == "/api/image":
-                    name = q.get("name", [""])[0]
-                    if not IMAGE_NAME.match(name):
-                        return self.send(400, {"error": "bad name"})
-                    with open(os.path.join(args.output, name), "rb") as f:
-                        extra = {"Content-Disposition": f'attachment; filename="{name}"'} if "download" in q else None
-                        self.send(200, f.read(), "image/png", extra)
-                else:
-                    self.send(404, {"error": "not found"})
-            except Exception as e:
-                self.send(500, {"error": str(e)})
+            if urllib.parse.urlparse(self.path).path == "/":
+                self.send(200, PAGE.encode(), "text/html; charset=utf-8")
+            else:
+                self.send(404, {"error": "not found"})
 
         def do_POST(self):
-            if urllib.parse.urlparse(self.path).path != "/api/generate":
+            path = urllib.parse.urlparse(self.path).path
+            if not path.startswith("/api/"):
                 return self.send(404, {"error": "not found"})
             try:
-                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-                prompt = str(body.get("prompt", "")).strip()
-                if not prompt:
-                    return self.send(400, {"error": "プロンプトが空です"})
-                width, height = SIZES.get(body.get("size"), SIZES["1:1"])
-                scale, steps = QUALITY.get(body.get("quality"), QUALITY["high"])
-                width, height = int(width * scale), int(height * scale)
-                seed = body.get("seed")
-                seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
-                lora = body.get("lora")
-                if lora and lora not in list_loras():
-                    return self.send(400, {"error": f"LoRA が見つかりません: {lora}"})
-                strength = min(max(float(body.get("lora_strength", 0.8)), 0.0), 2.0)
-                wf = build_workflow(prompt, str(body.get("negative", "")), width, height, steps, seed,
-                                    # 文字入りモードは前半 6 割を cfg 1.0、残りを cfg_text で
-                                    bool(body.get("text_mode")), round(steps * 0.6), args.cfg_text,
-                                    args.dit, args.te, args.vae, [(lora, strength)] if lora else [])
-                pid = comfy("/prompt", {"prompt": wf})["prompt_id"]
-                self.send(200, {"prompt_id": pid, "seed": seed,
-                                "lora": f"{lora.removesuffix('.safetensors')} ×{strength:g}" if lora else None})
-            except Exception as e:
-                self.send(500, {"error": str(e)})
-
-        def status(self, pid):
-            h = comfy(f"/history/{urllib.parse.quote(pid)}")
-            if pid not in h:
-                q = comfy("/queue")
-                if any(item[1] == pid for item in q.get("queue_running", [])):
-                    return {"state": "running"}
-                pending = sorted(q.get("queue_pending", []), key=lambda item: item[0])
-                for i, item in enumerate(pending):
-                    if item[1] == pid:
-                        return {"state": "queued", "position": i + 1}
-                return {"state": "running"}
-            st = h[pid]["status"]
-            if st.get("status_str") != "success":
-                for kind, msg in st.get("messages", []):
-                    if kind == "execution_error":
-                        return {"state": "error", "error": f"{msg['node_type']}: {msg['exception_message']}"}
-                return {"state": "error", "error": "生成に失敗しました（ログ確認セルを見てください）"}
-            img = h[pid]["outputs"]["9"]["images"][0]
-            return {"state": "done", "image": img["filename"]}
+                payload = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            except ValueError:
+                return self.send(400, {"error": "bad json"})
+            self.send(200, app.call(path[len("/api/"):], payload))
 
     return Handler
 
@@ -407,4 +469,4 @@ if __name__ == "__main__":
     p.add_argument("--vae", required=True)
     p.add_argument("--cfg-text", type=float, default=3.0)
     args = p.parse_args()
-    ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(args)).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(App(args))).serve_forever()
