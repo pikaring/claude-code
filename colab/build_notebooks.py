@@ -21,7 +21,10 @@ cells.append(md(
 
 ComfyUI をバックグラウンドで動かし、**このノートブックのセルから**画像を生成します。
 
-**使い方**：「ランタイム → ランタイムのタイプを変更」で **L4 GPU** を選び、上から順にセルを実行 → 「4. 画像を生成」のフォームを書き換えて何度でも実行。
+**使い方**：「ランタイム → ランタイムのタイプを変更」で **L4 GPU** を選び、セル 1〜4 を順に実行 → 「5. 画像を生成」のフォームを書き換えて何度でも実行。
+
+- 同じキャラクターでポーズや場面を変えるときは、「5a」で参照画像を設定してからセル 5 を実行（編集モード）
+- スマホ版と同じ操作画面を使いたいときは「5c」
 
 | 部品 | ファイル | サイズ |
 |---|---|---|
@@ -239,6 +242,7 @@ cfg_text = 3.0 #@param {type:"number"}
 #@markdown **LoRA**：セル 3b で表示されたファイル名（空欄なら使わない）
 lora_name = "" #@param {type:"string"}
 lora_strength = 0.8 #@param {type:"slider", min:0, max:1.5, step:0.05}
+#@markdown **編集モード**：セル 5a で参照画像を設定すると、そのキャラクターを元に生成します（プロンプトには変えたい内容を書く）
 
 import json, random, time, urllib.request, urllib.parse
 from IPython.display import Image, display
@@ -258,7 +262,17 @@ def api(path, data=None):
 if seed < 0:
     seed = random.randint(0, 2**32 - 1)
 loras = [(lora_name.strip(), lora_strength)] if lora_name.strip() else []
-wf = build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, DIT, TE, VAE, loras)
+refs = globals().get("REFS", [])
+ref_resolution = 1024
+if refs:
+    # 縦横比は 1 枚目の参照画像に合わせ、面積は width×height 相当にする
+    from PIL import Image as PILImage
+    ref_resolution = round((width * height) ** 0.5 / 32) * 32
+    with PILImage.open(f"/content/ComfyUI/input/{refs[0]}") as im:
+        width, height = ref_size(*im.size, ref_resolution)
+    print(f"編集モード：参照画像 {len(refs)} 枚、出力 {width}×{height}")
+wf = build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, DIT, TE, VAE,
+                    loras, refs, ref_resolution)
 
 t0 = time.time()
 pid = api("/prompt", {"prompt": wf})["prompt_id"]
@@ -281,6 +295,53 @@ else:
         path = f"/content/ComfyUI/output/{img['subfolder']}/{img['filename']}"
         display(Image(filename=path, width=768))
         print("保存先: VM 内", path, "（ドライブ・フォトには保存していません）")
+""", title=True))
+
+cells.append(code(
+"""#@title 5a.（任意）参照画像を設定（編集モード）
+#@markdown 同じキャラクターでポーズや場面を変えたいときに使います。設定したらセル 5 を実行してください。
+#@markdown - **アップロード**：PC から画像を選んで追加（何度か実行して最大 3 枚）
+#@markdown - **直前の生成結果**：最後に生成した画像を追加
+#@markdown - **解除**：参照画像を外して通常の生成に戻す
+action = "アップロード" #@param ["アップロード", "直前の生成結果", "解除"]
+
+import glob, io, os, uuid
+from PIL import Image as PILImage, ImageOps
+from IPython.display import Image, display
+
+INPUT_DIR = "/content/ComfyUI/input"
+REFS = globals().get("REFS", [])
+
+def save_ref(raw):
+    # EXIF の向きを反映して RGB の PNG にし、長辺 2048 に抑えて ComfyUI/input に置く
+    img = ImageOps.exif_transpose(PILImage.open(io.BytesIO(raw))).convert("RGB")
+    img.thumbnail((2048, 2048))
+    os.makedirs(INPUT_DIR, exist_ok=True)
+    name = f"qref_{uuid.uuid4().hex[:12]}.png"
+    img.save(f"{INPUT_DIR}/{name}")
+    return name
+
+if action == "解除":
+    REFS = []
+elif action == "アップロード":
+    from google.colab import files
+    for fname, raw in files.upload().items():
+        REFS.append(save_ref(raw))
+        if os.path.exists(fname):
+            os.remove(fname)  # files.upload が作業フォルダにも置くコピーを消す
+else:
+    outs = sorted(glob.glob("/content/ComfyUI/output/qwen21_*.png"), key=os.path.getmtime)
+    if not outs:
+        raise RuntimeError("まだ生成した画像がありません")
+    REFS.append(save_ref(open(outs[-1], "rb").read()))
+REFS = REFS[-3:]
+
+if REFS:
+    print(f"参照画像 {len(REFS)} 枚（出力は 1 枚目の縦横比になります）")
+    for r in REFS:
+        display(Image(filename=f"{INPUT_DIR}/{r}", width=160))
+else:
+    print("参照画像なし（通常の生成）")
 """, title=True))
 
 cells.append(code(
@@ -366,6 +427,13 @@ app = mobile_app.App(types.SimpleNamespace(
 mobile_app.register_colab(app)
 display(HTML(mobile_app.PAGE))
 """, title=True), LOG]
+
+
+# デスクトップ版にもスマホ版と同じ画面のセルを入れる（5b の直後）
+ui_cell = mobile_cells[-2]
+desktop_ui = dict(ui_cell, source=ui_cell["source"].replace(
+    "#@title 5. スマホ用の画面を開く", "#@title 5c.（任意）スマホ版と同じ画面で操作する", 1))
+cells.insert(next(i for i, c in enumerate(cells) if c["source"].startswith("#@title 5b.")) + 1, desktop_ui)
 
 
 def notebook(cells):
