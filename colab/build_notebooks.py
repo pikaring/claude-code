@@ -332,6 +332,7 @@ mobile_cells = [md(
 1. 「ランタイム → ランタイムのタイプを変更」で **L4 GPU** を選ぶ（初回だけ）
 2. 「ランタイム → **すべてのセルを実行**」
 3. 最後のセルに出る画面でプロンプトを入れて「生成する」
+4. 同じキャラクターでポーズを変えたいときは、画面の「参照画像」に元の画像を追加するか、生成結果の「参照に使う」を押してから、変えたい内容をプロンプトに書く
 
 初回は準備に 10〜15 分ほどかかります。使い終わったら「ランタイム → ランタイムを接続解除して削除」でユニットの消費を止めてください。
 
@@ -359,7 +360,8 @@ mobile_app = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mobile_app)
 
 app = mobile_app.App(types.SimpleNamespace(
-    comfy="http://127.0.0.1:8188", output="/content/ComfyUI/output", loras="/content/ComfyUI/models/loras",
+    comfy="http://127.0.0.1:8188", output="/content/ComfyUI/output", input="/content/ComfyUI/input",
+    loras="/content/ComfyUI/models/loras",
     dit=DIT, te=TE, vae=VAE, cfg_text=3.0))
 mobile_app.register_colab(app)
 display(HTML(mobile_app.PAGE))

@@ -19,7 +19,10 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # --- workflow ---
-def build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, dit, te, vae, loras=()):
+def build_workflow(prompt, negative, width, height, steps, seed, text_mode, switch_step, cfg_text, dit, te, vae, loras=(),
+                   refs=(), ref_resolution=1024):
+    # refs に ComfyUI/input 内の画像名を渡すと編集モード。出力サイズは 1 枚目の参照画像の縦横比で決まり、
+    # width/height にはその大きさ（ref_size() で計算）を渡す
     wf = {
         "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": dit}},
         # 公式スケジューラと同じく解像度に応じて shift を変える（base 0.5 @256 トークン、傾き 0.4/7936）。
@@ -40,6 +43,17 @@ def build_workflow(prompt, negative, width, height, steps, seed, text_mode, swit
             "model": model, "lora_name": name, "strength_model": strength}}
         model = [str(11 + i), 0]
     wf["10"]["inputs"]["model"] = model
+    latent = ["5", 0]
+    if refs:
+        enc = wf["4"]["inputs"]
+        enc["vae"] = ["3", 0]
+        enc["resolution"] = ref_resolution
+        for i, name in enumerate(refs):
+            wf[str(20 + i)] = {"class_type": "LoadImage", "inputs": {"image": name}}
+            enc[f"images.image_{i + 1}"] = [str(20 + i), 0]
+        # 参照画像に合わせた空の latent（TextEncodeQwenImage21 の 3 番目の出力）を使う
+        del wf["5"]
+        latent = ["4", 2]
     def ksampler(add_noise, cfg, start, end, leftover, latent):
         return {"class_type": "KSamplerAdvanced", "inputs": {
             "model": ["10", 0], "add_noise": add_noise, "noise_seed": seed, "steps": steps, "cfg": cfg,
@@ -48,15 +62,24 @@ def build_workflow(prompt, negative, width, height, steps, seed, text_mode, swit
             "start_at_step": start, "end_at_step": end, "return_with_leftover_noise": leftover}}
     if text_mode:
         # 前半 cfg 1.0 で構図を決め、後半 cfg 3.0 ＋ネガティブで文字を描き直す
-        wf["6"] = ksampler("enable", 1.0, 0, switch_step, "enable", ["5", 0])
+        wf["6"] = ksampler("enable", 1.0, 0, switch_step, "enable", latent)
         wf["7"] = ksampler("disable", cfg_text, switch_step, 10000, "disable", ["6", 0])
         last = "7"
     else:
-        wf["6"] = ksampler("enable", 1.0, 0, 10000, "disable", ["5", 0])
+        wf["6"] = ksampler("enable", 1.0, 0, 10000, "disable", latent)
         last = "6"
     wf["8"] = {"class_type": "VAEDecode", "inputs": {"samples": [last, 0], "vae": ["3", 0]}}
     wf["9"] = {"class_type": "SaveImage", "inputs": {"images": ["8", 0], "filename_prefix": "qwen21"}}
     return wf
+
+
+def ref_size(width, height, resolution):
+    # TextEncodeQwenImage21 と同じ計算: 面積 resolution^2 に近く、縦横比を保った 32 の倍数
+    import math
+    ratio = width / height
+    w = round(math.sqrt(resolution * resolution * ratio) / 32) * 32
+    h = round(math.sqrt(resolution * resolution / ratio) / 32) * 32
+    return max(32, w), max(32, h)
 # --- end workflow ---
 
 # 公式の推奨解像度（約 4MP）。高速モードは縦横それぞれ半分（約 1MP）
@@ -72,6 +95,8 @@ SIZES = {
 # (解像度の倍率, ステップ数)。公式の既定は 40 ステップ
 QUALITY = {"high": (1.0, 40), "fast": (0.5, 25)}
 IMAGE_NAME = re.compile(r"^qwen21_\d+_\.png$")
+REF_NAME = re.compile(r"^qref_[0-9a-f]{12}\.png$")
+MAX_REFS = 3
 
 PAGE = r"""<!doctype html>
 <html lang="ja">
@@ -112,6 +137,19 @@ select {
 .slider input { flex: 1; accent-color: var(--accent); }
 .slider span { font-variant-numeric: tabular-nums; min-width: 3em; text-align: right; }
 .slider.off { opacity: .4; }
+.row.off { opacity: .4; pointer-events: none; }
+.refs { display: flex; flex-wrap: wrap; gap: 10px; }
+.ref { position: relative; }
+.ref img { width: 76px; height: 76px; object-fit: cover; border-radius: 10px; display: block; border: 1px solid var(--line); }
+.ref button {
+  position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%;
+  border: 0; background: var(--text); color: var(--bg); font-size: 15px; line-height: 26px; padding: 0;
+}
+.addref {
+  display: inline-flex; align-items: center; justify-content: center; width: 76px; height: 76px;
+  border: 1.5px dashed var(--line); border-radius: 10px; color: var(--accent); font-size: 13px; text-align: center;
+}
+.result .actions { display: flex; gap: 16px; }
 .row { margin-top: 14px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips button {
@@ -144,6 +182,15 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
     <textarea id="prompt" placeholder="例：夕暮れの市役所の窓口、温かい照明、「市民課」と書かれた木の看板"></textarea>
 
     <div class="row">
+      <label>参照画像（同じキャラクターでポーズや場面を変えるとき）</label>
+      <div class="refs">
+        <div class="refs" id="refs"></div>
+        <label class="addref" id="addref">＋<br>画像を追加<input type="file" id="ref_file" accept="image/*" hidden></label>
+      </div>
+      <p class="hint">追加すると編集モードになります。プロンプトには変えたい内容を書きます（例：同じ女性が公園のベンチに座って本を読んでいる、全身）。出力は 1 枚目の縦横比になります。最大 3 枚</p>
+    </div>
+
+    <div class="row" id="size_row">
       <label>縦横比</label>
       <div class="chips" id="sizes"></div>
     </div>
@@ -209,6 +256,63 @@ function chips(id, options, initial) {
 const getSize = chips("sizes", ["1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9"].map(s => [s, s]), "3:4");
 const getQuality = chips("quality", [["high", "標準（高品質）"], ["fast", "高速"]], "high");
 
+// 参照画像: {name: サーバー上の名前, thumb: JPEG の base64}
+let refs = [];
+const MAX_REFS = 3;
+const refsEl = document.getElementById("refs");
+function renderRefs() {
+  refsEl.replaceChildren(...refs.map((r, i) => {
+    const d = document.createElement("div");
+    d.className = "ref";
+    const img = document.createElement("img");
+    img.src = "data:image/jpeg;base64," + r.thumb; img.alt = `参照画像 ${i + 1}`;
+    const x = document.createElement("button");
+    x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", `参照画像 ${i + 1} を外す`);
+    x.onclick = () => { refs.splice(i, 1); renderRefs(); };
+    d.append(img, x);
+    return d;
+  }));
+  document.getElementById("addref").style.display = refs.length >= MAX_REFS ? "none" : "";
+  document.getElementById("size_row").classList.toggle("off", refs.length > 0);
+}
+function addRef(r) {
+  if (refs.length >= MAX_REFS) refs.shift();
+  refs.push(r);
+  renderRefs();
+}
+async function downscale(file) {
+  // スマホの写真は大きいので、送る前に長辺 2048 の JPEG に縮める
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, ng) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => ng(new Error("画像を読み込めませんでした"));
+      i.src = url;
+    });
+    const k = Math.min(1, 2048 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.92);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+const fileEl = document.getElementById("ref_file");
+fileEl.onchange = async () => {
+  const f = fileEl.files[0];
+  fileEl.value = "";
+  if (!f) return;
+  setStatus("参照画像を送信中…");
+  try {
+    addRef(await call("upload_ref", {data: await downscale(f)}));
+    setStatus("");
+  } catch (e) {
+    setStatus("参照画像を追加できませんでした：" + e.message, true);
+  }
+};
+
 const loraEl = document.getElementById("lora");
 const strengthEl = document.getElementById("lora_strength");
 const strengthRow = strengthEl.parentElement;
@@ -261,6 +365,7 @@ go.onclick = async () => {
       text_mode: document.getElementById("text_mode").checked,
       seed: seedText === "" ? null : Number(seedText),
       lora: loraEl.value || null, lora_strength: Number(strengthEl.value),
+      refs: refs.map(r => r.name),
     });
     let label = "送信しました";
     timer = setInterval(() => setStatus(`${label}… ${Math.round((Date.now() - t0) / 1000)} 秒`), 1000);
@@ -270,7 +375,7 @@ go.onclick = async () => {
       if (st.state === "queued") label = `順番待ち（${st.position} 番目）`;
       else if (st.state === "running") label = "生成中（初回はモデルの読み込みで数分、標準画質は 1 枚数分かかります）";
       else if (st.state === "error") throw new Error(st.error);
-      else if (st.state === "done") { await showResult(st.image, job.seed, job.lora, prompt, (Date.now() - t0) / 1000); break; }
+      else if (st.state === "done") { await showResult(st.image, job.seed, job.lora, job.refs, prompt, (Date.now() - t0) / 1000); break; }
     }
     setStatus(`完了（${Math.round((Date.now() - t0) / 1000)} 秒）`);
   } catch (e) {
@@ -281,7 +386,7 @@ go.onclick = async () => {
   }
 };
 
-async function showResult(name, seed, lora, prompt, secs) {
+async function showResult(name, seed, lora, nrefs, prompt, secs) {
   // 表示は縮小 JPEG、保存するときだけ元の PNG を取りに行く
   const {jpeg} = await call("preview", {name});
   const card = document.createElement("div");
@@ -291,7 +396,19 @@ async function showResult(name, seed, lora, prompt, secs) {
   const meta = document.createElement("div");
   meta.className = "meta";
   const info = document.createElement("span");
-  info.textContent = `seed ${seed}${lora ? " ・ LoRA " + lora : ""} ・ ${Math.round(secs)} 秒`;
+  info.textContent = `seed ${seed}${nrefs ? ` ・ 参照 ${nrefs} 枚` : ""}${lora ? " ・ LoRA " + lora : ""} ・ ${Math.round(secs)} 秒`;
+  const use = document.createElement("a");
+  use.href = "#"; use.textContent = "参照に使う";
+  use.onclick = async (ev) => {
+    ev.preventDefault();
+    try {
+      addRef(await call("ref_from_output", {name}));
+      setStatus("参照画像に追加しました。プロンプトを変えて生成できます");
+      document.getElementById("prompt").scrollIntoView({behavior: "smooth", block: "center"});
+    } catch (e) {
+      setStatus("参照に追加できませんでした：" + e.message, true);
+    }
+  };
   const dl = document.createElement("a");
   dl.href = "#"; dl.textContent = "ファイルに保存";
   dl.onclick = async (ev) => {
@@ -312,7 +429,10 @@ async function showResult(name, seed, lora, prompt, secs) {
       dl.textContent = label;
     }
   };
-  meta.append(info, dl);
+  const actions = document.createElement("span");
+  actions.className = "actions";
+  actions.append(use, dl);
+  meta.append(info, actions);
   card.append(img, meta);
   document.getElementById("results").prepend(card);
 }
@@ -327,6 +447,8 @@ class App:
 
     def __init__(self, args):
         self.args = args
+        # 参照画像は ComfyUI/input に置く（LoadImage が読む場所）
+        self.input_dir = getattr(args, "input", None) or os.path.join(os.path.dirname(args.output), "input")
 
     def comfy(self, path, data=None):
         req = urllib.request.Request(
@@ -359,12 +481,39 @@ class App:
                 return self.status(str(payload.get("id", "")))
             if op == "preview":
                 return {"jpeg": self.preview(payload.get("name"))}
+            if op == "upload_ref":
+                data = str(payload.get("data", ""))
+                return self.save_ref(base64.b64decode(data.split(",", 1)[-1]))
+            if op == "ref_from_output":
+                with open(self.image_path(payload.get("name")), "rb") as f:
+                    return self.save_ref(f.read())
             if op == "png":
                 with open(self.image_path(payload.get("name")), "rb") as f:
                     return {"png": base64.b64encode(f.read()).decode()}
             return {"error": f"unknown op: {op}"}
         except Exception as e:
             return {"error": str(e)}
+
+    def save_ref(self, raw):
+        """アップロードされた画像を検証して PNG で保存する（EXIF などは捨て、長辺 2048 に抑える）"""
+        import uuid
+        from PIL import Image, ImageOps
+        if len(raw) > 30_000_000:
+            raise ValueError("画像が大きすぎます")
+        try:
+            img = Image.open(io.BytesIO(raw))
+            img = ImageOps.exif_transpose(img).convert("RGB")
+        except Exception:
+            raise ValueError("画像として読み込めませんでした") from None
+        img.thumbnail((2048, 2048))
+        os.makedirs(self.input_dir, exist_ok=True)
+        name = f"qref_{uuid.uuid4().hex[:12]}.png"
+        img.save(os.path.join(self.input_dir, name))
+        thumb = img.copy()
+        thumb.thumbnail((256, 256))
+        buf = io.BytesIO()
+        thumb.save(buf, "JPEG", quality=85)
+        return {"name": name, "thumb": base64.b64encode(buf.getvalue()).decode(), "size": list(img.size)}
 
     def preview(self, name):
         from PIL import Image
@@ -381,6 +530,15 @@ class App:
         width, height = SIZES.get(body.get("size"), SIZES["1:1"])
         scale, steps = QUALITY.get(body.get("quality"), QUALITY["high"])
         width, height = int(width * scale), int(height * scale)
+        refs = [str(r) for r in (body.get("refs") or [])][:MAX_REFS]
+        ref_resolution = int(2048 * scale)
+        for r in refs:
+            if not REF_NAME.match(r) or not os.path.exists(os.path.join(self.input_dir, r)):
+                raise ValueError("参照画像が見つかりません。もう一度追加してください")
+        if refs:
+            from PIL import Image
+            with Image.open(os.path.join(self.input_dir, refs[0])) as im:
+                width, height = ref_size(*im.size, ref_resolution)
         seed = body.get("seed")
         seed = random.randint(0, 2**32 - 1) if seed is None else int(seed)
         lora = body.get("lora")
@@ -391,9 +549,9 @@ class App:
         wf = build_workflow(prompt, str(body.get("negative", "")), width, height, steps, seed,
                             # 文字入りモードは前半 6 割を cfg 1.0、残りを cfg_text で
                             bool(body.get("text_mode")), round(steps * 0.6), a.cfg_text,
-                            a.dit, a.te, a.vae, [(lora, strength)] if lora else [])
+                            a.dit, a.te, a.vae, [(lora, strength)] if lora else [], refs, ref_resolution)
         pid = self.comfy("/prompt", {"prompt": wf})["prompt_id"]
-        return {"prompt_id": pid, "seed": seed,
+        return {"prompt_id": pid, "seed": seed, "refs": len(refs),
                 "lora": f"{lora.removesuffix('.safetensors')} ×{strength:g}" if lora else None}
 
     def status(self, pid):
