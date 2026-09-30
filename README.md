@@ -81,17 +81,35 @@ python3 license_watch.py        # 1,000ライセンス枠の残りを記録・�
 カナ・アクセスレベル・部署名・本パスワード設定状況)がそのまま取得できる。
 この Excel は氏名を含むためコミットしない(`.gitignore` 済み)。
 
-## 実機確認済みのフロー(2026-07-20)
+## 実機確認済みのフロー(2026-10-01 更新)
+
+**2026-10-01 に利用者ログ画面が変わった。** QuickSight 埋め込みから自社ダッシュボード
+(`/log-dashboard` 内の iframe `name="qd-logs"`、`https://dashboard.qommons.ai/dashboard-server/logs`)になった。
 
 1. `/login`: `input[name=username]` / `input[name=password]` → 「ログイン」ボタン(CAPTCHA・2FAなし)
-2. `/log-dashboard`(利用者ログ)は Amazon QuickSight の iframe 埋め込み。
-   iframe 内からのダウンロードはヘッドレスで検知できないため、埋め込み URL を
-   リクエスト横取りで取得し、トップレベルページとして開く
-3. Controls 展開 → `input[aria-label="Enter a date"]` ×2 に開始日・終了日を入力
-4. 「利用ログ」テーブルにホバー → `[aria-label="Menu options, 利用ログ, Table"]`
-   → 「Export to CSV」
+2. `/log-dashboard` を開き、iframe が `dashboard.qommons.ai` を読み込むのを待つ(iframe 側のセッションが張られる)
+3. iframe 内から `POST /dashboard-server/api/logs/entries` を**日単位・全ページ**で呼ぶ
+   (`{filters:{from,to,prefecture,municipality}, page, pageSize:100}`。pageSize の上限は100、
+   深いページも取得可。1リクエスト約1秒なので4並列。1か月分で約1,900リクエスト)
+4. 重複除去して従来の5列形式で `downloads/qommons-log-YYYY-MM-DD.csv` に保存
+   (診断情報は同名の `.meta.json`)
 
-CSV の列: `ユーザー名, 利用日時, ai_name_new, model_name, 入出力内容`
+CSV の列(従来と同じ): `ユーザー名, 利用日時, ai_name_new, model_name, 入出力内容`
+
+### 新ダッシュボードの注意点(2026-10-01 検証)
+
+- **画面の「CSV > 全N件をダウンロード」は使わない。** 新しい順に最大1万件で打ち切られる
+- **API は一部の発言を「同じ発言×複数モデル名」で大量に重複して返す。**
+  2026-09 は API 上 185,999 行だが、`(ユーザー名, 利用日時, 入出力内容)` で重複除去すると
+  旧 QuickSight データと件数が一致する(9/20・9/24・9/25 で照合)。
+  モデル名が複数に分かれた発言は、照合した14件すべてが旧データで Claude Opus 4.8 だったため
+  Opus 4.8 とみなす
+- モデル名は内部ID(`claude-4-6-sonnet` 等)で返るので `fetch_logs.mjs` の `MODEL_NAMES` で表示名に変換する。
+  未登録のIDはそのまま出力されるので、新モデルが出たら追記する
+- **入出力内容の長さ上限が変わった**: 旧 QuickSight は約2,000文字、新 API は10,000文字。
+  2026-09 月次分(新APIで再取得)以降、使用文字数・業務削減効果など文字数ベースの指標は
+  それ以前の月より大きく出る(同じ利用でも長文の応答が切られなくなったため)
+- ユーザー発言は `user#` 接頭辞なしで返ることがあるため、互換のため付与している
 
 ## リモート実行環境向けの対応(スクリプトが自動処理)
 

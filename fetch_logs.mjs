@@ -1,25 +1,40 @@
-// Qommons AI 利用ログ CSV 自動ダウンロードスクリプト
+// Qommons AI 利用ログ CSV 自動取得スクリプト
 //
 // 使い方:
-//   node qommons-report/fetch_logs.mjs
+//   node fetch_logs.mjs
 //
 // 必要な環境変数:
 //   QOMMONS_EMAIL    ログイン用メールアドレス
 //   QOMMONS_PASSWORD ログイン用パスワード
 //   QOMMONS_URL      (任意) ログインページ URL。既定: https://qommons.ai/login
+//   QOMMONS_START_DATE / QOMMONS_END_DATE / QOMMONS_FILE_DATE (任意) 期間とファイル名の日付。
+//     既定は当月1日〜当日(JST)。形式は "YYYY/MM/DD HH:MM:SS" / "YYYY-MM-DD"
+//   QOMMONS_PREFECTURE / QOMMONS_MUNICIPALITY (任意) 既定: 北海道 / 北海道_函館市
 //
 // 出力:
-//   qommons-report/downloads/qommons-log-YYYY-MM-DD.csv(当月1日〜当日 JST)
-//   失敗時は qommons-report/debug/ にスクリーンショットと HTML を保存して exit 1。
+//   downloads/qommons-log-YYYY-MM-DD.csv       従来(QuickSight時代)と同じ5列形式
+//     ユーザー名, 利用日時(YYYY-MM-DD HH:MM:SS), ai_name_new, model_name, 入出力内容
+//   downloads/qommons-log-YYYY-MM-DD.meta.json 日別の取得件数・重複除去の診断情報
+//   失敗時は debug/ にスクリーンショットと HTML を保存して exit 1。
 //
-// 実機で確認済みのフロー (2026-07-20):
-//   1. /login で input[name=username] / input[name=password] → 「ログイン」ボタン
-//   2. /log-dashboard(利用者ログ)は Amazon QuickSight ダッシュボードの iframe 埋め込み。
-//      iframe 内からのダウンロードはヘッドレスで拾えないため、iframe の埋め込み URL を
-//      リクエスト横取りで取得し(URL は使い捨てなので iframe 側は abort)、トップレベルで開く。
-//   3. Controls を展開 → input[aria-label="Enter a date"] ×2 に開始日・終了日を入力
-//   4. 「利用ログ」テーブルにホバー → [aria-label="Menu options, 利用ログ, Table"]
-//      → menuitem「Export to CSV」でダウンロード
+// 2026-10-01 画面変更への対応:
+//   /log-dashboard が QuickSight 埋め込みから自社ダッシュボード
+//   (iframe name="qd-logs", https://dashboard.qommons.ai/dashboard-server/logs)に変わった。
+//   画面の「CSV > 全 N 件をダウンロード」は新しい順に最大1万件で打ち切られ、入出力内容も
+//   1万文字で切られるため使わない。代わりに画面が内部で使っている
+//   POST /dashboard-server/api/logs/entries(pageSize 上限100、深いページも取得可)を
+//   iframe 内から日単位で全ページ取得する(1リクエスト約1秒、4並列)。
+//
+//   ★新APIは一部の発言を「同じ発言×複数モデル名」で何十〜何百行にも重複して返す
+//   (2026-09-20 の検証で実40件が576件に膨張。旧データと照合すると、重複除去後の件数は
+//   旧データと一致し、1行しかない発言のモデル名は正しかった)。そのため
+//   (ユーザー名, 利用日時, 入出力内容) で重複除去し、モデル名が1種類ならそれを採用する。
+//   複数種類に分かれた発言は、旧データとの照合(9/20・9/24・9/25 の計14件)ですべて
+//   Claude Opus 4.8 だったため Claude Opus 4.8 とみなす(件数は meta.json の multiModel)。
+//
+//   ★入出力内容の長さ: 旧QuickSightのCSVは約2,000文字、新APIは10,000文字で切られる。
+//   文字数ベースの指標は 2026-09 分の再取得以降、それ以前の月より大きく出る。
+//   旧形式との互換のため、モデルIDは表示名に変換し、user 発言には "user#" を付ける。
 //
 // 環境まわり(リモート実行環境向け):
 //   - 外向き HTTPS はプロキシ経由(HTTPS_PROXY)。Chromium には明示指定が必要
@@ -106,135 +121,107 @@ try {
     throw new Error(`ログインに失敗した可能性があります(現在URL: ${page.url()})`);
   }
 
-  // 2. 利用者ログ(QuickSight 埋め込み)の URL を横取りし、iframe 側は中断
-  let embedUrl = null;
-  await page.route('**quicksight.aws.amazon.com/embed/**', route => {
-    if (!embedUrl) { embedUrl = route.request().url(); route.abort('aborted'); }
-    else route.continue();
-  });
+  // 2. 利用者ログ(dashboard.qommons.ai の iframe)を開き、セッションが張られるのを待つ
   await page.goto('https://qommons.ai/log-dashboard', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  for (let i = 0; i < 30 && !embedUrl; i++) await page.waitForTimeout(1000);
-  if (!embedUrl) {
-    await dumpDebug(page, 'no-embed-url');
-    throw new Error('QuickSight 埋め込み URL を取得できませんでした(/log-dashboard の構成が変わった可能性)');
+  let fr = null;
+  for (let i = 0; i < 60 && !fr; i++) {
+    fr = page.frames().find(f => f.url().includes('dashboard.qommons.ai/dashboard-server/logs')) || null;
+    if (!fr) await page.waitForTimeout(1000);
   }
-  await page.unroute('**quicksight.aws.amazon.com/embed/**');
-
-  // 3. QuickSight をトップレベルで開く
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-  const pad = n => String(n).padStart(2, '0');
-  // QOMMONS_START_DATE / QOMMONS_END_DATE / QOMMONS_FILE_DATE を設定すると、
-  // 当月以外の期間(例: 過去月の再取得)を明示指定できる。未設定時は従来通り
-  // 当月1日〜当日(JST)。
-  const start = process.env.QOMMONS_START_DATE || `${now.getFullYear()}/${pad(now.getMonth() + 1)}/01 00:00:00`;
-  const end = process.env.QOMMONS_END_DATE || `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} 23:59:59`;
-  const fileDate = process.env.QOMMONS_FILE_DATE || `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
-  // 月末に近づき対象件数が増えると、QuickSight側のクエリが
-  // "Getting data for this visualization took too long" で失敗し、
-  // Export to CSV が disabled のまま(=何度リトライしても無駄)になることがある
-  // (2026-07-27 の本番実行で発生)。この場合はページを再読み込みして
-  // 日付設定からやり直す。
-  // 同じ文言が複数要素にマッチすると strict mode 違反で waitFor が例外になり、
-  // クエリタイムアウトを検知できなくなるため .first() を付ける。
-  const tooLongError = page.getByText('Getting data for this visualization took too long').first();
-  let tableReady = false;
-  for (let loadAttempt = 1; loadAttempt <= 3 && !tableReady; loadAttempt++) {
-    if (loadAttempt === 1) {
-      await page.goto(embedUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
-    } else {
-      console.error(`テーブルのクエリタイムアウトを検知。ページを再読み込みして再試行します(${loadAttempt}回目)。`);
-      await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
-    }
-    await page.waitForTimeout(15000);
-
-    // Controls を展開して日付を当月1日〜当日(JST)に設定
-    await page.locator('[aria-label="Controls"]').click().catch(() => {});
-    await page.waitForTimeout(2000);
-    const dates = page.locator('input[aria-label="Enter a date"]');
-    await dates.nth(0).waitFor({ state: 'visible', timeout: 15000 });
-    await dates.nth(0).fill(start); await dates.nth(0).press('Enter');
-    await page.waitForTimeout(2000);
-    await dates.nth(1).fill(end); await dates.nth(1).press('Enter');
-    console.log(`期間設定: ${start} 〜 ${end}`);
-    await page.waitForTimeout(20000); // データ再読み込み待ち(月末は通常より長めに待つ)
-
-    // テーブルに実データ行が表示される(=エクスポート操作が可能になる)まで待つ。
-    // 「利用ログ」テーブル本体は座標が変わりやすいため、行データらしきテキスト
-    // (メールアドレス形式のセル)が現れるまでポーリングする。
-    // 対象件数が増えるほどクエリ完了(またはタイムアウト表示)までの時間が延びる。
-    // 90秒では月半ば以降にエラー表示が出る前に検知を打ち切ってしまい、
-    // Export が disabled のまま先に進んで失敗していた(2026-08-16 の本番実行で発生)。
-    const tableLoaded = page.locator('text=/@city\\.hakodate\\.hokkaido\\.jp/').first();
-    const raceResult = await Promise.race([
-      tableLoaded.waitFor({ state: 'visible', timeout: 180000 }).then(() => 'loaded').catch(() => 'timeout'),
-      tooLongError.waitFor({ state: 'visible', timeout: 180000 }).then(() => 'query_timeout').catch(() => 'timeout'),
-    ]);
-    if (raceResult === 'loaded') {
-      tableReady = true;
-    } else if (raceResult === 'query_timeout') {
-      continue; // ページ再読み込みして再試行
-    } else if (loadAttempt < 3) {
-      // 判定不能。テーブルが読めていない可能性が高いので、先に進まず再読み込みする
-      // (先に進むと Export to CSV が disabled のまま3回空振りして失敗するだけ)。
-      console.error('WARN: テーブル行の読み込みもエラー表示も確認できませんでした。再読み込みします。');
-      continue;
-    } else {
-      console.error('WARN: テーブル行の読み込み確認がタイムアウトしました。そのまま続行します。');
-      tableReady = true; // 最終試行。判定不能だが従来通りとりあえず先に進む
-    }
+  if (!fr) {
+    await dumpDebug(page, 'no-log-frame');
+    throw new Error('利用者ログの iframe(dashboard.qommons.ai)が見つかりません(画面構成が変わった可能性)');
   }
+  await fr.locator('input[type=date]').first().waitFor({ timeout: 60000 });
   await page.waitForTimeout(2000);
 
-  // 5. 「利用ログ」テーブルにホバー → メニュー → Export to CSV
-  const vis = page.locator('text=Table, 利用ログ').first();
-  const menuBtn = page.locator('[aria-label="Menu options, 利用ログ, Table"]');
+  // 3. 期間(JST)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const start = process.env.QOMMONS_START_DATE || `${now.getFullYear()}/${pad(now.getMonth() + 1)}/01 00:00:00`;
+  const end = process.env.QOMMONS_END_DATE || `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} 23:59:59`;
+  const fileDate = process.env.QOMMONS_FILE_DATE || ymd(now);
+  const prefecture = process.env.QOMMONS_PREFECTURE || '北海道';
+  const municipality = process.env.QOMMONS_MUNICIPALITY || '北海道_函館市';
+  const toDate = s => { const [y, m, d] = s.slice(0, 10).split(/[\/-]/).map(Number); return new Date(y, m - 1, d); };
+  const days = [];
+  for (let d = toDate(start); d <= toDate(end); d.setDate(d.getDate() + 1)) days.push(ymd(d));
+  console.log(`期間設定: ${days[0]} 〜 ${days[days.length - 1]}(${days.length}日)`);
 
-  // QuickSightのツールバー(3点リーダー)はマウスホバー中しか表示されない。
-  // ループの外で1回だけホバーすると、前の試行のEscapeキーやクリックで
-  // マウスが離れた際にツールバーが消え、次の試行でメニューボタンの
-  // クリックがタイムアウトすることがあった(2026-07-24 の本番実行で発生)。
-  // 各試行の冒頭で毎回ホバーし直す。
-  async function hoverVisual() {
-    const box = await vis.boundingBox().catch(() => null);
-    if (box) await page.mouse.move(box.x + box.width / 2, box.y + 40);
-    await page.waitForTimeout(1500);
-  }
-  await hoverVisual();
-  await menuBtn.waitFor({ state: 'visible', timeout: 20000 });
+  // 4. 日単位で全ページを取得
+  const MODEL_NAMES = {
+    'claude-4-6-sonnet': 'Claude Sonnet 4.6', 'claude-4-8-opus': 'Claude Opus 4.8',
+    'claude-4-5-haiku': 'Claude Haiku 4.5', 'claude-5-sonnet': 'Claude Sonnet 5', 'claude-5-opus': 'Claude Opus 5',
+    'gpt-5.4-azure': 'GPT-5.4', 'gpt-5.4-mini': 'GPT-5.4 mini', 'gpt-5.5': 'GPT-5.5',
+    'gpt-5.6-sol': 'GPT-5.6 Sol', 'gpt-5.6-terra': 'GPT-5.6 Terra', 'gpt-5.6-luna': 'GPT-5.6 Luna',
+    'gemini-3.1-pro-preview': 'Gemini 3.1 Pro', 'gemini-3.1-flash-lite': 'Gemini 3.1 Flash Lite',
+    'gemini-2.5-pro': 'Gemini 2.5 Pro', 'gemini-3.5-flash': 'Gemini 3.5 Flash',
+    'gemini-3.6-flash': 'Gemini 3.6 Flash', 'gemini-3.7-flash': 'Gemini 3.7 Flash',
+    'plamo-3.0-prime': 'PLaMo 3.0 Prime',
+  };
+  const fetchDay = (day) => fr.evaluate(async ({ day, prefecture, municipality }) => {
+    const filters = { from: day, to: day, prefecture, municipality };
+    const get = async (page) => {
+      for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+          const r = await fetch('/dashboard-server/api/logs/entries', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ filters, page, pageSize: 100 }),
+          });
+          if (r.ok) { const j = await r.json(); return j.data; }
+        } catch (e) {}
+        await new Promise(res => setTimeout(res, 2000 * attempt));
+      }
+      throw new Error(`entries 取得失敗 ${day} page ${page}`);
+    };
+    const first = await get(1);
+    const total = first.totalCount;
+    const pages = Math.ceil(total / 100);
+    const out = new Array(pages); out[0] = first.entries;
+    let next = 2;
+    const worker = async () => { while (next <= pages) { const p = next++; out[p - 1] = (await get(p)).entries; } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    return { total, entries: out.flat() };
+  }, { day, prefecture, municipality });
 
-  // メニュー項目が無効(データ未読み込み)な場合があるため、開き直しながら数回試す。
-  let download;
-  let lastErr;
-  for (let attempt = 1; attempt <= 3 && !download; attempt++) {
-    // 前の試行で使った waitForEvent の Promise が残っていると、この試行が
-    // 終わった後にバックグラウンドでタイムアウト→未処理rejectionでプロセスが
-    // クラッシュすることがあった(2026-07-23 の本番実行で発生)。必ず
-    // .catch() を付けて破棄し、次の試行に進む。
-    let dl;
-    try {
-      if (attempt > 1) await hoverVisual();
-      await menuBtn.click();
-      await page.waitForTimeout(1500);
-      const exportItem = page.locator('[role="menuitem"]:has-text("Export to CSV")').first();
-      await exportItem.waitFor({ state: 'visible', timeout: 10000 });
-      dl = page.waitForEvent('download', { timeout: 120000 }); // 件数が多いと生成に時間がかかる
-      await exportItem.click({ timeout: 10000 });
-      download = await dl;
-    } catch (e) {
-      lastErr = e;
-      if (dl) dl.catch(() => {}); // 未処理rejection化を防ぐ
-      console.error(`Export to CSV 試行${attempt}回目 失敗: ${e.message.split('\n')[0]}`);
-      await page.keyboard.press('Escape').catch(() => {});
-      await page.waitForTimeout(8000);
+  const csvEsc = v => { const s = String(v ?? ''); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const rows = [];
+  const meta = { generatedAt: new Date().toISOString(), prefecture, municipality, days: {} };
+  for (const day of days) {
+    let res = await fetchDay(day);
+    if (res.entries.length !== res.total) {
+      console.error(`WARN: ${day} 取得件数 ${res.entries.length} ≠ 総数 ${res.total}。再取得します`);
+      res = await fetchDay(day);
     }
+    const groups = new Map();
+    for (const e of res.entries) {
+      const key = `${e.username}\u0000${e.datetime}\u0000${e.content}`;
+      if (!groups.has(key)) groups.set(key, { e, models: new Set() });
+      groups.get(key).models.add(e.modelName || '');
+    }
+    let multi = 0;
+    for (const { e, models } of groups.values()) {
+      let model;
+      if (models.size === 1) { const m = [...models][0]; model = MODEL_NAMES[m] || m; }
+      else { model = 'Claude Opus 4.8'; multi++; }
+      let content = (e.content || '').replace(/\r\n/g, '\n');
+      if (!content.startsWith('assistant#') && !content.startsWith('user#')) content = 'user#' + content;
+      const dt = (e.datetime || '').slice(0, 19).replace('T', ' ');
+      rows.push([e.username, dt, e.apiName, model, content]);
+    }
+    meta.days[day] = { raw: res.total, fetched: res.entries.length, unique: groups.size, multiModel: multi };
+    console.log(`  ${day}: API ${res.total}行 → 重複除去後 ${groups.size}件(複数モデル記録 ${multi}件)`);
   }
-  if (!download) throw lastErr || new Error('Export to CSV に繰り返し失敗しました');
+  rows.sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0));
+
   const outPath = path.join(downloadsDir, `qommons-log-${fileDate}.csv`);
-  await download.saveAs(outPath);
-  console.log(`DOWNLOADED: ${outPath}`);
-} catch (err) {
-  console.error(`FAILED: ${err.message}`);
+  const header = ['ユーザー名', '利用日時', 'ai_name_new', 'model_name', '入出力内容'];
+  fs.writeFileSync(outPath, '﻿' + [header, ...rows].map(r => r.map(csvEsc).join(',')).join('\r\n') + '\r\n');
+  fs.writeFileSync(outPath.replace(/\.csv$/, '.meta.json'), JSON.stringify(meta, null, 2));
+  console.log(`DOWNLOADED: ${outPath}(${rows.length}件)`);
+} catch (e) {
+  console.error(`FAILED: ${e.message}`);
   await dumpDebug(page, 'error');
   process.exitCode = 1;
 } finally {
