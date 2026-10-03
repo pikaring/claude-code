@@ -307,7 +307,7 @@ function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&am
 
 /* プレイヤー p の場 t（第k局）での役割。役割は場が終わるごとに時計回りに隣へ移る
    （預言者の次の場はゴリラなので、預言で奪ったシルバーバックをすぐ使える） */
-function roleOf(p, t, k){ var r = ring(), n = r.length; return r[((p - t + k + (G ? G.off : 0)) % n + n) % n]; }   // G.off：ゲームごとにランダムな円卓の向き
+function roleOf(p, t, k){ var r = ring(), n = r.length; return r[((p - t + (G ? G.off : 0)) % n + n) % n]; }   // G.off：ゲームごとにランダムな円卓の向き。局をまたいでも役割は途切れずに回る（1局でちょうど1周）
 function roleNow(p){ return roleOf(p, G.trick, G.round); }
 function holder(role){ for (var p=0;p<G.N;p++) if (roleNow(p) === role) return p; return -1; }
 function nm(p){ return p === 0 ? "あなた" : G.names[p]; }

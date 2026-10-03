@@ -129,10 +129,10 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
         S['rounds']+=1
         for t in range(NT):
             if any(len(h)==0 for h in hands): break
-            roles=[RING[(p-t+rnd)%NT] for p in range(N)]
+            roles=[RING[(p-t+(rnd if OPT.get('round_shift') else 0))%NT] for p in range(N)]   # round_shift=v2.7までの局ずらし（局の変わり目で役割が止まっていた）
             holder={roles[p]:p for p in range(N)}
             order=sorted(range(N),key=lambda q:ORDER.index(roles[q]))
-            later=lambda p:{RING[(p-u+rnd)%NT] for u in range(t+1,NT)}
+            later=lambda p:{RING[(p-u+(rnd if OPT.get('round_shift') else 0))%NT] for u in range(t+1,NT)}
             def hold(p,c):
                 if isgc(c): return 40 if GR in later(p) else 8
                 return c[1]*0.3+(c[1]*0.5 if GR in later(p) else 0)
@@ -231,7 +231,7 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
 
 
 RANGE={2:9,3:11,4:13}
-OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1}
+OPT_V12={'runfree':1,'mer_max':1,'pro_suit':1,'round_shift':1}   # round_shift: v2.7 までは局ごとに円卓をずらしていた
 OPT_V13=dict(OPT_V12,sb_double=1)
 OPT_V14=dict(OPT_V12,sb_raid='gor')
 OPT_V15=dict(OPT_V14,ring2=1,wrap=1,wrap_strict=1)
@@ -247,8 +247,9 @@ OPT_V24=dict(OPT_V22)   # v2.4: 連番の色の縛りを外す（v2.2 と同じ�
 OPT_V25=dict(OPT_V24,pro_best=1,pro_mode='steal')   # v2.5: 預言者は最強の札かSBを受け取る、聖典の先取りなし
 OPT_V26=dict(OPT_V25,pro_nogor=1,two_nopro=1)   # v2.6: ゴリラ役は名指せない、2人は預言者なし
 OPT_V27=dict(OPT_V26,gor_mixrun=1)   # v2.7: ゴリラ役は色を混ぜた連番を作れる
+OPT_V28=dict(OPT_V27,round_shift=0)   # v2.8: 局が変わっても役割は途切れずに回る
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25),("v2.6（ゴリラ役は名指せない、2人は預言者なし）",OPT_V26),("v2.7（ゴリラは色を混ぜた連番）",OPT_V27)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25),("v2.6（ゴリラ役は名指せない、2人は預言者なし）",OPT_V26),("v2.7（ゴリラは色を混ぜた連番）",OPT_V27),("v2.8（局をまたいでも役割が途切れない）",OPT_V28)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
