@@ -23,6 +23,7 @@ def pts(c, wr):  # 得点札としての点
     if isban(c): return 5 if wr==G else 0
     if isgc(c): return 15 if wr==G else 0
     return c[1]
+MIX=[False]   # v2.7: ゴリラ役は色を混ぜた連番を作れる（gor_mixrun）
 def combos(h, maxn, R):
     real=[c for c in h if c[0]>=0]; bans=[c for c in h if isban(c)]; gcs=[c for c in h if isgc(c)]
     out=[[c] for c in h]
@@ -37,6 +38,13 @@ def combos(h, maxn, R):
         for n in (2,3):
             if n<=maxn and len(cs)>=n:
                 for comb in itertools.combinations(cs,n): out.append(list(comb))
+    if MIX[0]:   # 色を混ぜた連番（同じスートだけの連番はすでに入っている）
+        for n in (2,3):
+            if n>maxn: continue
+            for r in byr:
+                if all(r+i in byr for i in range(n)):
+                    for comb in itertools.product(*[byr[r+i] for i in range(n)]):
+                        if len(set(c[0] for c in comb))>1: out.append(list(comb))
     if bans:
         b=bans[0]
         for n in (2,3):
@@ -59,6 +67,9 @@ def form(cmb, R):
     if nb>1: return None
     if len(cmb)==1: return ('single',real[0][0],1,real[0][1]) if real else ('ban',None,1,0)
     if len(set(c[1] for c in real))==1: return ('set',None,len(cmb),real[0][1])
+    if MIX[0] and nb==0 and len(set(c[0] for c in real))>1:
+        rs=sorted(c[1] for c in real)
+        return ('run',-1,len(cmb),rs[-1]) if len(set(rs))==len(rs) and rs[-1]-rs[0]==len(rs)-1 else None
     if len(set(c[0] for c in real))==1:
         rs=sorted(c[1] for c in real)
         if len(set(rs))!=len(rs): return None
@@ -81,7 +92,8 @@ def hi(a,b,R):  # 数字が上か。wrap=いちばん大きい数字の上に1�
 NR=4
 def val(c): return OPT.get('sb_pts',15) if isgc(c) else (0 if isban(c) else c[1])
 def legal_next(top, cm, R, role):
-    ft=form(top,R); fc=form(cm,R)
+    MIX[0]=True; ft=form(top,R)   # 場の組はもう出ている（ゴリラの色混ぜ連番も読めるように）
+    MIX[0]=bool(OPT.get('gor_mixrun') and role==GR); fc=form(cm,R)
     if not fc or fc[0] in ('gc','ban'): return False
     if ft[0]=='gc': return False
     if ft[0]!=fc[0] or ft[2]!=fc[2]: return False
@@ -139,15 +151,21 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                     hands[pp].remove(c2);hands[name].append(c2)
                     if isgc(c1): S['steal']+=1; knows[name]=pp
             # リード
-            p=order[0];h=hands[p];r=roles[p]
+            p=order[0];h=hands[p];r=roles[p];MIX[0]=bool(OPT.get('gor_mixrun') and r==GR)
             if r==GR and any(isgc(c) for c in h):
                 lead=[next(c for c in h if isgc(c))]
             else:
                 cands=[cm for cm in combos(h,3,R) if form(cm,R) and form(cm,R)[0] not in ('ban','gc')] or [[h[0]]]
                 if OPT.get('lead_backup'):   # 組でリードするのは、数字が大きい（上から4つ）か、重ね返せる同じ形の組がもう1つあるときだけ
-                    bk=lambda cm:len(cm)==1 or form(cm,R)[3]>=R-3 or any(legal_next(cm,b,R,r) for b in combos([c for c in h if c not in cm],len(cm),R) if len(b)==len(cm))
+                    def bk(cm):
+                        if len(cm)==1: return True
+                        MIX[0]=bool(OPT.get('gor_mixrun') and r==GR)
+                        if form(cm,R)[3]>=R-3: return True
+                        bs=[b for b in combos([c for c in h if c not in cm],len(cm),R) if len(b)==len(cm)]
+                        return any(legal_next(cm,b,R,r) for b in bs)
                     cands=[cm for cm in cands if bk(cm)] or cands
                 # 自分が取りやすい強い組ほど良いが、強い札は温存したい
+                MIX[0]=bool(OPT.get('gor_mixrun') and r==GR)
                 lead=max(cands,key=lambda cm:(len(cm)*2+form(cm,R)[3]*0.3 if form(cm,R) else -9)-sum(hold(p,c) for c in cm)*0.5+rng.random()*2)
             for c in lead: h.remove(c)
             pile=list(lead); top=lead; last=p; S['tricks']+=1
@@ -162,7 +180,9 @@ def game(rng,N,R,opt,HMAX=8,ROUNDS=4,COPIES=2):
                         if rq==GR and any(isgc(c) for c in h) and potv-OPT.get('sb_pts',15)*any(isgc(c) for c in pile)>=OPT.get('sb_thr',12):
                             gc=next(c for c in h if isgc(c));h.remove(gc);pile.append(gc);last=q;S['gcwin']+=1;inn=[];break
                         EDICT[0]=bool(opt.get('edict') and roles[last]==KR)
+                        MIX[0]=bool(opt.get('gor_mixrun') and rq==GR)
                         opts=[cm for cm in (combos(h,n,R) if n>1 else [[c] for c in h]) if len(cm)==n and legal_next(top,cm,R,rq)]
+                        MIX[0]=bool(opt.get('gor_mixrun') and rq==GR)
                         want=potv*(1.2 if rq==GR else 1.0)
                         if opts:
                             cm=min(opts,key=lambda cm:form(cm,R)[3]+sum(hold(q,c) for c in cm)*0.5)
@@ -226,8 +246,9 @@ OPT_V23=dict(OPT_V22,runfree=0,run_color=1)
 OPT_V24=dict(OPT_V22)   # v2.4: 連番の色の縛りを外す（v2.2 と同じ判定）
 OPT_V25=dict(OPT_V24,pro_best=1,pro_mode='steal')   # v2.5: 預言者は最強の札かSBを受け取る、聖典の先取りなし
 OPT_V26=dict(OPT_V25,pro_nogor=1,two_nopro=1)   # v2.6: ゴリラ役は名指せない、2人は預言者なし
+OPT_V27=dict(OPT_V26,gor_mixrun=1)   # v2.7: ゴリラ役は色を混ぜた連番を作れる
 if __name__=="__main__":
-    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25),("v2.6（ゴリラ役は名指せない、2人は預言者なし）",OPT_V26)]:
+    for name,opt in [("v1.5（回る順 王→商人→預言者→ゴリラ、いちばん大きい数字の上に1）",OPT_V15),("v1.7（同じ数字なら同じ色でも重ねられる、CPUは強い組か重ね返せる組があるときだけ組でリード）",OPT_V17),("v1.8（連番の1周）",OPT_V18),("v1.9（バナナ・2＝1・2、同数は同じ数字でも重ねられる）",OPT_V19),("v2.0（ゴリラ・商人の例外も1周に効く）",OPT_V20),("v2.1（商人の色無視を外す）",OPT_V21),("v2.2（バナナは同数だけ）",OPT_V22),("v2.3（連番に色の縛り、ゴリラだけ自由）",OPT_V23),("v2.4（組は色を問わない）",OPT_V24),("v2.5（預言者は最強の札かSB、聖典の先取りなし）",OPT_V25),("v2.6（ゴリラ役は名指せない、2人は預言者なし）",OPT_V26),("v2.7（ゴリラは色を混ぜた連番）",OPT_V27)]:
         print("==",name)
         for N,R in RANGE.items():
             rng=random.Random(5);n=400;SS={};BR=[0]*NR
