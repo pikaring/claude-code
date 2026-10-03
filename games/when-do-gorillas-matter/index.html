@@ -72,7 +72,8 @@
   <div class="wrap hero-grid">
     <div>
       <span class="pill"><b>無料</b> · インストール不要 · 通信なし · MIT License</span>
-      <p class="hero-note">商人・預言者・ゴリラ・王　<i>Profits, Prophets, Gorillas, and Kings: (When) Do Gorillas Matter?</i></p>
+      <img class="hero-logo" src="assets/logo.png" alt="商人・預言者・ゴリラ・王 MERCHANTS, PROPHETS, GORILLAS, KINGS" width="968" height="406">
+      <p class="hero-note"><i>Profits, Prophets, Gorillas, and Kings: (When) Do Gorillas Matter?</i></p>
       <h1>ゴリラは本当に、<br>歴史を動かすのか。</h1>
       <p class="lead">王、商人、預言者、そしてゴリラ。四つの役割が場ごとに円卓を巡る、2〜4人用のカードゲームである。競り上げられた札の山は、最後に札を出した者がすべて手にする。ただ一頭、ゴリラだけは色の制約に縛られず、切り札シルバーバックをもって場を一挙に制する。英雄が歴史を動かすのか、それとも力が動かすのか。ジャレド・ダイアモンドの問いを、卓上で検証する。</p>
       <div class="hero-actions">
@@ -335,7 +336,8 @@
     cards.forEach(function (c) {
       var it = d.items && d.items[c.dataset.asin];
       if (!it) return;
-      // 発売前の本は Amazon が1pxの透明GIFを返すので、そのときは画像を出さないif (it.image && !/\.gif$/i.test(it.image)) {
+      // 発売前の本は Amazon が1pxの透明GIFを返すので、そのときは画像を出さない
+      if (it.image && !/\.gif$/i.test(it.image)) {
         var img = document.createElement('img');
         img.className = 'gimg'; img.src = it.image; img.alt = ''; img.loading = 'lazy';
         c.insertBefore(img, c.firstChild);
