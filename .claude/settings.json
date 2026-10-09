@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "yomiyasu": {
+      "source": {
+        "source": "github",
+        "repo": "nanaism/yomiyasu"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "yomiyasu@yomiyasu": true
+  }
+}
